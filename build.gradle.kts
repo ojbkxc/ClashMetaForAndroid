@@ -235,8 +235,8 @@ subprojects {
             }
         }
         tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
-            compilerOptions {
-                languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
+            kotlinOptions {
+                languageVersion = "1.9"
             }
         }
     }
