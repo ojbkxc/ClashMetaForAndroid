@@ -115,7 +115,7 @@ class V2BoardSync(private val context: Context) {
 
     suspend fun fetchUpdatedDomains(): List<String>? {
         return try {
-            val updateUrl = config.getUpdateUrl()
+            val updateUrl = config.updateUrl
             val request = okhttp3.Request.Builder()
                 .url("$updateUrl/domains.json")
                 .build()

@@ -35,6 +35,7 @@ class V2BoardConfig(context: Context) {
         key = "update_url",
         defaultValue = "",
     )
+        get() = field.takeIf { it.isNotBlank() } ?: DEFAULT_UPDATE_URL
 
     fun getDomainList(): List<String> {
         val stored = domains.takeIf { it.isNotBlank() }
@@ -45,10 +46,6 @@ class V2BoardConfig(context: Context) {
 
     fun setDomainList(list: List<String>) {
         domains = list.joinToString(",")
-    }
-
-    fun getUpdateUrl(): String {
-        return updateUrl.takeIf { it.isNotBlank() } ?: DEFAULT_UPDATE_URL
     }
 
     companion object {
