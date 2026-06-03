@@ -227,12 +227,6 @@ subprojects {
             correctErrorTypes = true
             useBuildCache = false
         }
-
-        tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
-            kotlinOptions {
-                languageVersion = "2.1"
-            }
-        }
     }
 }
 
