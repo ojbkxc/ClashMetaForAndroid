@@ -221,13 +221,6 @@ subprojects {
             }
         }
     }
-
-    plugins.withId("kotlin-kapt") {
-        extensions.configure<org.jetbrains.kotlin.gradle.plugin.KaptExtension> {
-            correctErrorTypes = true
-            useBuildCache = false
-        }
-    }
 }
 
 task("clean", type = Delete::class) {
