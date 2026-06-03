@@ -227,6 +227,13 @@ subprojects {
             correctErrorTypes = true
             useBuildCache = false
         }
+        // Force kapt stub generation to use Kotlin 1.9 language version to avoid
+        // "language version 2.0+ in kapt is in Alpha" failures with Kotlin 2.1.0
+        tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptGenerateStubsTask>().configureEach {
+            kotlinOptions {
+                languageVersion = "1.9"
+            }
+        }
     }
 }
 
