@@ -1,8 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="PluralsCandidate">
-    <string name="launch_name_meta">Clash Meta</string>
-    <string name="launch_name_alpha">Clash Meta Alpha</string>
-    <string name="application_name_meta">Clash Meta for Android</string>
-    <string name="application_name_alpha">Clash Meta for Android Alpha</string>
+    <string name="launch_name_meta">蓝星网络</string>
+    <string name="launch_name_alpha">蓝星网络</string>
+    <string name="application_name_meta">蓝星网络</string>
+    <string name="application_name_alpha">蓝星网络</string>
 
     <string name="stopped">Stopped</string>
     <string name="tap_to_start">Tap to start</string>
@@ -211,7 +211,7 @@
     <string name="import_from_clipboard">Import from Clipboard</string>
     <string name="export_to_clipboard">Export to Clipboard</string>
 
-    <string name="clash_meta_for_android">Clash Meta for Android</string>
+    <string name="clash_meta_for_android">蓝星网络</string>
 
     <string name="document">Document</string>
     <string name="feedback">Feedback</string>
@@ -226,7 +226,7 @@
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
 
     <string name="tips_properties"><![CDATA[Accept Only <strong>Clash Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>
-    <string name="tips_help"><![CDATA[Clash Meta for Android is a <strong>freeware</strong> and we do <strong>NOT</strong> provide any service for it]]></string>
+    <string name="tips_help"><![CDATA[蓝星网络 - powered by Clash Meta]]></string>
 
     <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
 
@@ -357,4 +357,14 @@
     <string name="shortcut_start_long">Start Clash service</string>
     <string name="shortcut_stop_short">Stop Clash</string>
     <string name="shortcut_stop_long">Stop Clash service</string>
+
+    <!-- V2Board -->
+    <string name="v2board_login">Login</string>
+    <string name="v2board_login_hint">Sign in to your subscription account</string>
+    <string name="v2board_dashboard">My Account</string>
+    <string name="v2board_plans">Subscription Plans</string>
+    <string name="v2board_sync">Sync Subscription</string>
+    <string name="v2board_no_server_url">Server URL not configured</string>
+    <string name="v2board_no_server_url_hint">Please set v2board.url in local.properties</string>
+    <string name="format_v2board_traffic">%1$s / %2$s | Expires: %3$s</string>
 </resources>

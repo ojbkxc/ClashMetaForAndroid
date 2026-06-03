@@ -79,9 +79,24 @@ subprojects {
             } else {
                 setProperty("archivesBaseName", "cmfa-$versionName")
             }
+
+            // V2Board configuration
+            if (isApp) {
+                val v2boardUrl = queryConfigProperty("v2board.url") as? String ?: ""
+                val v2boardSyncInterval = queryConfigProperty("v2board.sync.interval") as? String ?: "1440"
+                val v2boardAppName = queryConfigProperty("v2board.app.name") as? String ?: ""
+                val v2boardDomains = queryConfigProperty("v2board.domains") as? String ?: "https://jc.lxseek.com,https://go.lxkjzh.top,https://cdn.lxkjzh.top"
+                val v2boardUpdateUrl = queryConfigProperty("v2board.update.url") as? String ?: "https://update.lxseek.com"
+
+                buildConfigField("String", "V2BOARD_URL", "\"${v2boardUrl}\"")
+                buildConfigField("long", "V2BOARD_SYNC_INTERVAL", v2boardSyncInterval)
+                buildConfigField("String", "V2BOARD_APP_NAME", "\"${v2boardAppName}\"")
+                buildConfigField("String", "V2BOARD_DOMAINS", "\"${v2boardDomains}\"")
+                buildConfigField("String", "V2BOARD_UPDATE_URL", "\"${v2boardUpdateUrl}\"")
+            }
         }
 
-        ndkVersion = "29.0.14206865"
+        // ndkVersion = "29.0.14206865"
 
         compileSdkVersion(defaultConfig.targetSdk!!)
 

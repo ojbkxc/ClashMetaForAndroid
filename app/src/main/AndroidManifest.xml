@@ -180,6 +180,11 @@
             android:configChanges="uiMode"
             android:exported="false"
             android:label="@string/files" />
+        <activity
+            android:name=".V2BoardActivity"
+            android:configChanges="uiMode|orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:label="@string/v2board_dashboard" />
 
         <service
             android:name=".LogcatService"

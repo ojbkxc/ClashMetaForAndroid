@@ -2,10 +2,8 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
-import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.core.util.trafficTotal
-import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
@@ -23,6 +21,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenSettings,
         OpenHelp,
         OpenAbout,
+        OpenV2BoardLogin,
+        OpenV2BoardDashboard,
+        OpenV2BoardPlans,
+        V2BoardSyncNow,
     }
 
     private val binding = DesignMainBinding
@@ -66,15 +68,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
-    suspend fun showAbout(versionName: String) {
+    suspend fun setV2BoardLoggedIn(loggedIn: Boolean, email: String? = null) {
         withContext(Dispatchers.Main) {
-            val binding = DesignAboutBinding.inflate(context.layoutInflater).apply {
-                this.versionName = versionName
-            }
+            binding.v2boardLoggedIn = loggedIn
+            binding.v2boardEmail = email ?: ""
+        }
+    }
 
-            AlertDialog.Builder(context)
-                .setView(binding.root)
-                .show()
+    suspend fun setV2BoardUserInfo(trafficUsed: String?, trafficTotal: String?, expireDate: String?) {
+        withContext(Dispatchers.Main) {
+            binding.v2boardTrafficUsed = trafficUsed ?: ""
+            binding.v2boardTrafficTotal = trafficTotal ?: ""
+            binding.v2boardExpireDate = expireDate ?: ""
         }
     }
 

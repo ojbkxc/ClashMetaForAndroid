@@ -82,12 +82,12 @@
     <string name="update_time">更新时间</string>
     <string name="package_name">应用包名称</string>
     <string name="install_time">安装时间</string>
-    <string name="clash_meta_for_android">Clash Meta for Android</string>
+    <string name="clash_meta_for_android">蓝星网络</string>
     <string name="feedback">反馈</string>
     <string name="github_issues">Github Issues</string>
     <string name="tips_properties"><![CDATA[仅接受 <strong>Clash 配置文件</strong>(包含<strong>代理</strong>/<strong>规则</strong>)]]></string>
     <string name="loading">载入中</string>
-    <string name="tips_help"><![CDATA[Clash Meta for Android 是一个<strong>免费软件</strong>并且我们<strong>不</strong>为其提供任何服务, <strong>请务必不要反馈非应用自身引起的问题</strong>]]></string>
+    <string name="tips_help"><![CDATA[蓝星网络 - powered by Clash Meta]]></string>
     <string name="donate">捐赠</string>
     <string name="allow_all_apps">允许所有应用</string>
     <string name="allow_selected_apps">仅允许已选择的应用</string>
@@ -269,4 +269,14 @@
     <string name="shortcut_start_long">启动 Clash 服务</string>
     <string name="shortcut_stop_short">停止 Clash</string>
     <string name="shortcut_stop_long">停止 Clash 服务</string>
+
+    <!-- V2Board -->
+    <string name="v2board_login">登录</string>
+    <string name="v2board_login_hint">登录您的订阅账号</string>
+    <string name="v2board_dashboard">我的账户</string>
+    <string name="v2board_plans">订阅套餐</string>
+    <string name="v2board_sync">同步订阅</string>
+    <string name="v2board_no_server_url">未配置服务器地址</string>
+    <string name="v2board_no_server_url_hint">请在 local.properties 中设置 v2board.url</string>
+    <string name="format_v2board_traffic">%1$s / %2$s | 到期：%3$s</string>
 </resources>
