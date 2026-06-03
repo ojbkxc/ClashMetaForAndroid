@@ -227,12 +227,6 @@ subprojects {
             correctErrorTypes = true
             useBuildCache = false
         }
-        // Configure kapt stub generation tasks to use Kotlin 2.0 language version
-        tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptGenerateStubsTask>().configureEach {
-            kotlinOptions {
-                languageVersion = "2.0"
-            }
-        }
     }
 }
 
