@@ -89,18 +89,19 @@ object ProfileProcessor {
                                         val flags = userinfo.split(";")
                                         for (flag in flags) {
                                             val info = flag.split("=")
+                                            if (info.size < 2 || info[1].isEmpty()) continue
                                             when {
-                                                info[0].contains("upload") && info[1].isNotEmpty() -> upload =
+                                                info[0].contains("upload") -> upload =
                                                     BigDecimal(info[1].split('.').first()).longValueExact()
 
-                                                info[0].contains("download") && info[1].isNotEmpty() -> download =
+                                                info[0].contains("download") -> download =
                                                     BigDecimal(info[1].split('.').first()).longValueExact()
 
-                                                info[0].contains("total") && info[1].isNotEmpty() -> total =
+                                                info[0].contains("total") -> total =
                                                     BigDecimal(info[1].split('.').first()).longValueExact()
 
-                                                info[0].contains("expire") && info[1].isNotEmpty() ->  expire =
-                                                    (info[1].toDouble() * 1000).toLong()
+                                                info[0].contains("expire") ->
+                                                    expire = (info[1].toDouble() * 1000).toLong()
                                             }
                                         }
                                     }
