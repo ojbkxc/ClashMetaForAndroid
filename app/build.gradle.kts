@@ -8,6 +8,18 @@ plugins {
     id("com.android.application")
 }
 
+android {
+    kotlinOptions {
+        jvmTarget = "21"
+        languageVersion = "1.9"
+    }
+}
+
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 dependencies {
     compileOnly(project(":hideapi"))
 

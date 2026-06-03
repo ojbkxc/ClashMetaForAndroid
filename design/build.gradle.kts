@@ -4,6 +4,18 @@ plugins {
     id("com.android.library")
 }
 
+android {
+    kotlinOptions {
+        jvmTarget = "21"
+        languageVersion = "1.9"
+    }
+}
+
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 dependencies {
     implementation(project(":common"))
     implementation(project(":core"))
