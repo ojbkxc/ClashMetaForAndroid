@@ -8,17 +8,6 @@ plugins {
     id("com.android.application")
 }
 
-kotlin {
-    compilerOptions {
-        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
-    }
-}
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
 dependencies {
     compileOnly(project(":hideapi"))
 
