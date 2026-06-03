@@ -121,8 +121,7 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         requests.trySend(request)
     }
 
-    override fun cancel() {
+    fun destroyWebView() {
         binding.webView.destroy()
-        super.cancel()
     }
 }

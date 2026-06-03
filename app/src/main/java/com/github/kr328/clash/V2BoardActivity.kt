@@ -227,6 +227,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         super.finish()
     }
 
+    override fun onDestroy() {
+        design?.destroyWebView()
+        super.onDestroy()
+    }
+
     companion object {
         const val EXTRA_URL = "v2board_url"
         const val EXTRA_IS_LOGIN = "v2board_is_login"
