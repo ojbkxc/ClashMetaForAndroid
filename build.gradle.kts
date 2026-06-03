@@ -212,6 +212,17 @@ subprojects {
             sourceCompatibility = JavaVersion.VERSION_21
             targetCompatibility = JavaVersion.VERSION_21
         }
+
+        (this as? com.android.build.gradle.LibraryExtension ?: (this as? com.android.build.gradle.AppExtension))?.kotlinOptions {
+            jvmTarget = "21"
+        }
+    }
+
+    plugins.withId("kotlin-kapt") {
+        extensions.configure<org.jetbrains.kotlin.gradle.plugin.KaptExtension> {
+            correctErrorTypes = true
+            useBuildCache = false
+        }
     }
 }
 
