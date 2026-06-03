@@ -4,6 +4,7 @@ import java.nio.file.StandardCopyOption
 
 plugins {
     kotlin("android")
+    kotlin("kapt")
     id("com.android.application")
 }
 
