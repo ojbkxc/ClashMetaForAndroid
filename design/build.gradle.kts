@@ -4,6 +4,16 @@ plugins {
     id("com.android.library")
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
+kotlin {
+    compilerOptions {
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
+    }
+}
+
 dependencies {
     implementation(project(":common"))
     implementation(project(":core"))
