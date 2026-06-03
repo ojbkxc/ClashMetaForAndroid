@@ -2,7 +2,7 @@
 
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.BaseExtension
-import java.net.URL
+import java.net.URI
 import java.util.*
 
 buildscript {
@@ -230,27 +230,27 @@ subprojects {
         // Force all kapt tasks to use Kotlin 1.9 language version to avoid
         // "language version 2.0+ in kapt is in Alpha" failures with Kotlin 2.1.0
         tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptGenerateStubsTask>().configureEach {
-            kotlinOptions {
-                languageVersion = "1.9"
+            compilerOptions {
+                languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
             }
         }
         tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
-            kotlinOptions {
-                languageVersion = "1.9"
+            compilerOptions {
+                languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
             }
         }
     }
 }
 
 task("clean", type = Delete::class) {
-    delete(rootProject.buildDir)
+    delete(rootProject.layout.buildDirectory)
 }
 
 tasks.wrapper {
     distributionType = Wrapper.DistributionType.ALL
 
     doLast {
-        val sha256 = URL("$distributionUrl.sha256").openStream()
+        val sha256 = URI("$distributionUrl.sha256").toURL().openStream()
             .use { it.reader().readText().trim() }
 
         file("gradle/wrapper/gradle-wrapper.properties")
