@@ -127,6 +127,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         V2BoardDesign.Request.Refresh -> {
                             design.reload()
                         }
+                        V2BoardDesign.Request.OpenInBrowser -> {
+                            val url = design.getCurrentUrl()
+                            if (url.isNotBlank()) {
+                                try {
+                                    startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(url)
+                                        )
+                                    )
+                                } catch (_: Exception) {}
+                            }
+                        }
                     }
                 }
             }

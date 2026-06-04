@@ -16,6 +16,7 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         object Close : Request()
         object Back : Request()
         object Refresh : Request()
+        object OpenInBrowser : Request()
     }
 
     private val binding = DesignV2boardWebviewBinding
@@ -37,6 +38,10 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.self = this
 
         binding.activityBarLayout.applyFrom(context)
+
+        binding.root.findViewById<android.widget.ImageView>(R.id.btn_open_in_browser)?.setOnClickListener {
+            requests.trySend(Request.OpenInBrowser)
+        }
 
         binding.webView.settings.apply {
             @SuppressLint("SetJavaScriptEnabled")
@@ -88,6 +93,10 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
 
     fun reload() {
         binding.webView.reload()
+    }
+
+    fun getCurrentUrl(): String {
+        return binding.webView.url ?: ""
     }
 
     fun evaluateAuthCheck() {

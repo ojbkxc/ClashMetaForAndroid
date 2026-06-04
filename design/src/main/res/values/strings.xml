@@ -366,5 +366,6 @@
     <string name="v2board_sync">Sync Subscription</string>
     <string name="v2board_no_server_url">Server URL not configured</string>
     <string name="v2board_no_server_url_hint">Please set v2board.url in local.properties</string>
+    <string name="v2board_open_in_browser">Open in browser</string>
     <string name="format_v2board_traffic">%1$s / %2$s | Expires: %3$s</string>
 </resources>

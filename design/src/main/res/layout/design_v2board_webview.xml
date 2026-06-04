@@ -69,6 +69,19 @@
             android:paddingEnd="@dimen/item_tailing_margin">
 
             <include layout="@layout/common_activity_bar" />
+
+            <ImageView
+                android:id="@+id/btn_open_in_browser"
+                android:layout_width="@dimen/item_header_component_size"
+                android:layout_height="@dimen/item_header_component_size"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="@dimen/item_header_margin"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="@string/v2board_open_in_browser"
+                android:focusable="true"
+                android:paddingHorizontal="@dimen/toolbar_image_action_padding"
+                android:src="@drawable/ic_baseline_open_in_new" />
         </com.github.kr328.clash.design.view.ActivityBarLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
