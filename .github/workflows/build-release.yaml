@@ -44,7 +44,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('core/src/foss/golang/go.mod', 'core/src/foss/golang/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
       
@@ -105,7 +105,7 @@ jobs:
 
       - name: Release Build
         if: success()
-        run: ./gradlew --no-daemon app:assembleMetaRelease
+        run: ./gradlew --no-daemon --stacktrace app:assembleMetaRelease
 
       - name: Tag Repo
         uses: richardsimko/update-tag@v1

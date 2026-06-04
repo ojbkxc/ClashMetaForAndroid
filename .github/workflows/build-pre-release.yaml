@@ -40,7 +40,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('core/src/foss/golang/go.mod', 'core/src/foss/golang/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -66,7 +66,7 @@ jobs:
 
       - name: Pre-release Build
         if: success()
-        run: ./gradlew --no-daemon app:assembleAlphaRelease
+        run: ./gradlew --no-daemon --stacktrace app:assembleAlphaRelease
 
       # Delete old Prerelease-alpha
       - uses: dev-drprasad/delete-tag-and-release@v1.1
