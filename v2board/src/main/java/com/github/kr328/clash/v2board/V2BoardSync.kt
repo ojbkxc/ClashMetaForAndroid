@@ -53,12 +53,14 @@ class V2BoardSync(private val context: Context) {
     }
 
     fun getActiveUrl(): String {
-        val serverUrl = config.serverUrl
-        if (serverUrl.isNotBlank()) return serverUrl
+        // Priority 1: Already probed working server URL (saved in config)
+        if (config.serverUrl.isNotBlank()) return config.serverUrl
 
-        val buildUrl = BuildConfig.V2BOARD_URL
-        if (buildUrl.isNotBlank()) return buildUrl
+        // Priority 2: Primary URL from ConfigManager (assets/v2board.properties)
+        val primaryUrl = ConfigManager.getServerUrl()
+        if (primaryUrl.isNotBlank()) return primaryUrl
 
+        // Priority 3: First domain from domain list (if any)
         return config.getDomainList().firstOrNull() ?: ""
     }
 
