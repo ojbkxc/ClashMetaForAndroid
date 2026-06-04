@@ -157,6 +157,53 @@ class MainActivity : BaseActivity<MainDesign>() {
         setupShortcuts()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_check_update) {
+            checkForUpdate()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun checkForUpdate() {
+        lifecycleScope.launch {
+            val currentVersion = try {
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+            } catch (e: Exception) {
+                "unknown"
+            }
+
+            // Show a dialog indicating check in progress
+            val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("检查更新")
+                .setMessage("正在检查...")
+                .setCancelable(false)
+                .create()
+            progressDialog.show()
+
+            val release = withContext(Dispatchers.IO) {
+                UpdateChecker.checkForUpdate(this@MainActivity)
+            }
+            progressDialog.dismiss()
+
+            if (release == null) {
+                androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("检查更新")
+                    .setMessage("检查更新失败，请稍后重试。")
+                    .setPositiveButton("确定", null)
+                    .show()
+                return@launch
+            }
+
+            UpdateChecker.showUpdateDialog(this@MainActivity, currentVersion, release)
+        }
+    }
+
     private fun setupShortcuts() {
         if (uiStore.hideAppIcon) return
 
