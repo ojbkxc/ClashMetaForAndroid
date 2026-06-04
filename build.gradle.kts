@@ -80,19 +80,23 @@ subprojects {
                 setProperty("archivesBaseName", "cmfa-$versionName")
             }
 
-            // V2Board configuration
+            // V2Board configuration (from v2board.properties)
             if (isApp) {
-                val v2boardUrl = queryConfigProperty("v2board.url") as? String ?: ""
-                val v2boardSyncInterval = queryConfigProperty("v2board.sync.interval") as? String ?: "1440"
-                val v2boardAppName = queryConfigProperty("v2board.app.name") as? String ?: ""
-                val v2boardDomains = queryConfigProperty("v2board.domains") as? String ?: "https://jc.lxseek.com,https://go.lxkjzh.top,https://cdn.lxkjzh.top"
-                val v2boardUpdateUrl = queryConfigProperty("v2board.update.url") as? String ?: "https://update.lxseek.com"
+                val v2boardProps = Properties()
+                val v2boardFile = rootProject.file("v2board.properties")
+                if (v2boardFile.exists()) {
+                    v2boardFile.inputStream().use { v2boardProps.load(it) }
+                }
+
+                val v2boardUrl = v2boardProps.getProperty("v2board.server.url", "")
+                val v2boardDomains = v2boardProps.getProperty("v2board.server.domains", "")
+                val v2boardSyncInterval = v2boardProps.getProperty("v2board.sync.interval", "1440")
+                val v2boardAppName = v2boardProps.getProperty("v2board.app.name", "")
 
                 buildConfigField("String", "V2BOARD_URL", "\"${v2boardUrl}\"")
+                buildConfigField("String", "V2BOARD_DOMAINS", "\"${v2boardDomains}\"")
                 buildConfigField("long", "V2BOARD_SYNC_INTERVAL", v2boardSyncInterval)
                 buildConfigField("String", "V2BOARD_APP_NAME", "\"${v2boardAppName}\"")
-                buildConfigField("String", "V2BOARD_DOMAINS", "\"${v2boardDomains}\"")
-                buildConfigField("String", "V2BOARD_UPDATE_URL", "\"${v2boardUpdateUrl}\"")
             }
         }
 

@@ -21,46 +21,17 @@ class V2BoardConfig(context: Context) {
         defaultValue = DEFAULT_SYNC_INTERVAL,
     )
 
-    var activeDomain: String by store.string(
-        key = "active_domain",
-        defaultValue = "",
-    )
-
-    var domains: String by store.string(
-        key = "domains",
-        defaultValue = "",
-    )
-
-    var updateUrl: String by store.string(
-        key = "update_url",
-        defaultValue = "",
-    )
-
-    val activeUpdateUrl: String
-        get() = updateUrl.takeIf { it.isNotBlank() } ?: DEFAULT_UPDATE_URL
-
     fun getDomainList(): List<String> {
-        val stored = domains.takeIf { it.isNotBlank() }
-        val builtIn = DEFAULT_DOMAINS
-        return (stored?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }
-            ?: builtIn).distinct()
-    }
-
-    fun setDomainList(list: List<String>) {
-        domains = list.joinToString(",")
+        val domains = BuildConfig.V2BOARD_DOMAINS
+        return if (domains.isNotBlank()) {
+            domains.split(",").map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        } else {
+            listOfNotNull(serverUrl.takeIf { it.isNotBlank() })
+        }
     }
 
     companion object {
         private const val FILE_NAME = "v2board_config"
-
         const val DEFAULT_SYNC_INTERVAL = 1440L
-
-        val DEFAULT_DOMAINS = listOf(
-            "https://jc.lxseek.com",
-            "https://go.lxkjzh.top",
-            "https://cdn.lxkjzh.top",
-        )
-
-        const val DEFAULT_UPDATE_URL = "https://update.lxseek.com"
     }
 }
