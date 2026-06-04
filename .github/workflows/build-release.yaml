@@ -85,6 +85,8 @@ jobs:
             git add build.gradle.kts
             git commit -am "Bump version to $newVersionName ($newVersionCode)"
             git tag "v$newVersionName"
+            git fetch origin main
+            git rebase origin/main
             git push --follow-tags
           fi
 

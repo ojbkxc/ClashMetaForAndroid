@@ -53,7 +53,11 @@ object V2BoardAutoSync {
                             }
                         }
                         if (updateSuccess) {
-                            setActive(existing)
+                            // 重新查询获取最新状态
+                            val updated = queryByUUID(existing.uuid)
+                            if (updated != null) {
+                                setActive(updated)
+                            }
                             Result.success("Subscription updated")
                         } else {
                             Result.failure(Exception("Failed to update subscription after $MAX_RETRY attempts"))
