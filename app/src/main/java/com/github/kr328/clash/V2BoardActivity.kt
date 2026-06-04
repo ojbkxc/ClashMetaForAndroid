@@ -204,19 +204,27 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     return origSend.apply(this, arguments);
                 };
 
-                // 3. Intercept localStorage.setItem for 'authorization' key
+                // 3. Intercept localStorage.setItem for authorization key
+                // AuroraForV2board uses vue-ls with namespace __AURORA__
                 var origSetItem = localStorage.setItem;
                 localStorage.setItem = function(key, value) {
                     origSetItem.call(localStorage, key, value);
-                    if (key === 'authorization' && value) {
+                    if ((key === 'authorization' || key === '__AURORA__authorization') && value) {
                         handleAuthData(value, '');
                     }
                 };
 
-                // 4. Poll localStorage for 'authorization' key (AuroraForV2board stores auth_data here)
+                // 4. Poll localStorage for authorization key
+                // AuroraForV2board stores auth_data with __AURORA__ namespace
                 function checkExisting() {
                     try {
-                        var auth = localStorage.getItem('authorization') || '';
+                        var auth = localStorage.getItem('__AURORA__authorization') || '';
+                        if (!auth) {
+                            auth = localStorage.getItem('authorization') || '';
+                        }
+                        if (!auth) {
+                            auth = localStorage.getItem('auth_data') || '';
+                        }
                         if (auth) {
                             handleAuthData(auth, '');
                         }

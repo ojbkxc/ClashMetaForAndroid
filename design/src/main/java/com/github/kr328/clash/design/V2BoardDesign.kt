@@ -103,7 +103,11 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         val js = """
             (function() {
                 try {
-                    var auth = localStorage.getItem('authorization') || '';
+                    // AuroraForV2board uses vue-ls with namespace __AURORA__
+                    var auth = localStorage.getItem('__AURORA__authorization') || '';
+                    if (!auth) {
+                        auth = localStorage.getItem('authorization') || '';
+                    }
                     if (!auth) {
                         auth = localStorage.getItem('auth_data') || '';
                     }
