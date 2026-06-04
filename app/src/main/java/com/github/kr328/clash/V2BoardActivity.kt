@@ -241,7 +241,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "Login successful, syncing subscription...",
+                        "登录成功，正在同步订阅...",
                         ToastDuration.Short
                     )
                 }
@@ -251,12 +251,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
                         activity.design?.showToast(
-                            syncResult.getOrNull() ?: "Sync completed",
+                            syncResult.getOrNull() ?: "同步完成",
                             ToastDuration.Short
                         )
                     } else {
                         activity.design?.showToast(
-                            "Sync failed: ${syncResult.exceptionOrNull()?.message}",
+                            "同步失败: ${syncResult.exceptionOrNull()?.message}",
                             ToastDuration.Long
                         )
                     }
@@ -278,7 +278,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "Logged out",
+                        "已退出登录",
                         ToastDuration.Short
                     )
                 }

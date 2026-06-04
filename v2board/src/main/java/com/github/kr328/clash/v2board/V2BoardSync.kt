@@ -100,7 +100,15 @@ class V2BoardSync(private val context: Context) {
                 resetApi()
             }
 
-            val response = getApi()?.getSubscribe(auth)
+            // 确保auth header格式正确，V2Board通常需要Bearer前缀
+            val authHeader = if (auth.startsWith("Bearer ", ignoreCase = true) ||
+                auth.startsWith("Basic ", ignoreCase = true)) {
+                auth
+            } else {
+                "Bearer $auth"
+            }
+
+            val response = getApi()?.getSubscribe(authHeader)
                 ?: return Result.failure(Exception("Server URL not configured"))
 
             if (response.isSuccessful && response.body()?.data != null) {
@@ -110,7 +118,12 @@ class V2BoardSync(private val context: Context) {
                 }
                 val url = data.subscribeUrl
                 if (!url.isNullOrBlank()) {
-                    Result.success(url)
+                    // 验证URL格式
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        Result.success(url)
+                    } else {
+                        Result.failure(Exception("Invalid subscribe URL format"))
+                    }
                 } else {
                     Result.failure(Exception("Subscribe URL is empty"))
                 }
