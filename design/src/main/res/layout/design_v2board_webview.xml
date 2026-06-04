@@ -58,7 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="top"
-            android:layout_marginTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
+            android:layout_marginTop="@{(int) (self.surface.insets.top + @dimen/toolbar_height)}"
             android:max="100"
             android:visibility="gone" />
 
