@@ -50,17 +50,16 @@
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                     android:gravity="center" />
             </LinearLayout>
-        </FrameLayout>
 
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:layout_marginTop="@{(int) (self.surface.insets.top + @dimen/toolbar_height)}"
-            android:max="100"
-            android:visibility="gone" />
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:max="100"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
