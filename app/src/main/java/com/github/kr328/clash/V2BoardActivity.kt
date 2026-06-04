@@ -39,6 +39,10 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     design.requests.onReceive {
                         when (it) {
                             V2BoardDesign.Request.Close -> finish()
+                            V2BoardDesign.Request.Back -> {
+                                if (design.canGoBack()) design.goBack() else finish()
+                            }
+                            V2BoardDesign.Request.Refresh -> design.reload()
                         }
                     }
                 }

@@ -30,13 +30,13 @@ object V2BoardAutoSync {
                     if (existing != null) {
                         patch(existing.uuid, profileName, subscribeUrl, intervalMs)
                         update(existing.uuid)
-                        Log.d(TAG, "Updated existing profile: ${existing.uuid}")
+                        Log.d("$TAG: Updated existing profile: ${existing.uuid}")
                     } else {
                         val uuid = create(Profile.Type.Url, profileName, subscribeUrl)
                         patch(uuid, profileName, subscribeUrl, intervalMs)
                         commit(uuid)
                         setActive(queryByUUID(uuid)!!)
-                        Log.d(TAG, "Created new profile: $uuid")
+                        Log.d("$TAG: Created new profile: $uuid")
                     }
                 }
             } catch (e: Exception) {
