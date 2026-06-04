@@ -114,10 +114,10 @@ key.password=<password>
 ### 域名回退机制
 
 ```
-1. 优先使用 activeDomain（上次成功的域名）
-2. 其次使用 serverUrl（配置的域名）
-3. 最后使用内置域名列表逐个探测
-4. 全部失败 → 从 updateUrl 拉取新域名列表 → 再次探测
+1. 优先使用 config.serverUrl（已探测成功的域名或登录后动态获取的后端地址）
+2. 其次使用 ConfigManager 中的主域名（v2board.server.url，仅作为首次启动 fallback）
+3. 最后使用 assets/v2board.properties 中的域名列表（v2board.server.domains）逐个探测
+4. 全部失败 → 提示用户检查网络或配置
 ```
 
 ### 更新地址接口格式
