@@ -32,16 +32,16 @@ object UpdateChecker {
             if (!response.isSuccessful) return@withContext null
 
             val json = JSONObject(response.body?.string() ?: return@withContext null)
-            val tagName = json.optString("tag_name", "")
-            val body = json.optString("body", "")
+            val tagName = if (json.has("tag_name")) json.getString("tag_name") else ""
+            val body = if (json.has("body")) json.getString("body") else ""
 
-            val assets = json.optJSONArray("assets") ?: return@withContext null
+            val assets = if (json.has("assets")) json.getJSONArray("assets") else return@withContext null
             var apkUrl = ""
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
-                val name = asset.optString("name", "")
+                val name = if (asset.has("name")) asset.getString("name") else ""
                 if (name.endsWith(".apk")) {
-                    apkUrl = asset.optString("browser_download_url", "")
+                    apkUrl = if (asset.has("browser_download_url")) asset.getString("browser_download_url") else ""
                     break
                 }
             }
