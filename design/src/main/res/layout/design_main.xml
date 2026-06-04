@@ -141,7 +141,7 @@
                     android:onClick="@{() -> self.request(Request.OpenV2BoardDashboard)}"
                     android:visibility="@{v2boardLoggedIn ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_cloud_download"
-                    app:subtext="@{v2boardTrafficUsed.length() > 0 ? @string/format_v2board_traffic(v2boardTrafficUsed, v2boardTrafficTotal, v2boardExpireDate) : v2boardEmail}"
+                    app:subtext="@{v2boardTrafficUsed != null &amp;&amp; !v2boardTrafficUsed.isEmpty() ? @string/format_v2board_traffic(v2boardTrafficUsed, v2boardTrafficTotal, v2boardExpireDate) : v2boardEmail}"
                     app:text="@string/v2board_dashboard" />
 
                 <com.github.kr328.clash.design.view.LargeActionLabel
