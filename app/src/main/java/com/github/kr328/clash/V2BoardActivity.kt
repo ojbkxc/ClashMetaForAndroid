@@ -152,31 +152,35 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             (function() {
                 var _detected = false;
 
-                function handleAuthData(authData, token, email) {
+                function handleAuthData(authData, token) {
                     if (_detected || !authData) return;
                     _detected = true;
                     try {
-                        AndroidBridge.onAuthData(authData, token || '', email || '');
+                        AndroidBridge.onAuthData(authData, token || '', '');
                     } catch(e) {}
                 }
 
-                // Intercept fetch API
+                // 1. Intercept fetch API responses
                 var origFetch = window.fetch;
-                window.fetch = function() {
-                    return origFetch.apply(this, arguments).then(function(response) {
-                        var url = (typeof arguments[0] === 'string') ? arguments[0] : (arguments[0].url || '');
-                        if (url.indexOf('/passport/auth/login') !== -1 || url.indexOf('/passport/auth/token2Login') !== -1) {
-                            response.clone().json().then(function(data) {
-                                if (data && data.data && data.data.auth_data) {
-                                    handleAuthData(data.data.auth_data, data.data.token, '');
+                if (origFetch) {
+                    window.fetch = function() {
+                        return origFetch.apply(this, arguments).then(function(response) {
+                            try {
+                                var url = (typeof arguments[0] === 'string') ? arguments[0] : (arguments[0].url || '');
+                                if (url.indexOf('/passport/auth/login') !== -1 || url.indexOf('/passport/auth/token2Login') !== -1) {
+                                    response.clone().json().then(function(data) {
+                                        if (data && data.data && data.data.auth_data) {
+                                            handleAuthData(data.data.auth_data, data.data.token);
+                                        }
+                                    }).catch(function() {});
                                 }
-                            }).catch(function() {});
-                        }
-                        return response;
-                    });
-                };
+                            } catch(e) {}
+                            return response;
+                        });
+                    };
+                }
 
-                // Intercept XMLHttpRequest
+                // 2. Intercept XMLHttpRequest responses
                 var origOpen = XMLHttpRequest.prototype.open;
                 var origSend = XMLHttpRequest.prototype.send;
                 XMLHttpRequest.prototype.open = function(method, url) {
@@ -189,7 +193,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             if (this._url && (this._url.indexOf('/passport/auth/login') !== -1 || this._url.indexOf('/passport/auth/token2Login') !== -1)) {
                                 var data = JSON.parse(this.responseText);
                                 if (data && data.data && data.data.auth_data) {
-                                    handleAuthData(data.data.auth_data, data.data.token, '');
+                                    handleAuthData(data.data.auth_data, data.data.token);
                                 }
                             }
                         } catch(e) {}
@@ -197,13 +201,26 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     return origSend.apply(this, arguments);
                 };
 
-                // Fallback: check localStorage
-                try {
-                    var auth = localStorage.getItem('auth_data') || '';
-                    if (auth) {
-                        handleAuthData(auth, localStorage.getItem('token') || '', localStorage.getItem('email') || '');
+                // 3. Intercept localStorage.setItem for 'authorization' key
+                var origSetItem = localStorage.setItem;
+                localStorage.setItem = function(key, value) {
+                    origSetItem.call(localStorage, key, value);
+                    if (key === 'authorization' && value) {
+                        handleAuthData(value, '');
                     }
-                } catch(e) {}
+                };
+
+                // 4. Poll localStorage for 'authorization' key (AuroraForV2board stores auth_data here)
+                function checkExisting() {
+                    try {
+                        var auth = localStorage.getItem('authorization') || '';
+                        if (auth) {
+                            handleAuthData(auth, '');
+                        }
+                    } catch(e) {}
+                }
+                checkExisting();
+                setInterval(checkExisting, 2000);
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)

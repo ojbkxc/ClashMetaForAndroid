@@ -103,7 +103,10 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         val js = """
             (function() {
                 try {
-                    var auth = localStorage.getItem('auth_data') || '';
+                    var auth = localStorage.getItem('authorization') || '';
+                    if (!auth) {
+                        auth = localStorage.getItem('auth_data') || '';
+                    }
                     if (!auth) {
                         var cookies = document.cookie.split(';');
                         for (var i = 0; i < cookies.length; i++) {
@@ -115,7 +118,7 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
                         }
                     }
                     if (auth) {
-                        AndroidBridge.onAuthData(auth, localStorage.getItem('token') || '', localStorage.getItem('email') || '');
+                        AndroidBridge.onAuthData(auth, '', '');
                     }
                 } catch(e) {}
             })();
