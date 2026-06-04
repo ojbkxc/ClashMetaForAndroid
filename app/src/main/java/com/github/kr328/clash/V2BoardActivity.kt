@@ -328,9 +328,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "登录成功，正在同步订阅...",
+                        "登录成功，3秒后自动同步订阅...",
                         ToastDuration.Short
                     )
+                }
+
+                // 延迟3秒，确保前端 localStorage 已写入 auth_data
+                kotlinx.coroutines.delay(3000)
+
+                withContext(Dispatchers.Main) {
                     // 用 JavaScript 调用前端的 API，自动带正确的 authorization header
                     activity.fetchSubscribeViaJs()
                 }

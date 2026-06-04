@@ -38,13 +38,9 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        // First launch: open login page
+        // 已登录但没有配置文件时，自动同步订阅
         val session = V2BoardSync.getInstance(this).session
-        if (!session.hasEverLoggedIn) {
-            session.hasEverLoggedIn = true
-            startActivity(V2BoardActivity.openLogin(this@MainActivity))
-        } else if (session.isLoggedIn) {
-            // 已登录但没有配置文件时，自动同步订阅
+        if (session.isLoggedIn) {
             autoSyncIfNoProfile()
         }
 
