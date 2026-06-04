@@ -55,7 +55,14 @@ class MainActivity : BaseActivity<MainDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
-                        Event.ActivityStart,
+                        Event.ActivityStart -> {
+                            design.fetch()
+                            // 从登录页返回后，检查是否需要同步
+                            val s = V2BoardSync.getInstance(this@MainActivity).session
+                            if (s.isLoggedIn) {
+                                launch { autoSyncIfNoProfile() }
+                            }
+                        }
                         Event.ServiceRecreated,
                         Event.ClashStop, Event.ClashStart,
                         Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
