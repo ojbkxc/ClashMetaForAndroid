@@ -66,7 +66,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
-                    injectAuthDetector(view)
+                    if (url != null && !url.startsWith("file://")) {
+                        injectAuthDetector(view)
+                    }
                 }
             }
 
@@ -283,6 +285,16 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             }
         }
 
+        @JavascriptInterface
+        fun getAboutInfo(): String {
+            return try {
+                val pkg = activity.packageManager.getPackageInfo(activity.packageName, 0)
+                "${pkg.versionName ?: "N/A"}|${activity.packageName}"
+            } catch (_: Exception) {
+                "N/A|N/A"
+            }
+        }
+
         private suspend fun tryAutoSubscribe(): Result<String> {
             val result = activity.sync.fetchSubscribeUrl()
             if (result.isSuccess) {
@@ -331,8 +343,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         }
 
         fun openAbout(context: Context): Intent {
-            val url = getBaseUrl(context)
-            return createIntent(context, "$url/#/about")
+            return createIntent(context, "file:///android_asset/about.html")
         }
 
         fun openKnowledge(context: Context): Intent {
