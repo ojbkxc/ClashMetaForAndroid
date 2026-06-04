@@ -74,6 +74,40 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         restoreAuthToLocalStorage(view)
                         // 再注入登录检测
                         injectAuthDetector(view)
+
+                        // 如果已登录但还没有触发过登录检测，检查是否需要自动同步
+                        if (!loginDetected && sync.session.isLoggedIn) {
+                            // 检查是否有活动配置
+                            launch {
+                                val hasActive = withProfile {
+                                    val active = queryActive()
+                                    active != null && active.imported
+                                }
+                                if (!hasActive) {
+                                    // 没有配置，先获取后端地址，再触发同步
+                                    loginDetected = true
+                                    // 从页面获取后端地址
+                                    if (sync.config.serverUrl.isBlank()) {
+                                        view.evaluateJavascript(
+                                            "(window.EnvConfig && window.EnvConfig.serverUrl) || window.location.origin || '';"
+                                        ) { result ->
+                                            val url = result?.removeSurrounding("\"") ?: ""
+                                            if (url.isNotBlank() && url.startsWith("http")) {
+                                                sync.config.serverUrl = url
+                                                sync.resetApi()
+                                            }
+                                        }
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        design?.showToast(
+                                            "正在自动同步订阅...",
+                                            ToastDuration.Short
+                                        )
+                                        fetchSubscribeViaJs()
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
