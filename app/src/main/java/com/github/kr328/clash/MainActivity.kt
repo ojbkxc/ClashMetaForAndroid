@@ -19,10 +19,8 @@ import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R as DesignR
 
@@ -64,9 +62,9 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
                         MainDesign.Request.OpenHelp ->
-                            startActivity(HelpActivity::class.intent)
+                            startActivity(V2BoardActivity.openKnowledge(this@MainActivity))
                         MainDesign.Request.OpenAbout ->
-                            design.showAbout(queryAppVersionName())
+                            startActivity(V2BoardActivity.openAbout(this@MainActivity))
                         MainDesign.Request.OpenV2BoardLogin ->
                             startActivity(V2BoardActivity.openLogin(this@MainActivity))
                     }
@@ -131,12 +129,6 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
-        }
-    }
-
-    private suspend fun queryAppVersionName(): String {
-        return withContext(Dispatchers.IO) {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "Unknown"
         }
     }
 
