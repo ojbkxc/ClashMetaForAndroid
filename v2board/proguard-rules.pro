@@ -1,2 +1,2 @@
 # V2Board module proguard rules
--keep class com.github.kr328.clash.v2board.V2BoardApi$* { *; }
+# OkHttp + org.json used directly, no special rules needed

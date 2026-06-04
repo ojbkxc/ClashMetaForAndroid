@@ -2,10 +2,8 @@ package com.github.kr328.clash.v2board
 
 import android.content.Context
 import com.github.kr328.clash.common.log.Log
-import com.google.gson.Gson
 import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 class V2BoardSync(private val context: Context) {
@@ -20,41 +18,6 @@ class V2BoardSync(private val context: Context) {
             .build()
     }
 
-    private val gson by lazy { Gson() }
-
-    private var api: V2BoardApi? = null
-    private var currentBaseUrl: String = ""
-
-    fun getApi(): V2BoardApi? {
-        val url = getActiveUrl()
-        if (url.isBlank()) return null
-
-        // Retrofit requires base URL to end with /
-        val baseUrl = if (url.endsWith("/")) url else "$url/"
-
-        if (api != null && currentBaseUrl == baseUrl) return api
-
-        synchronized(this) {
-            if (api != null && currentBaseUrl == baseUrl) return api
-
-            api = Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(httpClient)
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build()
-                .create(V2BoardApi::class.java)
-
-            currentBaseUrl = baseUrl
-        }
-
-        return api
-    }
-
-    fun resetApi() {
-        api = null
-        currentBaseUrl = ""
-    }
-
     fun getActiveUrl(): String {
         // Priority 1: Already probed working server URL (saved in config)
         if (config.serverUrl.isNotBlank()) return config.serverUrl
@@ -67,6 +30,10 @@ class V2BoardSync(private val context: Context) {
         return config.getDomainList().firstOrNull() ?: ""
     }
 
+    fun resetApi() {
+        // No-op: we no longer use Retrofit, OkHttp is stateless
+    }
+
     suspend fun findWorkingDomain(): String? {
         for (domain in config.getDomainList()) {
             try {
@@ -76,7 +43,6 @@ class V2BoardSync(private val context: Context) {
                 httpClient.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         config.serverUrl = domain
-                        resetApi()
                         Log.d("V2BoardSync: Found working domain: $domain")
                         return domain
                     }
@@ -102,7 +68,6 @@ class V2BoardSync(private val context: Context) {
                 }
                 currentUrl = workingDomain
                 config.serverUrl = workingDomain
-                resetApi()
             }
 
             // 确保auth header格式正确，V2Board通常需要Bearer前缀
@@ -113,49 +78,69 @@ class V2BoardSync(private val context: Context) {
                 "Bearer $auth"
             }
 
-            Log.d("V2BoardSync: Fetching subscribe from: $currentUrl/api/v1/user/getSubscribe")
+            val apiUrl = "$currentUrl/api/v1/user/getSubscribe"
+            Log.d("V2BoardSync: Fetching subscribe from: $apiUrl")
 
-            val response = getApi()?.getSubscribe(authHeader)
-                ?: return Result.failure(Exception("Server URL not configured"))
+            // 直接用 OkHttp 请求，不用 Retrofit，避免 Gson 泛型类型解析问题
+            val request = okhttp3.Request.Builder()
+                .url(apiUrl)
+                .header("Authorization", authHeader)
+                .header("Accept", "application/json")
+                .get()
+                .build()
 
-            if (response.isSuccessful && response.body()?.data != null) {
-                val data = response.body()!!.data!!
-                if (data.token != null && data.token != session.userToken) {
-                    session.userToken = data.token
-                }
+            val response = httpClient.newCall(request).execute()
+            val responseBody = response.body()?.string() ?: ""
 
-                // 优先使用 subscribe_url，如果为空则用 token 构造URL
-                // 与前端逻辑保持一致: subscribe_url || (origin + "/api/v1/client/subscribe?token=" + token)
-                val subscribeUrl = data.subscribeUrl
-                val token = data.token
+            Log.d("V2BoardSync: Response code: ${response.code()}, body length: ${responseBody.length}")
 
-                Log.d("V2BoardSync: subscribe_url=$subscribeUrl, token=$token")
+            if (response.isSuccessful) {
+                val json = JSONObject(responseBody)
+                val data = json.optJSONObject("data")
 
-                val finalUrl = when {
-                    !subscribeUrl.isNullOrBlank() -> subscribeUrl
-                    !token.isNullOrBlank() -> "${getActiveUrl()}/api/v1/client/subscribe?token=$token"
-                    else -> null
-                }
+                if (data != null) {
+                    val subscribeUrl = data.optString("subscribe_url", "")
+                    val token = data.optString("token", "")
 
-                Log.d("V2BoardSync: Final subscribe URL: $finalUrl")
+                    Log.d("V2BoardSync: subscribe_url=$subscribeUrl, token=$token")
 
-                if (finalUrl != null) {
-                    // 验证URL格式
-                    if (finalUrl.startsWith("http://") || finalUrl.startsWith("https://")) {
-                        Result.success(finalUrl)
+                    // 优先使用 subscribe_url，如果为空则用 token 构造URL
+                    val finalUrl = when {
+                        subscribeUrl.isNotBlank() -> subscribeUrl
+                        token.isNotBlank() -> "${getActiveUrl()}/api/v1/client/subscribe?token=$token"
+                        else -> null
+                    }
+
+                    Log.d("V2BoardSync: Final subscribe URL: $finalUrl")
+
+                    if (finalUrl != null) {
+                        if (finalUrl.startsWith("http://") || finalUrl.startsWith("https://")) {
+                            Result.success(finalUrl)
+                        } else {
+                            Result.failure(Exception("Invalid subscribe URL format"))
+                        }
                     } else {
-                        Result.failure(Exception("Invalid subscribe URL format"))
+                        Result.failure(Exception("Subscribe URL is empty"))
                     }
                 } else {
-                    Result.failure(Exception("Subscribe URL is empty"))
+                    val msg = json.optString("message", "Unknown error")
+                    Log.w("V2BoardSync: API returned no data: $msg")
+                    Result.failure(Exception(msg))
                 }
             } else {
+                Log.w("V2BoardSync: HTTP error: ${response.code()}")
+
                 if (response.code() == 401 || response.code() == 403) {
                     session.clear()
                     Result.failure(Exception("Session expired, please login again"))
                 } else {
-                    val msg = response.body()?.message ?: "Failed to fetch subscribe"
-                    Result.failure(Exception(msg))
+                    try {
+                        val json = JSONObject(responseBody)
+                        val msg = json.optString("message", "HTTP ${response.code()}")
+                        Result.failure(Exception(msg))
+                    } catch (_: Exception) {
+                        Result.failure(Exception("HTTP ${response.code()}"))
+                    }
                 }
             }
         } catch (e: Exception) {
