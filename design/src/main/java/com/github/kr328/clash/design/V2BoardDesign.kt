@@ -103,6 +103,15 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         val js = """
             (function() {
                 try {
+                    // 获取后端API地址
+                    function getApiUrl() {
+                        try {
+                            var envUrl = (window.EnvConfig && window.EnvConfig.serverUrl) || '';
+                            if (envUrl && envUrl.indexOf('http') === 0) return envUrl;
+                        } catch(e) {}
+                        return window.location.origin || '';
+                    }
+
                     // AuroraForV2board uses vue-ls with namespace __AURORA__
                     var auth = localStorage.getItem('__AURORA__authorization') || '';
                     if (!auth) {
@@ -122,7 +131,7 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
                         }
                     }
                     if (auth) {
-                        AndroidBridge.onAuthData(auth, '', '');
+                        AndroidBridge.onAuthData(auth, '', getApiUrl());
                     }
                 } catch(e) {}
             })();

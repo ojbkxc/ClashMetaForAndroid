@@ -155,11 +155,20 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             (function() {
                 var _detected = false;
 
+                // 获取后端API地址：优先从EnvConfig，其次用当前页面地址
+                function getApiUrl() {
+                    try {
+                        var envUrl = (window.EnvConfig && window.EnvConfig.serverUrl) || '';
+                        if (envUrl && envUrl.indexOf('http') === 0) return envUrl;
+                    } catch(e) {}
+                    return window.location.origin || '';
+                }
+
                 function handleAuthData(authData, token) {
                     if (_detected || !authData) return;
                     _detected = true;
                     try {
-                        AndroidBridge.onAuthData(authData, token || '', '');
+                        AndroidBridge.onAuthData(authData, token || '', getApiUrl());
                     } catch(e) {}
                 }
 
@@ -239,12 +248,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
     class AuthBridge(private val activity: V2BoardActivity) {
         @JavascriptInterface
-        fun onAuthData(authData: String, token: String, email: String) {
+        fun onAuthData(authData: String, token: String, serverUrl: String) {
             if (authData.isBlank()) return
             if (activity.loginDetected) return
 
             activity.loginDetected = true
-            activity.sync.session.save(authData, token, email)
+            activity.sync.session.save(authData, token, "")
+
+            // 保存后端API地址
+            if (serverUrl.isNotBlank()) {
+                activity.sync.config.serverUrl = serverUrl
+                activity.sync.resetApi()
+            }
 
             activity.launch {
                 withContext(Dispatchers.Main) {
