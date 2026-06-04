@@ -26,21 +26,6 @@
         <variable
             name="hasProviders"
             type="boolean" />
-        <variable
-            name="v2boardLoggedIn"
-            type="boolean" />
-        <variable
-            name="v2boardEmail"
-            type="String" />
-        <variable
-            name="v2boardTrafficUsed"
-            type="String" />
-        <variable
-            name="v2boardTrafficTotal"
-            type="String" />
-        <variable
-            name="v2boardExpireDate"
-            type="String" />
 
         <import type="android.view.View" />
         <import type="com.github.kr328.clash.design.MainDesign.Request" />
@@ -122,49 +107,9 @@
                     app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
                     app:text="@string/profile" />
 
-                <!-- V2Board: Not logged in -->
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenV2BoardLogin)}"
-                    android:visibility="@{!v2boardLoggedIn ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_vpn_lock"
-                    app:subtext="@string/v2board_login_hint"
-                    app:text="@string/v2board_login" />
-
-                <!-- V2Board: Logged in -->
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenV2BoardDashboard)}"
-                    android:visibility="@{v2boardLoggedIn ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_cloud_download"
-                    app:subtext="@{v2boardTrafficUsed != null &amp;&amp; !v2boardTrafficUsed.isEmpty() ? @string/format_v2board_traffic(v2boardTrafficUsed, v2boardTrafficTotal, v2boardExpireDate) : v2boardEmail}"
-                    app:text="@string/v2board_dashboard" />
-
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenV2BoardPlans)}"
-                    android:visibility="@{v2boardLoggedIn ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_get_app"
-                    app:text="@string/v2board_plans" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.V2BoardSyncNow)}"
-                    android:visibility="@{v2boardLoggedIn ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_sync"
-                    app:text="@string/v2board_sync" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProviders)}"
                     android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
@@ -175,9 +120,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenLogs)}"
-                    app:icon="@drawable/ic_baseline_assignment"
-                    app:text="@string/logs" />
+                    android:onClick="@{() -> self.request(Request.OpenV2BoardLogin)}"
+                    app:icon="@drawable/ic_baseline_vpn_lock"
+                    app:text="@string/v2board_login" />
 
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"

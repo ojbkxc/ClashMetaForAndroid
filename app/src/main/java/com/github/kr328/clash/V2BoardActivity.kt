@@ -188,7 +188,21 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     )
                 }
 
-                tryAutoSubscribe()
+                val syncResult = tryAutoSubscribe()
+
+                withContext(Dispatchers.Main) {
+                    if (syncResult.isSuccess) {
+                        activity.design?.showToast(
+                            syncResult.getOrNull() ?: "Sync completed",
+                            ToastDuration.Short
+                        )
+                    } else {
+                        activity.design?.showToast(
+                            "Sync failed: ${syncResult.exceptionOrNull()?.message}",
+                            ToastDuration.Long
+                        )
+                    }
+                }
 
                 if (activity.isLoginMode) {
                     withContext(Dispatchers.Main) {
@@ -213,12 +227,13 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             }
         }
 
-        private suspend fun tryAutoSubscribe() {
+        private suspend fun tryAutoSubscribe(): Result<String> {
             val result = activity.sync.fetchSubscribeUrl()
             if (result.isSuccess) {
                 val subscribeUrl = result.getOrNull()!!
-                V2BoardAutoSync.sync(activity, subscribeUrl)
+                return V2BoardAutoSync.sync(activity, subscribeUrl)
             }
+            return result
         }
     }
 

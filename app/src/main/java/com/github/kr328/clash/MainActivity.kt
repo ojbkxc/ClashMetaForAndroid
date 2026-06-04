@@ -1,6 +1,5 @@
 package com.github.kr328.clash
 
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -20,34 +19,19 @@ import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
-import com.github.kr328.clash.v2board.V2BoardSync
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
-import java.text.SimpleDateFormat
-import java.util.*
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
     override suspend fun main() {
-        val sync = V2BoardSync.getInstance(this)
-
-        // Only show login page on first install
-        if (!sync.session.hasEverLoggedIn) {
-            val intent = V2BoardActivity.openLogin(this)
-            val result = startActivityForResult(
-                ActivityResultContracts.StartActivityForResult(),
-                intent
-            )
-            if (result.resultCode != Activity.RESULT_OK) {
-                finish()
-                return
-            }
-        }
-
         val design = MainDesign(this)
+
         setContentDesign(design)
+
         design.fetch()
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
@@ -77,35 +61,14 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(ProfilesActivity::class.intent)
                         MainDesign.Request.OpenProviders ->
                             startActivity(ProvidersActivity::class.intent)
-                        MainDesign.Request.OpenLogs -> {
-                            if (LogcatService.running) {
-                                startActivity(LogcatActivity::class.intent)
-                            } else {
-                                startActivity(LogsActivity::class.intent)
-                            }
-                        }
                         MainDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
-
                         MainDesign.Request.OpenHelp ->
-                            startActivity(V2BoardActivity.openKnowledge(this@MainActivity))
+                            startActivity(HelpActivity::class.intent)
                         MainDesign.Request.OpenAbout ->
-                            startActivity(V2BoardActivity.openAbout(this@MainActivity))
-
+                            design.showAbout(queryAppVersionName())
                         MainDesign.Request.OpenV2BoardLogin ->
                             startActivity(V2BoardActivity.openLogin(this@MainActivity))
-                        MainDesign.Request.OpenV2BoardDashboard ->
-                            startActivity(V2BoardActivity.openDashboard(this@MainActivity))
-                        MainDesign.Request.OpenV2BoardPlans ->
-                            startActivity(V2BoardActivity.openPlans(this@MainActivity))
-                        MainDesign.Request.V2BoardSyncNow -> {
-                            launch {
-                                design.showToast("Syncing...", ToastDuration.Short)
-                                V2BoardAutoSync.checkAndSync(this@MainActivity)
-                                design.updateV2BoardStatus()
-                                design.showToast("Done", ToastDuration.Short)
-                            }
-                        }
                     }
                 }
                 if (clashRunning) {
@@ -133,39 +96,6 @@ class MainActivity : BaseActivity<MainDesign>() {
         withProfile {
             setProfileName(queryActive()?.name)
         }
-
-        // Only update local login state display, no network call
-        updateV2BoardStatus()
-    }
-
-    private suspend fun MainDesign.updateV2BoardStatus() {
-        val session = V2BoardSync.getInstance(this@MainActivity).session
-        setV2BoardLoggedIn(session.isLoggedIn, session.email)
-
-        // Show cached traffic info from Profile if available
-        if (session.isLoggedIn) {
-            withProfile {
-                val active = queryActive()
-                if (active != null && active.total > 0) {
-                    val used = active.upload + active.download
-                    val usedStr = formatBytes(used)
-                    val totalStr = formatBytes(active.total)
-                    val expire = if (active.expire > 0) {
-                        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        sdf.format(Date(active.expire))
-                    } else ""
-                    setV2BoardUserInfo(usedStr, totalStr, expire)
-                }
-            }
-        }
-    }
-
-    private fun formatBytes(bytes: Long): String {
-        if (bytes <= 0) return "0 B"
-        val units = arrayOf("B", "KB", "MB", "GB", "TB")
-        val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt()
-        val size = bytes / Math.pow(1024.0, digitGroups.toDouble())
-        return String.format("%.1f %s", size, units[digitGroups.coerceAtMost(units.size - 1)])
     }
 
     private suspend fun MainDesign.fetchTraffic() {
@@ -201,6 +131,12 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
+        }
+    }
+
+    private suspend fun queryAppVersionName(): String {
+        return withContext(Dispatchers.IO) {
+            packageManager.getPackageInfo(packageName, 0).versionName
         }
     }
 

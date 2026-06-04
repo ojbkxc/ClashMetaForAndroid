@@ -179,7 +179,8 @@ class V2BoardSync(private val context: Context) {
             val auth = session.authData
             if (auth.isBlank()) return Result.failure(Exception("Not logged in"))
 
-            val response = getApi()?.getSubscribe(auth)
+            val bearerAuth = if (auth.startsWith("Bearer ")) auth else "Bearer $auth"
+            val response = getApi()?.getSubscribe(bearerAuth)
                 ?: return Result.failure(Exception("Server URL not configured"))
 
             if (response.isSuccessful && response.body()?.data != null) {

@@ -17,14 +17,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenProxy,
         OpenProfiles,
         OpenProviders,
-        OpenLogs,
         OpenSettings,
         OpenHelp,
         OpenAbout,
         OpenV2BoardLogin,
-        OpenV2BoardDashboard,
-        OpenV2BoardPlans,
-        V2BoardSyncNow,
     }
 
     private val binding = DesignMainBinding
@@ -65,21 +61,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setHasProviders(has: Boolean) {
         withContext(Dispatchers.Main) {
             binding.hasProviders = has
-        }
-    }
-
-    suspend fun setV2BoardLoggedIn(loggedIn: Boolean, email: String? = null) {
-        withContext(Dispatchers.Main) {
-            binding.v2boardLoggedIn = loggedIn
-            binding.v2boardEmail = email ?: ""
-        }
-    }
-
-    suspend fun setV2BoardUserInfo(trafficUsed: String?, trafficTotal: String?, expireDate: String?) {
-        withContext(Dispatchers.Main) {
-            binding.v2boardTrafficUsed = trafficUsed ?: ""
-            binding.v2boardTrafficTotal = trafficTotal ?: ""
-            binding.v2boardExpireDate = expireDate ?: ""
         }
     }
 
