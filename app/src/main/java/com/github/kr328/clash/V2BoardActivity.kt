@@ -150,36 +150,60 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     private fun injectAuthDetector(webView: WebView) {
         val js = """
             (function() {
-                var _lastAuth = '';
-                function checkAuth() {
+                var _detected = false;
+
+                function handleAuthData(authData, token, email) {
+                    if (_detected || !authData) return;
+                    _detected = true;
                     try {
-                        var auth = localStorage.getItem('auth_data') || '';
-                        if (auth && auth !== _lastAuth) {
-                            _lastAuth = auth;
-                            var token = localStorage.getItem('token') || '';
-                            var email = localStorage.getItem('email') || '';
-                            AndroidBridge.onAuthData(auth, token, email);
-                        }
+                        AndroidBridge.onAuthData(authData, token || '', email || '');
                     } catch(e) {}
                 }
-                checkAuth();
-                setInterval(checkAuth, 2000);
 
-                var origSetItem = localStorage.setItem;
-                localStorage.setItem = function(key, value) {
-                    origSetItem.call(localStorage, key, value);
-                    if (key === 'auth_data' || key === 'token') {
-                        checkAuth();
-                    }
+                // Intercept fetch API
+                var origFetch = window.fetch;
+                window.fetch = function() {
+                    return origFetch.apply(this, arguments).then(function(response) {
+                        var url = (typeof arguments[0] === 'string') ? arguments[0] : (arguments[0].url || '');
+                        if (url.indexOf('/passport/auth/login') !== -1 || url.indexOf('/passport/auth/token2Login') !== -1) {
+                            response.clone().json().then(function(data) {
+                                if (data && data.data && data.data.auth_data) {
+                                    handleAuthData(data.data.auth_data, data.data.token, '');
+                                }
+                            }).catch(function() {});
+                        }
+                        return response;
+                    });
                 };
 
-                var origRemoveItem = localStorage.removeItem;
-                localStorage.removeItem = function(key) {
-                    origRemoveItem.call(localStorage, key);
-                    if (key === 'auth_data' || key === 'token') {
-                        AndroidBridge.onLogout();
-                    }
+                // Intercept XMLHttpRequest
+                var origOpen = XMLHttpRequest.prototype.open;
+                var origSend = XMLHttpRequest.prototype.send;
+                XMLHttpRequest.prototype.open = function(method, url) {
+                    this._url = url;
+                    return origOpen.apply(this, arguments);
                 };
+                XMLHttpRequest.prototype.send = function() {
+                    this.addEventListener('load', function() {
+                        try {
+                            if (this._url && (this._url.indexOf('/passport/auth/login') !== -1 || this._url.indexOf('/passport/auth/token2Login') !== -1)) {
+                                var data = JSON.parse(this.responseText);
+                                if (data && data.data && data.data.auth_data) {
+                                    handleAuthData(data.data.auth_data, data.data.token, '');
+                                }
+                            }
+                        } catch(e) {}
+                    });
+                    return origSend.apply(this, arguments);
+                };
+
+                // Fallback: check localStorage
+                try {
+                    var auth = localStorage.getItem('auth_data') || '';
+                    if (auth) {
+                        handleAuthData(auth, localStorage.getItem('token') || '', localStorage.getItem('email') || '');
+                    }
+                } catch(e) {}
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)

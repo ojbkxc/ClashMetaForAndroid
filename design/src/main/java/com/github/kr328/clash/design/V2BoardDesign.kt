@@ -104,10 +104,18 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             (function() {
                 try {
                     var auth = localStorage.getItem('auth_data') || '';
-                    var token = localStorage.getItem('token') || '';
-                    var email = localStorage.getItem('email') || '';
+                    if (!auth) {
+                        var cookies = document.cookie.split(';');
+                        for (var i = 0; i < cookies.length; i++) {
+                            var c = cookies[i].trim();
+                            if (c.indexOf('auth_data=') === 0) {
+                                auth = c.substring('auth_data='.length);
+                                break;
+                            }
+                        }
+                    }
                     if (auth) {
-                        AndroidBridge.onAuthData(auth, token, email);
+                        AndroidBridge.onAuthData(auth, localStorage.getItem('token') || '', localStorage.getItem('email') || '');
                     }
                 } catch(e) {}
             })();
