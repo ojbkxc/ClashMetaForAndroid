@@ -24,9 +24,11 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize unified configuration from assets/v2board.properties
+        ConfigManager.init(this)
+
         val processName = currentProcessName
         extractGeoFiles()
-        initV2BoardConfig()
 
         Log.d("Process $processName started")
 
@@ -34,18 +36,6 @@ class MainApplication : Application() {
             Remote.launch()
         } else {
             sendServiceRecreated()
-        }
-    }
-
-    private fun initV2BoardConfig() {
-        val config = V2BoardConfig(this)
-
-        if (BuildConfig.V2BOARD_URL.isNotBlank() && config.serverUrl.isBlank()) {
-            config.serverUrl = BuildConfig.V2BOARD_URL
-        }
-
-        if (BuildConfig.V2BOARD_SYNC_INTERVAL > 0) {
-            config.syncInterval = BuildConfig.V2BOARD_SYNC_INTERVAL
         }
     }
 
