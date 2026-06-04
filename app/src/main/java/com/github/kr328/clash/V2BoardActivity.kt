@@ -358,8 +358,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         }
 
         fun openLogin(context: Context): Intent {
+            val sync = V2BoardSync.getInstance(context)
             val url = getBaseUrl(context)
-            return createIntent(context, "$url/#/login", isLogin = true)
+            // 已登录时打开用户仪表盘，未登录时打开登录页
+            return if (sync.session.isLoggedIn) {
+                createIntent(context, "$url/#/stage", isLogin = false)
+            } else {
+                createIntent(context, "$url/#/login", isLogin = true)
+            }
         }
 
         fun openAbout(context: Context): Intent {

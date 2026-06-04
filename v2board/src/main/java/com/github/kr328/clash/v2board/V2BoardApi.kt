@@ -11,14 +11,14 @@ interface V2BoardApi {
     suspend fun getSubscribe(
         @Header("Authorization") authData: String,
     ): Response<SubscribeResponse>
-
-    data class SubscribeResponse(
-        @SerializedName("data") val data: SubscribeData?,
-        @SerializedName("message") val message: String? = null,
-    )
-
-    data class SubscribeData(
-        @SerializedName("subscribe_url") val subscribeUrl: String?,
-        @SerializedName("token") val token: String?,
-    )
 }
+
+data class SubscribeResponse(
+    @SerializedName("data") val data: SubscribeData?,
+    @SerializedName("message") val message: String? = null,
+)
+
+data class SubscribeData(
+    @SerializedName("subscribe_url") val subscribeUrl: String?,
+    @SerializedName("token") val token: String?,
+)
