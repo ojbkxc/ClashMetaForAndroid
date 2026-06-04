@@ -27,6 +27,8 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
 tasks.getByName("clean", type = Delete::class) {
