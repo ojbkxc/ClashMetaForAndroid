@@ -91,7 +91,6 @@ jobs:
           cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
       - name: Signing properties
-        if: ${{ secrets.SIGNING_STORE_PASSWORD != '' }}
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
@@ -101,6 +100,9 @@ jobs:
           echo keystore.password="$SIGNING_STORE_PASSWORD" > signing.properties
           echo key.alias="$SIGNING_KEY_ALIAS" >> signing.properties
           echo key.password="$SIGNING_KEY_PASSWORD" >> signing.properties
+
+          echo "cat signing.properties"
+          cat signing.properties
 
       - name: Release Build
         if: success()
