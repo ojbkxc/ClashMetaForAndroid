@@ -75,21 +75,16 @@ class V2BoardSync(private val context: Context) {
                     config.serverUrl = workingDomain
                 }
 
-                // 确保auth header格式正确，V2Board通常需要Bearer前缀
-                val authHeader = if (auth.startsWith("Bearer ", ignoreCase = true) ||
-                    auth.startsWith("Basic ", ignoreCase = true)) {
-                    auth
-                } else {
-                    "Bearer $auth"
-                }
+                // V2Board 后端直接用原始 auth_data (JWT) 作为 authorization header
+                // 不需要 Bearer 前缀，前端也是直接发送原始值
+                val authHeader = auth
 
                 val apiUrl = "$currentUrl/api/v1/user/getSubscribe"
                 Log.d("V2BoardSync: Fetching subscribe from: $apiUrl")
 
-                // 直接用 OkHttp 请求，不用 Retrofit，避免 Gson 泛型类型解析问题
                 val request = okhttp3.Request.Builder()
                     .url(apiUrl)
-                    .header("Authorization", authHeader)
+                    .header("authorization", authHeader)
                     .header("Accept", "application/json")
                     .get()
                     .build()
