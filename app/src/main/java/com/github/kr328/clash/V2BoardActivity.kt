@@ -413,7 +413,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     // 用 WebView JavaScript 调用前端 API 获取订阅URL
-    // 前端的请求自动带正确的 authorization header，不会出现 401/403
+    // 完全模拟前端 AuroraForV2board 的逻辑
     private fun fetchSubscribeViaJs() {
         val serverUrl = sync.config.serverUrl.ifBlank { sync.getActiveUrl() }
         val js = """
@@ -427,7 +427,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         AndroidBridge.onSubscribeError('未找到登录凭证');
                         return;
                     }
-                    // 使用后端地址，如果为空则用当前页面地址
+                    // API 使用后端地址（与前端 n["l"] 一致）
                     var baseUrl = '${serverUrl.replace("'", "\\'")}' || window.location.origin;
                     var apiUrl = baseUrl + '/api/v1/user/getSubscribe';
                     fetch(apiUrl, {
@@ -439,12 +439,10 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     }).then(function(r) { return r.json(); })
                     .then(function(json) {
                         if (json && json.data) {
-                            var url = json.data.subscribe_url || '';
+                            var subscribeUrl = json.data.subscribe_url || '';
                             var token = json.data.token || '';
-                            var finalUrl = url;
-                            if (!finalUrl && token) {
-                                finalUrl = baseUrl + '/api/v1/client/subscribe?token=' + token;
-                            }
+                            // 与前端逻辑完全一致：subscribe_url || (location.origin + "/api/v1/client/subscribe?token=" + token)
+                            var finalUrl = subscribeUrl || (location.origin + '/api/v1/client/subscribe?token=' + token);
                             if (finalUrl) {
                                 AndroidBridge.onSubscribeUrl(finalUrl);
                             } else {
