@@ -11,27 +11,41 @@
 - 帮助/关于页面直接打开 V2Board 知识库和关于页
 - 兼容原版 Clash Meta 全部功能（代理、规则、日志等）
 
-## 编译配置
+## 配置管理
 
-在项目根目录创建 `local.properties`，添加以下配置：
+### 1. V2Board 服务端配置
+
+所有 V2Board 相关配置统一存放在 `app/src/main/assets/v2board.properties` 文件中。您可以根据需要修改此文件，无需重新编译代码即可更新配置。
+
+**文件位置**: `app/src/main/assets/v2board.properties`
+
+**配置项说明**:
+
+```properties
+# 主服务端 URL（必填，用于 API 调用）
+v2board.server.url=https://your-domain.com
+
+# 备用域名列表（可选，逗号分隔，当主域名不可用时自动探测）
+v2board.server.domains=https://domain1.com,https://domain2.com,https://domain3.com
+
+# 订阅同步间隔（分钟，默认 1440 = 24小时）
+v2board.sync.interval=1440
+
+# 应用显示名称（可选，仅用于内部标识）
+v2board.app.name=蓝星网络
+```
+
+> **注意**: 
+> - 修改 `v2board.properties` 后需要重新编译 APK 才能生效（因为该文件被打包在 assets 中）。
+> - 如果只需要更新服务器地址，无需修改代码，只需替换 assets 中的配置文件并重新打包即可。
+
+### 2. 编译配置（local.properties）
+
+在项目根目录创建 `local.properties` 文件（可选，主要用于 SDK 路径和签名）：
 
 ```properties
 # Android SDK 路径（必填）
 sdk.dir=/path/to/android-sdk
-
-# ========== V2Board 配置 ==========
-
-# V2Board 主域名（可选，留空则使用内置域名列表第一个）
-v2board.url=https://jc.lxseek.com
-
-# 内置域名列表，逗号分隔（可选）
-v2board.domains=https://jc.lxseek.com,https://go.lxkjzh.top,https://cdn.lxkjzh.top
-
-# 域名更新地址（可选，当所有内置域名不可用时从此地址拉取新域名列表）
-v2board.update.url=https://update.lxseek.com
-
-# 订阅同步间隔，单位分钟（可选，默认 1440 = 24小时）
-v2board.sync.interval=1440
 
 # 自定义应用包名（可选）
 custom.application.id=com.my.compile.clash
@@ -40,9 +54,9 @@ custom.application.id=com.my.compile.clash
 remove.suffix=true
 ```
 
-### 签名配置
+### 3. 签名配置（signing.properties）
 
-创建 `signing.properties`：
+创建 `signing.properties` 文件以配置 APK 签名：
 
 ```properties
 keystore.path=/path/to/keystore/file
@@ -73,7 +87,7 @@ key.password=<password>
 
 | 文件 | 说明 |
 |------|------|
-| `V2BoardConfig.kt` | 多域名配置、更新地址、同步间隔管理 |
+| `ConfigManager.kt` | 统一配置管理，从 assets/v2board.properties 读取配置 |\n| `V2BoardConfig.kt` | 多域名配置、同步间隔管理（基于 ConfigManager） |
 | `V2BoardSession.kt` | 登录态持久化（SharedPreferences） |
 | `V2BoardApi.kt` | Retrofit API 接口定义 |
 | `V2BoardSync.kt` | 域名回退、API 调用、单例管理 |

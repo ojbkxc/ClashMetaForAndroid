@@ -22,12 +22,12 @@ class V2BoardConfig(context: Context) {
     )
 
     fun getDomainList(): List<String> {
-        val domains = BuildConfig.V2BOARD_DOMAINS
-        return if (domains.isNotBlank()) {
-            domains.split(",").map { it.trim() }.filter { it.isNotBlank() }.distinct()
-        } else {
-            listOfNotNull(serverUrl.takeIf { it.isNotBlank() })
-        }
+        // Use ConfigManager as the single source of truth for domains
+        val configDomains = ConfigManager.getDomains()
+        if (configDomains.isNotEmpty()) return configDomains
+
+        // Fallback: use the serverUrl if it's set (backward compatibility)
+        return listOfNotNull(serverUrl.takeIf { it.isNotBlank() })
     }
 
     companion object {
