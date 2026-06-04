@@ -8,7 +8,7 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.clashDir
-import com.github.kr328.clash.v2board.V2BoardConfig
+import com.github.kr328.clash.v2board.ConfigManager
 import java.io.File
 import java.io.FileOutputStream
 
