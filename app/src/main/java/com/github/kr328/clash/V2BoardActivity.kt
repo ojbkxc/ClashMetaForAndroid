@@ -282,8 +282,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             ToastDuration.Short
                         )
                     } else {
+                        val error = syncResult.exceptionOrNull()
+                        val errorMsg = if (error?.message != null) {
+                            error.message
+                        } else {
+                            error?.javaClass?.simpleName ?: "Unknown error"
+                        }
                         activity.design?.showToast(
-                            "同步失败: ${syncResult.exceptionOrNull()?.message}",
+                            "同步失败: $errorMsg",
                             ToastDuration.Long
                         )
                     }

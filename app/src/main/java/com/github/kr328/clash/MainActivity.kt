@@ -185,8 +185,9 @@ class MainActivity : BaseActivity<MainDesign>() {
         // 获取订阅URL
         val result = sync.fetchSubscribeUrl()
         if (result.isFailure) {
-            val error = result.exceptionOrNull()?.message ?: "未知错误"
-            design?.showToast("获取订阅失败: $error", ToastDuration.Long)
+            val error = result.exceptionOrNull()
+            val errorMsg = error?.message ?: error?.javaClass?.simpleName ?: "Unknown error"
+            design?.showToast("获取订阅失败: $errorMsg", ToastDuration.Long)
             return
         }
 
@@ -195,11 +196,11 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         if (syncResult.isSuccess) {
             design?.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
-            // 刷新UI显示新配置
             design?.fetch()
         } else {
-            val error = syncResult.exceptionOrNull()?.message ?: "未知错误"
-            design?.showToast("订阅同步失败: $error", ToastDuration.Long)
+            val error = syncResult.exceptionOrNull()
+            val errorMsg = error?.message ?: error?.javaClass?.simpleName ?: "Unknown error"
+            design?.showToast("订阅同步失败: $errorMsg", ToastDuration.Long)
         }
     }
 
