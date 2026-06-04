@@ -42,6 +42,9 @@ class MainActivity : BaseActivity<MainDesign>() {
         if (!session.hasEverLoggedIn) {
             session.hasEverLoggedIn = true
             startActivity(V2BoardActivity.openLogin(this@MainActivity))
+        } else if (session.isLoggedIn) {
+            // 已登录但没有配置文件时，自动同步订阅
+            autoSyncIfNoProfile()
         }
 
         design.fetch()
@@ -143,6 +146,21 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
+        }
+    }
+
+    private suspend fun autoSyncIfNoProfile() {
+        withProfile {
+            val active = queryActive()
+            if (active == null || !active.imported) {
+                // 没有活动配置，自动同步订阅
+                val sync = V2BoardSync.getInstance(this@MainActivity)
+                val result = sync.fetchSubscribeUrl()
+                if (result.isSuccess) {
+                    val subscribeUrl = result.getOrNull()!!
+                    V2BoardAutoSync.sync(this@MainActivity, subscribeUrl)
+                }
+            }
         }
     }
 
