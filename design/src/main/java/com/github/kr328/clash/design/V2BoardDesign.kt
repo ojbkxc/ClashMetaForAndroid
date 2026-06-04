@@ -135,10 +135,6 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.emptyView.visibility = View.VISIBLE
     }
 
-    fun request(request: Request) {
-        requests.trySend(request)
-    }
-
     fun destroyWebView() {
         binding.webView.destroy()
     }

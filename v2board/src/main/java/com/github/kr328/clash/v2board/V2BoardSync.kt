@@ -141,39 +141,6 @@ class V2BoardSync(private val context: Context) {
         }
     }
 
-    suspend fun ensureWorkingDomain(): Boolean {
-        val current = getActiveUrl()
-        if (current.isBlank()) {
-            return findWorkingDomain() != null
-        }
-
-        if (probeDomain(current)) return true
-
-        resetApi()
-        return findWorkingDomain() != null
-    }
-
-    suspend fun login(email: String, password: String): Result<V2BoardApi.LoginData> {
-        return try {
-            ensureWorkingDomain()
-
-            val response = getApi()?.login(email, password)
-                ?: return Result.failure(Exception("Server URL not configured"))
-
-            if (response.isSuccessful && response.body()?.data != null) {
-                val data = response.body()!!.data!!
-                session.save(data.authData, data.token, email)
-                Result.success(data)
-            } else {
-                val msg = response.body()?.message ?: response.errorBody()?.string() ?: "Login failed"
-                Result.failure(Exception(msg))
-            }
-        } catch (e: Exception) {
-            Log.w("V2Board login error: ${e.message}")
-            Result.failure(e)
-        }
-    }
-
     suspend fun fetchSubscribeUrl(): Result<String> {
         return try {
             val auth = session.authData

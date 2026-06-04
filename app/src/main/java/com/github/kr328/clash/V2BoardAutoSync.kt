@@ -47,18 +47,4 @@ object V2BoardAutoSync {
             }
         }
     }
-
-    suspend fun checkAndSync(context: Context) {
-        withContext(Dispatchers.IO) {
-            val sync = V2BoardSync.getInstance(context)
-            if (!sync.session.isLoggedIn) return@withContext
-
-            sync.ensureWorkingDomain()
-
-            val result = sync.fetchSubscribeUrl()
-            if (result.isSuccess) {
-                sync(context, result.getOrNull()!!)
-            }
-        }
-    }
 }

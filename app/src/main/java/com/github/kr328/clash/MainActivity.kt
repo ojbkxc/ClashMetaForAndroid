@@ -19,6 +19,7 @@ import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
+import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 import java.util.concurrent.TimeUnit
@@ -29,6 +30,13 @@ class MainActivity : BaseActivity<MainDesign>() {
         val design = MainDesign(this)
 
         setContentDesign(design)
+
+        // First launch: open login page
+        val session = V2BoardSync.getInstance(this).session
+        if (!session.hasEverLoggedIn) {
+            session.hasEverLoggedIn = true
+            startActivity(V2BoardActivity.openLogin(this@MainActivity))
+        }
 
         design.fetch()
 

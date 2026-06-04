@@ -59,7 +59,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                loginDetected = false
+                // Don't reset loginDetected here - once login is detected,
+                // keep it true to prevent re-detection on page redirect
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -294,9 +295,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
     override fun finish() {
         if (isLoginMode && !loginDetected) {
-            if (!sync.session.isLoggedIn) {
-                setResult(Activity.RESULT_CANCELED)
-            }
+            setResult(Activity.RESULT_CANCELED)
         }
         super.finish()
     }
@@ -329,16 +328,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun openLogin(context: Context): Intent {
             val url = getBaseUrl(context)
             return createIntent(context, "$url/#/login", isLogin = true)
-        }
-
-        fun openDashboard(context: Context): Intent {
-            val url = getBaseUrl(context)
-            return createIntent(context, "$url/#/dashboard")
-        }
-
-        fun openPlans(context: Context): Intent {
-            val url = getBaseUrl(context)
-            return createIntent(context, "$url/#/plan")
         }
 
         fun openAbout(context: Context): Intent {
