@@ -9,6 +9,7 @@ import android.net.http.SslError
 import android.os.Bundle
 import android.view.View
 import android.webkit.*
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.design.V2BoardDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.v2board.V2BoardSync
@@ -255,10 +256,13 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.loginDetected = true
             activity.sync.session.save(authData, token, "")
 
+            Log.d("V2Board: onAuthData called, serverUrl=$serverUrl")
+
             // 保存后端API地址
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
                 activity.sync.resetApi()
+                Log.d("V2Board: Saved backend URL: $serverUrl")
             }
 
             activity.launch {
@@ -282,13 +286,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             "同步失败: ${syncResult.exceptionOrNull()?.message}",
                             ToastDuration.Long
                         )
-                    }
-                }
-
-                if (activity.isLoginMode) {
-                    withContext(Dispatchers.Main) {
-                        activity.setResult(Activity.RESULT_OK)
-                        activity.finish()
                     }
                 }
             }

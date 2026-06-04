@@ -29,19 +29,22 @@ class V2BoardSync(private val context: Context) {
         val url = getActiveUrl()
         if (url.isBlank()) return null
 
-        if (api != null && currentBaseUrl == url) return api
+        // Retrofit requires base URL to end with /
+        val baseUrl = if (url.endsWith("/")) url else "$url/"
+
+        if (api != null && currentBaseUrl == baseUrl) return api
 
         synchronized(this) {
-            if (api != null && currentBaseUrl == url) return api
+            if (api != null && currentBaseUrl == baseUrl) return api
 
             api = Retrofit.Builder()
-                .baseUrl(url)
+                .baseUrl(baseUrl)
                 .client(httpClient)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build()
                 .create(V2BoardApi::class.java)
 
-            currentBaseUrl = url
+            currentBaseUrl = baseUrl
         }
 
         return api
@@ -90,6 +93,8 @@ class V2BoardSync(private val context: Context) {
 
             // Ensure we have a working server URL before making the request
             var currentUrl = getActiveUrl()
+            Log.d("V2BoardSync: Active URL: $currentUrl")
+
             if (currentUrl.isBlank()) {
                 val workingDomain = findWorkingDomain()
                 if (workingDomain == null) {
@@ -108,6 +113,8 @@ class V2BoardSync(private val context: Context) {
                 "Bearer $auth"
             }
 
+            Log.d("V2BoardSync: Fetching subscribe from: $currentUrl/api/v1/user/getSubscribe")
+
             val response = getApi()?.getSubscribe(authHeader)
                 ?: return Result.failure(Exception("Server URL not configured"))
 
@@ -122,11 +129,15 @@ class V2BoardSync(private val context: Context) {
                 val subscribeUrl = data.subscribeUrl
                 val token = data.token
 
+                Log.d("V2BoardSync: subscribe_url=$subscribeUrl, token=$token")
+
                 val finalUrl = when {
                     !subscribeUrl.isNullOrBlank() -> subscribeUrl
                     !token.isNullOrBlank() -> "${getActiveUrl()}/api/v1/client/subscribe?token=$token"
                     else -> null
                 }
+
+                Log.d("V2BoardSync: Final subscribe URL: $finalUrl")
 
                 if (finalUrl != null) {
                     // 验证URL格式

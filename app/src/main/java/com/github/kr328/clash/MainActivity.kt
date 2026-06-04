@@ -150,17 +150,49 @@ class MainActivity : BaseActivity<MainDesign>() {
     }
 
     private suspend fun autoSyncIfNoProfile() {
-        withProfile {
+        // 检查是否有活动配置
+        val hasActive = withProfile {
             val active = queryActive()
-            if (active == null || !active.imported) {
-                // 没有活动配置，自动同步订阅
-                val sync = V2BoardSync.getInstance(this@MainActivity)
-                val result = sync.fetchSubscribeUrl()
-                if (result.isSuccess) {
-                    val subscribeUrl = result.getOrNull()!!
-                    V2BoardAutoSync.sync(this@MainActivity, subscribeUrl)
-                }
+            active != null && active.imported
+        }
+        if (hasActive) return
+
+        // 检查登录状态
+        val sync = V2BoardSync.getInstance(this)
+        val session = sync.session
+        if (!session.isLoggedIn) return
+
+        // 检查后端地址是否已保存
+        val serverUrl = sync.config.serverUrl
+        if (serverUrl.isBlank()) {
+            val configUrl = sync.config.getDomainList().firstOrNull()
+            if (configUrl.isNullOrBlank()) {
+                design?.showToast("未配置服务器地址，请先登录", ToastDuration.Long)
+                return
             }
+        }
+
+        // 显示同步中提示
+        design?.showToast("正在自动同步订阅...", ToastDuration.Short)
+
+        // 获取订阅URL
+        val result = sync.fetchSubscribeUrl()
+        if (result.isFailure) {
+            val error = result.exceptionOrNull()?.message ?: "未知错误"
+            design?.showToast("获取订阅失败: $error", ToastDuration.Long)
+            return
+        }
+
+        val subscribeUrl = result.getOrNull()!!
+        val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
+
+        if (syncResult.isSuccess) {
+            design?.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
+            // 刷新UI显示新配置
+            design?.fetch()
+        } else {
+            val error = syncResult.exceptionOrNull()?.message ?: "未知错误"
+            design?.showToast("订阅同步失败: $error", ToastDuration.Long)
         }
     }
 
