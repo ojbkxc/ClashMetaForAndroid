@@ -90,9 +90,9 @@ class V2BoardSync(private val context: Context) {
                 .build()
 
             val response = httpClient.newCall(request).execute()
-            val responseBody = response.body()?.string() ?: ""
+            val responseBody = response.body?.string() ?: ""
 
-            Log.d("V2BoardSync: Response code: ${response.code()}, body length: ${responseBody.length}")
+            Log.d("V2BoardSync: Response code: ${response.code}, body length: ${responseBody.length}")
 
             if (response.isSuccessful) {
                 val json = JSONObject(responseBody)
@@ -128,18 +128,18 @@ class V2BoardSync(private val context: Context) {
                     Result.failure(Exception(msg))
                 }
             } else {
-                Log.w("V2BoardSync: HTTP error: ${response.code()}")
+                Log.w("V2BoardSync: HTTP error: ${response.code}")
 
-                if (response.code() == 401 || response.code() == 403) {
+                if (response.code == 401 || response.code == 403) {
                     session.clear()
                     Result.failure(Exception("Session expired, please login again"))
                 } else {
                     try {
                         val json = JSONObject(responseBody)
-                        val msg = json.optString("message", "HTTP ${response.code()}")
+                        val msg = json.optString("message", "HTTP ${response.code}")
                         Result.failure(Exception(msg))
                     } catch (_: Exception) {
-                        Result.failure(Exception("HTTP ${response.code()}"))
+                        Result.failure(Exception("HTTP ${response.code}"))
                     }
                 }
             }
