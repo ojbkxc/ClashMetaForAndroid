@@ -86,6 +86,18 @@ class V2BoardSync(private val context: Context) {
             val auth = session.authData
             if (auth.isBlank()) return Result.failure(Exception("Not logged in"))
 
+            // Ensure we have a working server URL before making the request
+            var currentUrl = getActiveUrl()
+            if (currentUrl.isBlank()) {
+                val workingDomain = findWorkingDomain()
+                if (workingDomain == null) {
+                    return Result.failure(Exception("No working server URL found"))
+                }
+                currentUrl = workingDomain
+                config.serverUrl = workingDomain
+                resetApi()
+            }
+
             val response = getApi()?.getSubscribe(auth)
                 ?: return Result.failure(Exception("Server URL not configured"))
 
