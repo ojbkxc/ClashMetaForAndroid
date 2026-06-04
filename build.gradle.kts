@@ -96,7 +96,7 @@ subprojects {
             }
         }
 
-        // ndkVersion = "29.0.14206865"
+        ndkVersion = "29.0.14206865"
 
         compileSdkVersion(defaultConfig.targetSdk!!)
 
@@ -191,7 +191,7 @@ subprojects {
 
         buildFeatures.apply {
             dataBinding {
-                enable = name != "hideapi"
+                isEnabled = name != "hideapi"
             }
         }
 
