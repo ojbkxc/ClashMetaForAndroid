@@ -43,6 +43,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                                 if (design.canGoBack()) design.goBack() else finish()
                             }
                             V2BoardDesign.Request.Refresh -> design.reload()
+                            V2BoardDesign.Request.OpenInBrowser -> {}
                         }
                     }
                 }

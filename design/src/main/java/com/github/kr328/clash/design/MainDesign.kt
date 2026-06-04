@@ -2,8 +2,10 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.core.util.trafficTotal
+import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
@@ -61,6 +63,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setHasProviders(has: Boolean) {
         withContext(Dispatchers.Main) {
             binding.hasProviders = has
+        }
+    }
+
+    suspend fun showAbout(versionName: String) {
+        withContext(Dispatchers.Main) {
+            val binding = DesignAboutBinding.inflate(context.layoutInflater).apply {
+                this.versionName = versionName
+            }
+
+            AlertDialog.Builder(context)
+                .setView(binding.root)
+                .show()
         }
     }
 
