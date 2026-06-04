@@ -116,11 +116,22 @@ class V2BoardSync(private val context: Context) {
                 if (data.token != null && data.token != session.userToken) {
                     session.userToken = data.token
                 }
-                val url = data.subscribeUrl
-                if (!url.isNullOrBlank()) {
+
+                // 优先使用 subscribe_url，如果为空则用 token 构造URL
+                // 与前端逻辑保持一致: subscribe_url || (origin + "/api/v1/client/subscribe?token=" + token)
+                val subscribeUrl = data.subscribeUrl
+                val token = data.token
+
+                val finalUrl = when {
+                    !subscribeUrl.isNullOrBlank() -> subscribeUrl
+                    !token.isNullOrBlank() -> "${getActiveUrl()}/api/v1/client/subscribe?token=$token"
+                    else -> null
+                }
+
+                if (finalUrl != null) {
                     // 验证URL格式
-                    if (url.startsWith("http://") || url.startsWith("https://")) {
-                        Result.success(url)
+                    if (finalUrl.startsWith("http://") || finalUrl.startsWith("https://")) {
+                        Result.success(finalUrl)
                     } else {
                         Result.failure(Exception("Invalid subscribe URL format"))
                     }
