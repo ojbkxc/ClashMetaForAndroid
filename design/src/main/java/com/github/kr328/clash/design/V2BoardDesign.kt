@@ -143,6 +143,10 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.webView.addJavascriptInterface(obj, name)
     }
 
+    fun evaluateJavascript(script: String) {
+        binding.webView.evaluateJavascript(script, null)
+    }
+
     fun showNoServerUrl() {
         binding.webView.visibility = View.GONE
         binding.emptyView.visibility = View.VISIBLE

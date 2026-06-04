@@ -169,39 +169,21 @@ class MainActivity : BaseActivity<MainDesign>() {
         val session = sync.session
         if (!session.isLoggedIn) return
 
-        // 检查后端地址是否已保存
-        val serverUrl = sync.config.serverUrl
-        if (serverUrl.isBlank()) {
-            val configUrl = sync.config.getDomainList().firstOrNull()
-            if (configUrl.isNullOrBlank()) {
-                design?.showToast("未配置服务器地址，请先登录", ToastDuration.Long)
+        // 尝试通过 Kotlin API 获取订阅（可能因 JWT 过期失败）
+        val result = sync.fetchSubscribeUrl()
+        if (result.isSuccess) {
+            val subscribeUrl = result.getOrNull()!!
+            val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
+            if (syncResult.isSuccess) {
+                design?.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
+                design?.fetch()
                 return
             }
         }
 
-        // 显示同步中提示
-        design?.showToast("正在自动同步订阅...", ToastDuration.Short)
-
-        // 获取订阅URL
-        val result = sync.fetchSubscribeUrl()
-        if (result.isFailure) {
-            val error = result.exceptionOrNull()
-            val errorMsg = error?.message ?: error?.javaClass?.simpleName ?: "Unknown error"
-            design?.showToast("获取订阅失败: $errorMsg", ToastDuration.Long)
-            return
-        }
-
-        val subscribeUrl = result.getOrNull()!!
-        val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
-
-        if (syncResult.isSuccess) {
-            design?.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
-            design?.fetch()
-        } else {
-            val error = syncResult.exceptionOrNull()
-            val errorMsg = error?.message ?: error?.javaClass?.simpleName ?: "Unknown error"
-            design?.showToast("订阅同步失败: $errorMsg", ToastDuration.Long)
-        }
+        // Kotlin 方式失败，静默处理
+        // 用户点击"登录"按钮会打开 V2BoardActivity，通过 JavaScript 方式获取订阅
+        Log.d("V2Board: autoSyncIfNoProfile: Kotlin API failed, user needs to open login page")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

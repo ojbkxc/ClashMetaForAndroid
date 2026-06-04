@@ -60,14 +60,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                // Don't reset loginDetected here - once login is detected,
-                // keep it true to prevent re-detection on page redirect
+                // 页面开始加载时就注入 auth_data，确保前端 router guard 能读取
+                if (view != null) {
+                    restoreAuthToLocalStorage(view)
+                }
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
                     if (url != null && !url.startsWith("file://")) {
+                        // 先注入 auth_data 到 localStorage，确保前端 router guard 能读取
+                        restoreAuthToLocalStorage(view)
+                        // 再注入登录检测
                         injectAuthDetector(view)
                     }
                 }
@@ -149,6 +154,26 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 }
             }
         }
+    }
+
+    // 将已保存的 auth_data 注入到 WebView 的 localStorage
+    // 确保前端 router guard 能读取到登录状态
+    private fun restoreAuthToLocalStorage(webView: WebView) {
+        val authData = sync.session.authData
+        if (authData.isBlank()) return
+
+        val js = """
+            (function() {
+                try {
+                    var key = '__AURORA__authorization';
+                    var current = localStorage.getItem(key) || '';
+                    if (!current || current !== '${authData.replace("'", "\\'")}') {
+                        localStorage.setItem(key, '${authData.replace("'", "\\'")}');
+                    }
+                } catch(e) {}
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
     }
 
     private fun injectAuthDetector(webView: WebView) {
@@ -271,9 +296,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         "登录成功，正在同步订阅...",
                         ToastDuration.Short
                     )
+                    // 用 JavaScript 调用前端的 API，自动带正确的 authorization header
+                    activity.fetchSubscribeViaJs()
                 }
+            }
+        }
 
-                val syncResult = tryAutoSubscribe()
+        @JavascriptInterface
+        fun onSubscribeUrl(subscribeUrl: String) {
+            if (subscribeUrl.isBlank()) return
+            Log.d("V2Board: onSubscribeUrl called, url=$subscribeUrl")
+
+            activity.launch {
+                val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
@@ -293,6 +328,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             ToastDuration.Long
                         )
                     }
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun onSubscribeError(error: String) {
+            Log.w("V2Board: onSubscribeError: $error")
+            activity.launch {
+                withContext(Dispatchers.Main) {
+                    activity.design?.showToast(
+                        "获取订阅失败: $error",
+                        ToastDuration.Long
+                    )
                 }
             }
         }
@@ -321,14 +369,59 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             }
         }
 
-        private suspend fun tryAutoSubscribe(): Result<String> {
-            val result = activity.sync.fetchSubscribeUrl()
-            if (result.isSuccess) {
-                val subscribeUrl = result.getOrNull()!!
-                return V2BoardAutoSync.sync(activity, subscribeUrl)
-            }
-            return result
-        }
+    }
+
+    // 用 WebView JavaScript 调用前端 API 获取订阅URL
+    // 前端的请求自动带正确的 authorization header，不会出现 401/403
+    private fun fetchSubscribeViaJs() {
+        val serverUrl = sync.config.serverUrl.ifBlank { sync.getActiveUrl() }
+        val js = """
+            (function() {
+                try {
+                    var auth = localStorage.getItem('__AURORA__authorization') || '';
+                    if (!auth) {
+                        auth = localStorage.getItem('authorization') || '';
+                    }
+                    if (!auth) {
+                        AndroidBridge.onSubscribeError('未找到登录凭证');
+                        return;
+                    }
+                    // 使用后端地址，如果为空则用当前页面地址
+                    var baseUrl = '${serverUrl.replace("'", "\\'")}' || window.location.origin;
+                    var apiUrl = baseUrl + '/api/v1/user/getSubscribe';
+                    fetch(apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'authorization': auth,
+                            'Accept': 'application/json'
+                        }
+                    }).then(function(r) { return r.json(); })
+                    .then(function(json) {
+                        if (json && json.data) {
+                            var url = json.data.subscribe_url || '';
+                            var token = json.data.token || '';
+                            var finalUrl = url;
+                            if (!finalUrl && token) {
+                                finalUrl = baseUrl + '/api/v1/client/subscribe?token=' + token;
+                            }
+                            if (finalUrl) {
+                                AndroidBridge.onSubscribeUrl(finalUrl);
+                            } else {
+                                AndroidBridge.onSubscribeError('服务器未返回订阅地址');
+                            }
+                        } else {
+                            var msg = json.message || json.msg || JSON.stringify(json);
+                            AndroidBridge.onSubscribeError('服务器返回异常: ' + msg);
+                        }
+                    }).catch(function(e) {
+                        AndroidBridge.onSubscribeError('请求失败: ' + (e.message || e));
+                    });
+                } catch(e) {
+                    AndroidBridge.onSubscribeError('脚本错误: ' + e.message);
+                }
+            })();
+        """.trimIndent()
+        design?.evaluateJavascript(js)
     }
 
     override fun finish() {
