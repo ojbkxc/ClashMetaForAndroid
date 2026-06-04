@@ -38,7 +38,6 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.self = this
 
         binding.activityBarLayout.applyFrom(context)
-        binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
 
         binding.webView.settings.apply {
             @SuppressLint("SetJavaScriptEnabled")
