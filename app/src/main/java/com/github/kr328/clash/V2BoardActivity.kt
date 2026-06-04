@@ -12,6 +12,7 @@ import android.webkit.*
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.design.V2BoardDesign
 import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
