@@ -72,10 +72,20 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
                     if (url != null && !url.startsWith("file://")) {
-                        // 先注入 auth_data 到 localStorage，确保前端 router guard 能读取
+                        // 先注入 auth_data 到 localStorage
                         restoreAuthToLocalStorage(view)
                         // 再注入登录检测
                         injectAuthDetector(view)
+
+                        // 如果已登录但页面停在登录页，强制跳转到仪表盘
+                        // evaluateJavascript 是异步的，router guard 可能先于注入执行
+                        if (sync.session.isLoggedIn && url.contains("/login")) {
+                            val serverUrl = sync.config.serverUrl.ifBlank { sync.getActiveUrl() }
+                            val dashboardUrl = "$serverUrl/#/stage"
+                            SyncLog.add("已登录但页面在登录页，跳转到仪表盘")
+                            view.loadUrl(dashboardUrl)
+                            return
+                        }
 
                         // 如果已登录但还没有触发过登录检测，检查是否需要自动同步
                         if (!loginDetected && sync.session.isLoggedIn) {
@@ -350,6 +360,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 } catch (_: Exception) {}
             }
             if (cleanAuth.isBlank()) return
+
+            // 如果已登录且 auth_data 相同，不重复触发同步
+            val existingAuth = activity.sync.session.authData
+            if (existingAuth.isNotBlank() && existingAuth == cleanAuth) {
+                activity.loginDetected = true
+                SyncLog.add("已登录，跳过重复同步")
+                return
+            }
 
             activity.loginDetected = true
             activity.sync.session.save(cleanAuth, token, "")

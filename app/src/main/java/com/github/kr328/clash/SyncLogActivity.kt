@@ -1,12 +1,15 @@
 package com.github.kr328.clash
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import com.github.kr328.clash.v2board.SyncLog
-import android.view.Gravity
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.ViewGroup
@@ -24,32 +27,29 @@ class SyncLogActivity : AppCompatActivity() {
             setPadding(pad, pad, pad, pad)
         }
 
-        // 标题
-        val title = TextView(this).apply {
-            text = "同步日志"
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTypeface(null, Typeface.BOLD)
+        // 标题栏：标题 + 复制按钮
+        val titleBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
             val mb = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics).toInt()
             setPadding(0, 0, 0, mb)
         }
-        layout.addView(title)
+
+        val title = TextView(this).apply {
+            text = "日志"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTypeface(null, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        titleBar.addView(title)
 
         // 日志文件路径提示
         val logFile = File(getExternalFilesDir(null), "sync_log.txt")
         val pathText = TextView(this).apply {
-            text = "日志文件: ${logFile.absolutePath}"
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            text = "文件: ${logFile.absolutePath}"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             val mb = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics).toInt()
             setPadding(0, 0, 0, mb)
-        }
-        layout.addView(pathText)
-
-        // 日志内容
-        val logContent = TextView(this).apply {
-            typeface = Typeface.MONOSPACE
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            val pad = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics).toInt()
-            setPadding(pad, pad, pad, pad)
         }
 
         // 从文件读取日志
@@ -60,16 +60,44 @@ class SyncLogActivity : AppCompatActivity() {
                 "读取日志文件失败: ${e.message}"
             }
         } else {
-            // 回退到内存中的日志
             SyncLog.getFormatted()
         }
-        logContent.text = if (content.isBlank()) "暂无日志" else content
+        val logText = if (content.isBlank()) "暂无日志" else content
+
+        // 复制按钮
+        val copyBtn = Button(this).apply {
+            text = "复制"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            isAllCaps = false
+            minWidth = 0
+            minimumWidth = 0
+            val px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics).toInt()
+            setPadding(px, 0, px, 0)
+            setOnClickListener {
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("sync_log", logText))
+                Toast.makeText(this@SyncLogActivity, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            }
+        }
+        titleBar.addView(copyBtn)
+
+        layout.addView(titleBar)
+        layout.addView(pathText)
+
+        // 日志内容
+        val logContent = TextView(this).apply {
+            text = logText
+            typeface = Typeface.MONOSPACE
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            val pad = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics).toInt()
+            setPadding(pad, pad, pad, pad)
+            setTextIsSelectable(true)
+        }
 
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
         }
 
-        // 用 HorizontalScrollView 包裹以支持横向滚动
         val hScroll = HorizontalScrollView(this).apply {
             addView(logContent, ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,

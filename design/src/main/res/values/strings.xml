@@ -361,12 +361,12 @@
     <!-- V2Board -->
     <string name="v2board_login">Login</string>
     <string name="v2board_login_hint">Sign in to your subscription account</string>
-    <string name="v2board_dashboard">My Account</string>
+    <string name="v2board_dashboard">Account</string>
     <string name="v2board_plans">Subscription Plans</string>
     <string name="v2board_sync">Sync Subscription</string>
     <string name="v2board_no_server_url">Server URL not configured</string>
     <string name="v2board_no_server_url_hint">Please set v2board.url in local.properties</string>
     <string name="v2board_open_in_browser">Open in browser</string>
-    <string name="v2board_sync_log">Sync Log</string>
+    <string name="v2board_sync_log">Log</string>
     <string name="format_v2board_traffic">%1$s / %2$s | Expires: %3$s</string>
 </resources>
