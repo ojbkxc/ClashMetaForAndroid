@@ -23,9 +23,9 @@ object V2BoardAutoSync {
                 val intervalMs = TimeUnit.MINUTES.toMillis(intervalMinutes)
                 val profileName = ConfigManager.getAppName()
 
-                Log.d("$TAG: Syncing subscription: name=$profileName, url=$subscribeUrl, interval=${intervalMinutes}min")
+                Log.d("$TAG: Syncing subscription: name=$profileName, url=***, interval=${intervalMinutes}min")
                 SyncLog.add("开始同步订阅: $profileName")
-                SyncLog.add("订阅URL: $subscribeUrl")
+                SyncLog.add("订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
 
                 // 验证订阅URL格式
                 if (!subscribeUrl.startsWith("http://") && !subscribeUrl.startsWith("https://")) {

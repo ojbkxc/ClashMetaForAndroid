@@ -132,6 +132,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.ViewSyncLog)}"
+                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/v2board_sync_log" />
 
@@ -140,7 +141,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenSettings)}"
-                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_settings"
                     app:text="@string/settings" />
 

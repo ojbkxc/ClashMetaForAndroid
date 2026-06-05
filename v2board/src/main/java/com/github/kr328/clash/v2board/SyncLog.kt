@@ -44,6 +44,27 @@ object SyncLog {
         listeners.forEach { it() }
     }
 
+    /**
+     * 域名脱敏: https://cdn.lxseek.link → https://c***.l***.***
+     */
+    fun maskUrl(url: String): String {
+        return try {
+            val uri = java.net.URI(url)
+            val host = uri.host ?: return "***"
+            val parts = host.split(".")
+            if (parts.size >= 2) {
+                val masked = parts.joinToString(".") { part ->
+                    if (part.length <= 2) "***" else "${part.first()}***"
+                }
+                "${uri.scheme}://$masked"
+            } else {
+                "${uri.scheme}://***"
+            }
+        } catch (_: Exception) {
+            "***"
+        }
+    }
+
     fun addListener(listener: () -> Unit) {
         listeners.add(listener)
     }

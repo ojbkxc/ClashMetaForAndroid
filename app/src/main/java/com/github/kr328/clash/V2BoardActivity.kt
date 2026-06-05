@@ -372,16 +372,16 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.loginDetected = true
             activity.sync.session.save(cleanAuth, token, "")
 
-            Log.d("V2Board: onAuthData called, serverUrl=$serverUrl")
+            Log.d("V2Board: onAuthData called")
             SyncLog.add("登录成功，获取到认证信息")
-            SyncLog.add("后端地址: $serverUrl")
+            SyncLog.add("后端地址: ${SyncLog.maskUrl(serverUrl)}")
             SyncLog.add("auth_data: ${cleanAuth.take(30)}...")
 
             // 保存后端API地址
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
                 activity.sync.resetApi()
-                Log.d("V2Board: Saved backend URL: $serverUrl")
+                Log.d("V2Board: Saved backend URL")
             }
 
             activity.launch {
@@ -407,11 +407,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         @JavascriptInterface
         fun onSubscribeUrl(subscribeUrl: String) {
             if (subscribeUrl.isBlank()) return
-            Log.d("V2Board: onSubscribeUrl called, url=$subscribeUrl")
-            SyncLog.add("获取到订阅URL: $subscribeUrl")
+            Log.d("V2Board: onSubscribeUrl called")
+            SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
 
             activity.launch {
-                Log.d("V2Board: Starting sync with URL: $subscribeUrl")
+                Log.d("V2Board: Starting sync")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl)
 
                 withContext(Dispatchers.Main) {
