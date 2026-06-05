@@ -14,6 +14,7 @@ import com.github.kr328.clash.design.V2BoardDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.V2BoardSync
+import com.github.kr328.clash.v2board.SyncLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -317,6 +318,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.sync.session.save(authData, token, "")
 
             Log.d("V2Board: onAuthData called, serverUrl=$serverUrl")
+            SyncLog.add("登录成功，获取到认证信息")
+            SyncLog.add("后端地址: $serverUrl")
+            SyncLog.add("auth_data长度: ${authData.length}")
 
             // 保存后端API地址
             if (serverUrl.isNotBlank()) {
@@ -332,12 +336,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         ToastDuration.Short
                     )
                 }
+                SyncLog.add("等待3秒后获取订阅...")
 
                 // 延迟3秒，确保前端 localStorage 已写入 auth_data
                 kotlinx.coroutines.delay(3000)
 
                 withContext(Dispatchers.Main) {
                     // 用 JavaScript 调用前端的 API，自动带正确的 authorization header
+                    SyncLog.add("通过JS获取订阅URL...")
                     activity.fetchSubscribeViaJs()
                 }
             }
@@ -347,6 +353,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun onSubscribeUrl(subscribeUrl: String) {
             if (subscribeUrl.isBlank()) return
             Log.d("V2Board: onSubscribeUrl called, url=$subscribeUrl")
+            SyncLog.add("获取到订阅URL: $subscribeUrl")
 
             activity.launch {
                 Log.d("V2Board: Starting sync with URL: $subscribeUrl")
@@ -355,6 +362,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
                         Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
+                        SyncLog.add("同步成功: ${syncResult.getOrNull()}")
                         activity.design?.showToast(
                             syncResult.getOrNull() ?: "同步完成",
                             ToastDuration.Short
@@ -367,6 +375,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             error?.javaClass?.simpleName ?: "Unknown error"
                         }
                         Log.w("V2Board: Sync failed: $errorMsg")
+                        SyncLog.add("同步失败: $errorMsg")
                         activity.design?.showToast(
                             "同步失败: $errorMsg",
                             ToastDuration.Long
@@ -379,11 +388,13 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         @JavascriptInterface
         fun log(message: String) {
             Log.d("V2Board JS: $message")
+            SyncLog.add("JS: $message")
         }
 
         @JavascriptInterface
         fun onSubscribeError(error: String) {
             Log.w("V2Board: onSubscribeError: $error")
+            SyncLog.add("获取订阅失败: $error")
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(

@@ -23,6 +23,7 @@ import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
+import com.github.kr328.clash.v2board.SyncLog
 import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -38,11 +39,18 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        // 已登录但没有配置文件时，自动同步订阅
-        val session = V2BoardSync.getInstance(this).session
-        if (session.isLoggedIn) {
-            autoSyncIfNoProfile()
+        // 更新登录状态和日志
+        fun updateSyncUI() {
+            val sync = V2BoardSync.getInstance(this@MainActivity)
+            launch {
+                design.setLoginStatus(sync.session.isLoggedIn)
+                design.setSyncLog(SyncLog.getFormatted())
+                design.setSyncLogVisible(SyncLog.getAll().isNotEmpty())
+            }
         }
+
+        // 初始更新UI
+        updateSyncUI()
 
         design.fetch()
 
@@ -54,11 +62,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                     when (it) {
                         Event.ActivityStart -> {
                             design.fetch()
-                            // 从登录页返回后，检查是否需要同步
-                            val s = V2BoardSync.getInstance(this@MainActivity).session
-                            if (s.isLoggedIn) {
-                                launch { autoSyncIfNoProfile() }
-                            }
+                            updateSyncUI()
                         }
                         Event.ServiceRecreated,
                         Event.ClashStop, Event.ClashStart,
@@ -86,8 +90,31 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(V2BoardActivity.openKnowledge(this@MainActivity))
                         MainDesign.Request.OpenAbout ->
                             startActivity(V2BoardActivity.openAbout(this@MainActivity))
-                        MainDesign.Request.OpenV2BoardLogin ->
-                            startActivity(V2BoardActivity.openLogin(this@MainActivity))
+                        MainDesign.Request.OpenV2BoardLogin -> {
+                            val sync = V2BoardSync.getInstance(this@MainActivity)
+                            if (sync.session.isLoggedIn) {
+                                // 已登录，直接触发同步
+                                launch {
+                                    SyncLog.clear()
+                                    SyncLog.add("--- 登录后自动同步 ---")
+                                    updateSyncUI()
+                                    autoSyncSubscription(design)
+                                    updateSyncUI()
+                                }
+                            } else {
+                                // 未登录，打开登录页（登录成功后3秒会自动同步）
+                                startActivity(V2BoardActivity.openLogin(this@MainActivity))
+                            }
+                        }
+                        MainDesign.Request.SyncSubscription -> {
+                            launch {
+                                SyncLog.clear()
+                                SyncLog.add("--- 手动同步 ---")
+                                updateSyncUI()
+                                autoSyncSubscription(design)
+                                updateSyncUI()
+                            }
+                        }
                     }
                 }
                 if (clashRunning) {
@@ -153,34 +180,54 @@ class MainActivity : BaseActivity<MainDesign>() {
         }
     }
 
-    private suspend fun autoSyncIfNoProfile() {
-        // 检查是否有活动配置
-        val hasActive = withProfile {
-            val active = queryActive()
-            active != null && active.imported
-        }
-        if (hasActive) return
-
-        // 检查登录状态
+    private suspend fun autoSyncSubscription(design: MainDesign) {
         val sync = V2BoardSync.getInstance(this)
         val session = sync.session
-        if (!session.isLoggedIn) return
 
-        // 尝试通过 Kotlin API 获取订阅（可能因 JWT 过期失败）
+        if (!session.isLoggedIn) {
+            SyncLog.add("未登录，请先登录")
+            design.setSyncLog(SyncLog.getFormatted())
+            design.setSyncLogVisible(true)
+            return
+        }
+
+        SyncLog.add("已登录，开始通过API获取订阅...")
+
+        // 方式一：通过 Kotlin API 获取订阅（推荐，不需要 WebView）
         val result = sync.fetchSubscribeUrl()
+
         if (result.isSuccess) {
             val subscribeUrl = result.getOrNull()!!
+            SyncLog.add("API获取订阅URL成功")
+
             val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
             if (syncResult.isSuccess) {
-                design?.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
-                design?.fetch()
-                return
+                design.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
+                design.fetch()
+            } else {
+                val errorMsg = syncResult.exceptionOrNull()?.message ?: "未知错误"
+                design.showToast("同步失败: $errorMsg", ToastDuration.Long)
+            }
+        } else {
+            val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
+            SyncLog.add("API获取订阅失败: $errorMsg")
+
+            // 如果是 token 失效，需要重新登录
+            if (errorMsg.contains("expired", ignoreCase = true) ||
+                errorMsg.contains("login", ignoreCase = true) ||
+                errorMsg.contains("401") || errorMsg.contains("403")) {
+                SyncLog.add("凭证已失效，需要重新登录")
+                design.showToast("登录凭证已失效，请重新登录", ToastDuration.Long)
+                // 打开登录页面让用户重新登录
+                startActivity(V2BoardActivity.openLogin(this@MainActivity))
+            } else {
+                // 网络错误等，提示用户但不跳转登录
+                design.showToast("同步失败: $errorMsg", ToastDuration.Long)
             }
         }
 
-        // Kotlin 方式失败，静默处理
-        // 用户点击"登录"按钮会打开 V2BoardActivity，通过 JavaScript 方式获取订阅
-        Log.d("V2Board: autoSyncIfNoProfile: Kotlin API failed, user needs to open login page")
+        design.setSyncLog(SyncLog.getFormatted())
+        design.setSyncLogVisible(true)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -279,5 +279,6 @@
     <string name="v2board_no_server_url">未配置服务器地址</string>
     <string name="v2board_no_server_url_hint">请在 local.properties 中设置 v2board.url</string>
     <string name="v2board_open_in_browser">在浏览器中打开</string>
+    <string name="v2board_sync_log">同步日志</string>
     <string name="format_v2board_traffic">%1$s / %2$s | 到期：%3$s</string>
 </resources>

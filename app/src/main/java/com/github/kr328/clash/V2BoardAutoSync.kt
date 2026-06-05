@@ -5,6 +5,7 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.ConfigManager
+import com.github.kr328.clash.v2board.SyncLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -22,16 +23,20 @@ object V2BoardAutoSync {
                 val profileName = ConfigManager.getAppName()
 
                 Log.d("$TAG: Syncing subscription: name=$profileName, url=$subscribeUrl, interval=${intervalMinutes}min")
+                SyncLog.add("开始同步订阅: $profileName")
+                SyncLog.add("订阅URL: $subscribeUrl")
 
                 // 验证订阅URL格式
                 if (!subscribeUrl.startsWith("http://") && !subscribeUrl.startsWith("https://")) {
                     Log.w("$TAG: Invalid subscribe URL format: $subscribeUrl")
+                    SyncLog.add("错误: 订阅URL格式无效")
                     return@withContext Result.failure(Exception("Invalid subscribe URL format"))
                 }
 
                 withProfile {
                     val allProfiles = queryAll()
                     Log.d("$TAG: Total profiles: ${allProfiles.size}")
+                    SyncLog.add("当前配置文件数量: ${allProfiles.size}")
 
                     // 优先匹配名称为应用名的配置，其次匹配包含subscribe关键词的URL配置
                     val existing = allProfiles.find {
@@ -43,17 +48,21 @@ object V2BoardAutoSync {
 
                     if (existing != null) {
                         Log.d("$TAG: Found existing profile: ${existing.uuid}, name=${existing.name}")
+                        SyncLog.add("找到已有配置: ${existing.name}")
                         // 更新现有配置
                         patch(existing.uuid, profileName, subscribeUrl, intervalMs)
+                        SyncLog.add("正在更新配置...")
                         var updateSuccess = false
                         for (attempt in 1..MAX_RETRY) {
                             try {
                                 update(existing.uuid)
                                 updateSuccess = true
                                 Log.d("$TAG: Updated existing profile: ${existing.uuid} (attempt $attempt)")
+                                SyncLog.add("配置更新成功 (尝试 $attempt)")
                                 break
                             } catch (e: Exception) {
                                 Log.w("$TAG: Update attempt $attempt failed: ${e.message}")
+                                SyncLog.add("更新失败 (尝试 $attempt): ${e.message}")
                                 if (attempt < MAX_RETRY) {
                                     delay(1000L * attempt)
                                 }
@@ -65,16 +74,20 @@ object V2BoardAutoSync {
                             if (updated != null) {
                                 setActive(updated)
                                 Log.d("$TAG: Set active profile: ${updated.uuid}")
+                                SyncLog.add("已激活配置: ${updated.name}")
                             }
-                            Result.success("Subscription updated")
+                            Result.success("订阅已更新")
                         } else {
+                            SyncLog.add("错误: 更新订阅失败，已重试 $MAX_RETRY 次")
                             Result.failure(Exception("Failed to update subscription after $MAX_RETRY attempts"))
                         }
                     } else {
                         Log.d("$TAG: No existing profile found, creating new one")
+                        SyncLog.add("未找到已有配置，创建新配置...")
                         // 创建新配置
                         val uuid = create(Profile.Type.Url, profileName, subscribeUrl)
                         Log.d("$TAG: Created pending profile: $uuid")
+                        SyncLog.add("配置已创建: $uuid")
                         patch(uuid, profileName, subscribeUrl, intervalMs)
                         var commitSuccess = false
                         for (attempt in 1..MAX_RETRY) {
@@ -82,9 +95,11 @@ object V2BoardAutoSync {
                                 commit(uuid)
                                 commitSuccess = true
                                 Log.d("$TAG: Committed profile: $uuid (attempt $attempt)")
+                                SyncLog.add("配置提交成功 (尝试 $attempt)")
                                 break
                             } catch (e: Exception) {
                                 Log.w("$TAG: Commit attempt $attempt failed: ${e.message}")
+                                SyncLog.add("提交失败 (尝试 $attempt): ${e.message}")
                                 if (attempt < MAX_RETRY) {
                                     delay(1000L * attempt)
                                 }
@@ -95,21 +110,26 @@ object V2BoardAutoSync {
                             if (profile != null) {
                                 setActive(profile)
                                 Log.d("$TAG: Set active profile: ${profile.uuid}")
-                                Result.success("Subscription added")
+                                SyncLog.add("已激活配置: ${profile.name}")
+                                Result.success("订阅已添加")
                             } else {
                                 Log.w("$TAG: Profile created but not found: $uuid")
+                                SyncLog.add("错误: 配置已创建但查询不到")
                                 Result.failure(Exception("Profile created but not found"))
                             }
                         } else {
                             // 清理失败的配置
                             Log.w("$TAG: Cleaning up failed profile: $uuid")
+                            SyncLog.add("清理失败的配置...")
                             try { delete(uuid) } catch (_: Exception) {}
+                            SyncLog.add("错误: 创建订阅失败，已重试 $MAX_RETRY 次")
                             Result.failure(Exception("Failed to create subscription after $MAX_RETRY attempts"))
                         }
                     }
                 }
             } catch (e: Exception) {
                 Log.w("$TAG sync failed: ${e.message}")
+                SyncLog.add("同步异常: ${e.message}")
                 Result.failure(e)
             }
         }
