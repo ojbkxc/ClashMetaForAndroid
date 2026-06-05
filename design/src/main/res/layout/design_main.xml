@@ -27,12 +27,6 @@
             name="hasProviders"
             type="boolean" />
         <variable
-            name="syncLogText"
-            type="String" />
-        <variable
-            name="syncLogVisible"
-            type="boolean" />
-        <variable
             name="isLoggedIn"
             type="boolean" />
 
@@ -133,40 +127,13 @@
                     app:icon="@drawable/ic_baseline_vpn_lock"
                     app:text="@{isLoggedIn ? @string/v2board_dashboard : @string/v2board_login}" />
 
-                <!-- 同步日志区域 -->
-                <LinearLayout
+                <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="@{syncLogVisible ? View.VISIBLE : View.GONE}"
-                    android:layout_marginHorizontal="4dp"
-                    android:layout_marginVertical="8dp"
-                    android:background="@drawable/bg_bottom_sheet"
-                    android:padding="12dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/v2board_sync_log"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
-                    <ScrollView
-                        android:layout_width="match_parent"
-                        android:layout_height="200dp"
-                        android:scrollbars="vertical">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@{syncLogText}"
-                            android:textSize="11sp"
-                            android:fontFamily="monospace"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:lineSpacingExtra="2dp" />
-                    </ScrollView>
-                </LinearLayout>
+                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
+                    android:onClick="@{() -> self.request(Request.ViewSyncLog)}"
+                    app:icon="@drawable/ic_baseline_info"
+                    app:text="@string/v2board_sync_log" />
 
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"

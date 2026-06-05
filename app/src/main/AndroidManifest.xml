@@ -186,6 +186,12 @@
             android:exported="false"
             android:label="@string/v2board_dashboard" />
 
+        <activity
+            android:name=".SyncLogActivity"
+            android:configChanges="uiMode|orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:label="@string/v2board_sync_log" />
+
         <service
             android:name=".LogcatService"
             android:exported="false"

@@ -21,6 +21,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenHelp,
         OpenAbout,
         OpenV2BoardLogin,
+        ViewSyncLog,
     }
 
     private val binding = DesignMainBinding
@@ -61,18 +62,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setHasProviders(has: Boolean) {
         withContext(Dispatchers.Main) {
             binding.hasProviders = has
-        }
-    }
-
-    suspend fun setSyncLog(logText: String) {
-        withContext(Dispatchers.Main) {
-            binding.syncLogText = logText
-        }
-    }
-
-    suspend fun setSyncLogVisible(visible: Boolean) {
-        withContext(Dispatchers.Main) {
-            binding.syncLogVisible = visible
         }
     }
 

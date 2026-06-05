@@ -44,8 +44,6 @@ class MainActivity : BaseActivity<MainDesign>() {
             val sync = V2BoardSync.getInstance(this@MainActivity)
             launch {
                 design.setLoginStatus(sync.session.isLoggedIn)
-                design.setSyncLog(SyncLog.getFormatted())
-                design.setSyncLogVisible(SyncLog.getAll().isNotEmpty())
             }
         }
 
@@ -104,6 +102,9 @@ class MainActivity : BaseActivity<MainDesign>() {
                                 // 未登录，打开登录页（登录成功后3秒会自动同步）
                                 startActivity(V2BoardActivity.openLogin(this@MainActivity))
                             }
+                        }
+                        MainDesign.Request.ViewSyncLog -> {
+                            startActivity(SyncLogActivity::class.intent)
                         }
                     }
                 }
@@ -176,8 +177,6 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         if (!session.isLoggedIn) {
             SyncLog.add("未登录，请先登录")
-            design.setSyncLog(SyncLog.getFormatted())
-            design.setSyncLogVisible(true)
             return
         }
 
@@ -203,9 +202,6 @@ class MainActivity : BaseActivity<MainDesign>() {
             SyncLog.add("API获取订阅失败: $errorMsg")
             design.showToast("同步失败: $errorMsg", ToastDuration.Long)
         }
-
-        design.setSyncLog(SyncLog.getFormatted())
-        design.setSyncLogVisible(true)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
