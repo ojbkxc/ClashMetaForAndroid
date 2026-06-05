@@ -202,8 +202,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             (function() {
                 try {
                     var key = '__AURORA__authorization';
-                    // vue-ls 用 JSON.stringify 存储，所以写入时也要 stringify
-                    var value = JSON.stringify('${authData.replace("'", "\\'")}');
+                    // vue-ls 用 JSON.stringify({value: v}) 存储
+                    var value = JSON.stringify({value: '${authData.replace("'", "\\'")}'});
                     var current = localStorage.getItem(key) || '';
                     if (!current || current !== value) {
                         localStorage.setItem(key, value);
@@ -279,15 +279,24 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
                 // 3. Intercept localStorage.setItem for authorization key
                 // AuroraForV2board uses vue-ls with namespace __AURORA__
-                // vue-ls 用 JSON.stringify 存储，所以 value 带引号
+                // vue-ls 用 JSON.stringify({value: v}) 存储
                 var origSetItem = localStorage.setItem;
                 localStorage.setItem = function(key, value) {
                     origSetItem.call(localStorage, key, value);
                     if ((key === 'authorization' || key === '__AURORA__authorization') && value) {
-                        // vue-ls 存的是 JSON.stringify 后的值，需要 parse 去引号
+                        // vue-ls 格式: {"value":"xxx"}，需要提取 .value
                         var cleanValue = value;
-                        try { cleanValue = JSON.parse(value); } catch(e) {}
-                        handleAuthData(cleanValue || value, '');
+                        try {
+                            var parsed = JSON.parse(value);
+                            if (parsed && typeof parsed === 'object' && parsed.value) {
+                                cleanValue = parsed.value;
+                            } else if (typeof parsed === 'string') {
+                                cleanValue = parsed;
+                            }
+                        } catch(e) {}
+                        if (cleanValue && typeof cleanValue === 'string') {
+                            handleAuthData(cleanValue, '');
+                        }
                     }
                 };
 
@@ -303,8 +312,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             auth = localStorage.getItem('auth_data') || '';
                         }
                         if (auth) {
-                            // vue-ls 用 JSON.stringify 存储，需要 parse 去引号
-                            try { auth = JSON.parse(auth); } catch(e) {}
+                            // vue-ls 格式: {"value":"xxx"}，需要提取 .value
+                            try {
+                                var parsed = JSON.parse(auth);
+                                if (parsed && typeof parsed === 'object' && parsed.value) {
+                                    auth = parsed.value;
+                                } else if (typeof parsed === 'string') {
+                                    auth = parsed;
+                                }
+                            } catch(e) {}
                             if (auth && typeof auth === 'string') {
                                 handleAuthData(auth, '');
                             }
@@ -460,8 +476,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         AndroidBridge.onSubscribeError('未找到登录凭证');
                         return;
                     }
-                    // vue-ls 用 JSON.stringify 存储，读出来带引号，需要 JSON.parse 去掉
-                    try { auth = JSON.parse(auth); } catch(e) {}
+                    // vue-ls 用 JSON.stringify({value: v}) 存储，需要解析提取 .value
+                    try {
+                        var parsed = JSON.parse(auth);
+                        if (parsed && typeof parsed === 'object' && parsed.value) {
+                            auth = parsed.value;
+                        } else if (typeof parsed === 'string') {
+                            auth = parsed;
+                        }
+                    } catch(e) {}
                     if (!auth || typeof auth !== 'string') {
                         AndroidBridge.onSubscribeError('登录凭证格式错误');
                         return;
