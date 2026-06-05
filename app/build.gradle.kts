@@ -25,8 +25,8 @@ dependencies {
     implementation(libs.androidx.coordinator)
     implementation(libs.androidx.recyclerview)
     implementation(libs.google.material)
-    implementation(libs.quickie.bundled)
-    implementation(libs.androidx.activity.ktx)
+    // implementation(libs.quickie.bundled)   // QR 扫描库，暂时注释
+    // implementation(libs.androidx.activity.ktx)  // 未使用
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
@@ -43,7 +43,7 @@ task("downloadGeoFiles") {
         "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb" to "geoip.metadb",
         "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat" to "geosite.dat",
         // "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb" to "country.mmdb",
-        "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb" to "ASN.mmdb",
+        // "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb" to "ASN.mmdb",  // 后端配置未使用 ASN 规则
     )
 
     doLast {

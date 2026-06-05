@@ -67,15 +67,16 @@ class MainApplication : Application() {
             }
         }
 
-        val asnFile = File(clashDir, "ASN.mmdb")
-        if (asnFile.exists() && asnFile.lastModified() < updateDate) {
-            asnFile.delete()
-        }
-        if (!asnFile.exists()) {
-            FileOutputStream(asnFile).use {
-                assets.open("ASN.mmdb").copyTo(it)
-            }
-        }
+        // ASN.mmdb 后端配置未使用，已注释
+        // val asnFile = File(clashDir, "ASN.mmdb")
+        // if (asnFile.exists() && asnFile.lastModified() < updateDate) {
+        //     asnFile.delete()
+        // }
+        // if (!asnFile.exists()) {
+        //     FileOutputStream(asnFile).use {
+        //         assets.open("ASN.mmdb").copyTo(it)
+        //     }
+        // }
     }
 
     fun finalize() {
