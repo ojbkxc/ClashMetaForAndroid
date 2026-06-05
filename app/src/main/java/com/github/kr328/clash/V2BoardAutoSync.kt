@@ -93,14 +93,6 @@ object V2BoardAutoSync {
                         SyncLog.add("配置已创建: $uuid")
                         patch(uuid, profileName, subscribeUrl, intervalMs)
 
-                        // 立即激活配置
-                        val profile = queryByUUID(uuid)
-                        if (profile != null) {
-                            setActive(profile)
-                            Log.d("$TAG: Set active profile: ${profile.uuid}")
-                            SyncLog.add("已激活配置: ${profile.name}")
-                        }
-
                         var commitSuccess = false
                         for (attempt in 1..MAX_RETRY) {
                             try {
@@ -120,6 +112,13 @@ object V2BoardAutoSync {
                             }
                         }
                         if (commitSuccess) {
+                            // commit 成功后再激活（pending 状态无法激活）
+                            val profile = queryByUUID(uuid)
+                            if (profile != null) {
+                                setActive(profile)
+                                Log.d("$TAG: Set active profile: ${profile.uuid}")
+                                SyncLog.add("已激活配置: ${profile.name}")
+                            }
                             Result.success("订阅已添加")
                         } else {
                             SyncLog.add("错误: 订阅下载失败，已重试 $MAX_RETRY 次")
