@@ -89,19 +89,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.OpenAbout ->
                             startActivity(V2BoardActivity.openAbout(this@MainActivity))
                         MainDesign.Request.OpenV2BoardLogin -> {
-                            val sync = V2BoardSync.getInstance(this@MainActivity)
-                            if (sync.session.isLoggedIn) {
-                                // 已登录，直接触发同步
-                                launch {
-                                    SyncLog.add("--- 登录后同步 ---")
-                                    updateSyncUI()
-                                    autoSyncSubscription(design)
-                                    updateSyncUI()
-                                }
-                            } else {
-                                // 未登录，打开登录页（登录成功后3秒会自动同步）
-                                startActivity(V2BoardActivity.openLogin(this@MainActivity))
-                            }
+                            // 始终打开 WebView（已登录时显示仪表盘，未登录时显示登录页）
+                            startActivity(V2BoardActivity.openLogin(this@MainActivity))
                         }
                         MainDesign.Request.ViewSyncLog -> {
                             startActivity(SyncLogActivity::class.intent)

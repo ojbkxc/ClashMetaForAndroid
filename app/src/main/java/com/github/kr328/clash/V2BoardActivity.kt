@@ -468,11 +468,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     }
                     // API 使用后端地址（与前端 n["l"] 一致）
                     var baseUrl = '${serverUrl.replace("'", "\\'")}' || window.location.origin;
-                    var apiUrl = baseUrl + '/api/v1/user/getSubscribe';
+                    // 后端 User middleware: $request->input('auth_data') ?? $request->header('authorization')
+                    // 用 query 参数 auth_data 比 header 更可靠（避免 CDN/代理剥离 header）
+                    var apiUrl = baseUrl + '/api/v1/user/getSubscribe?auth_data=' + encodeURIComponent(auth);
                     fetch(apiUrl, {
                         method: 'GET',
                         headers: {
-                            'authorization': auth,
                             'Accept': 'application/json'
                         }
                     }).then(function(r) { return r.json(); })

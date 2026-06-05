@@ -82,16 +82,15 @@ class V2BoardSync(private val context: Context) {
                     SyncLog.add("找到可用域名: $workingDomain")
                 }
 
-                // 直接使用原始 auth_data，不加 Bearer 前缀
-                val authHeader = auth
-
-                val apiUrl = "$currentUrl/api/v1/user/getSubscribe"
+                // 后端 User middleware: $request->input('auth_data') ?? $request->header('authorization')
+                // 用 query 参数 auth_data 比 header 更可靠
+                val cleanAuth = auth.trim().removeSurrounding("\"").removeSurrounding("'")
+                val apiUrl = "$currentUrl/api/v1/user/getSubscribe?auth_data=${java.net.URLEncoder.encode(cleanAuth, "UTF-8")}"
                 Log.d("V2BoardSync: Fetching subscribe from: $apiUrl")
-                SyncLog.add("请求订阅信息: $apiUrl")
+                SyncLog.add("请求订阅信息: $currentUrl/api/v1/user/getSubscribe")
 
                 val request = okhttp3.Request.Builder()
                     .url(apiUrl)
-                    .header("authorization", authHeader)
                     .header("Accept", "application/json")
                     .get()
                     .build()
