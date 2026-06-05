@@ -18,6 +18,17 @@ class V2BoardSync(private val context: Context) {
     val config = V2BoardConfig(context)
     val session = V2BoardSession(context)
 
+    companion object {
+        @Volatile
+        private var instance: V2BoardSync? = null
+
+        fun getInstance(context: Context): V2BoardSync {
+            return instance ?: synchronized(this) {
+                instance ?: V2BoardSync(context.applicationContext).also { instance = it }
+            }
+        }
+    }
+
     private val httpClient by lazy {
         val builder = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
