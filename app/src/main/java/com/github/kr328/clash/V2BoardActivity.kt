@@ -202,9 +202,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             (function() {
                 try {
                     var key = '__AURORA__authorization';
+                    // vue-ls 用 JSON.stringify 存储，所以写入时也要 stringify
+                    var value = JSON.stringify('${authData.replace("'", "\\'")}');
                     var current = localStorage.getItem(key) || '';
-                    if (!current || current !== '${authData.replace("'", "\\'")}') {
-                        localStorage.setItem(key, '${authData.replace("'", "\\'")}');
+                    if (!current || current !== value) {
+                        localStorage.setItem(key, value);
                     }
                 } catch(e) {}
             })();
@@ -277,11 +279,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
                 // 3. Intercept localStorage.setItem for authorization key
                 // AuroraForV2board uses vue-ls with namespace __AURORA__
+                // vue-ls 用 JSON.stringify 存储，所以 value 带引号
                 var origSetItem = localStorage.setItem;
                 localStorage.setItem = function(key, value) {
                     origSetItem.call(localStorage, key, value);
                     if ((key === 'authorization' || key === '__AURORA__authorization') && value) {
-                        handleAuthData(value, '');
+                        // vue-ls 存的是 JSON.stringify 后的值，需要 parse 去引号
+                        var cleanValue = value;
+                        try { cleanValue = JSON.parse(value); } catch(e) {}
+                        handleAuthData(cleanValue || value, '');
                     }
                 };
 
@@ -297,7 +303,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             auth = localStorage.getItem('auth_data') || '';
                         }
                         if (auth) {
-                            handleAuthData(auth, '');
+                            // vue-ls 用 JSON.stringify 存储，需要 parse 去引号
+                            try { auth = JSON.parse(auth); } catch(e) {}
+                            if (auth && typeof auth === 'string') {
+                                handleAuthData(auth, '');
+                            }
                         }
                     } catch(e) {}
                 }
@@ -448,6 +458,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     }
                     if (!auth) {
                         AndroidBridge.onSubscribeError('未找到登录凭证');
+                        return;
+                    }
+                    // vue-ls 用 JSON.stringify 存储，读出来带引号，需要 JSON.parse 去掉
+                    try { auth = JSON.parse(auth); } catch(e) {}
+                    if (!auth || typeof auth !== 'string') {
+                        AndroidBridge.onSubscribeError('登录凭证格式错误');
                         return;
                     }
                     // API 使用后端地址（与前端 n["l"] 一致）
