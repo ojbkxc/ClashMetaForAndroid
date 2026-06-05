@@ -340,8 +340,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (authData.isBlank()) return
             if (activity.loginDetected) return
 
-            // 清理 auth_data：去掉引号、空格等
-            val cleanAuth = authData.trim().removeSurrounding("\"").removeSurrounding("'")
+            // 清理 auth_data：处理 vue-ls 的 {"value":"JWT"} 格式
+            var cleanAuth = authData.trim().removeSurrounding("\"").removeSurrounding("'")
+            // 如果仍然是 JSON 对象格式，尝试提取 value 字段
+            if (cleanAuth.startsWith("{") && cleanAuth.contains("\"value\"")) {
+                try {
+                    val json = org.json.JSONObject(cleanAuth)
+                    cleanAuth = json.optString("value", cleanAuth)
+                } catch (_: Exception) {}
+            }
             if (cleanAuth.isBlank()) return
 
             activity.loginDetected = true
