@@ -314,13 +314,17 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (authData.isBlank()) return
             if (activity.loginDetected) return
 
+            // 清理 auth_data：去掉引号、空格等
+            val cleanAuth = authData.trim().removeSurrounding("\"").removeSurrounding("'")
+            if (cleanAuth.isBlank()) return
+
             activity.loginDetected = true
-            activity.sync.session.save(authData, token, "")
+            activity.sync.session.save(cleanAuth, token, "")
 
             Log.d("V2Board: onAuthData called, serverUrl=$serverUrl")
             SyncLog.add("登录成功，获取到认证信息")
             SyncLog.add("后端地址: $serverUrl")
-            SyncLog.add("auth_data长度: ${authData.length}")
+            SyncLog.add("auth_data: ${cleanAuth.take(30)}...")
 
             // 保存后端API地址
             if (serverUrl.isNotBlank()) {
