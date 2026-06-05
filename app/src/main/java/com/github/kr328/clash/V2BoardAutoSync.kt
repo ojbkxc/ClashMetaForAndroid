@@ -7,6 +7,7 @@ import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.ConfigManager
 import com.github.kr328.clash.v2board.SyncLog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -55,7 +56,9 @@ object V2BoardAutoSync {
                         var updateSuccess = false
                         for (attempt in 1..MAX_RETRY) {
                             try {
-                                update(existing.uuid)
+                                withContext(NonCancellable) {
+                                    update(existing.uuid)
+                                }
                                 updateSuccess = true
                                 Log.d("$TAG: Updated existing profile: ${existing.uuid} (attempt $attempt)")
                                 SyncLog.add("配置更新成功 (尝试 $attempt)")
@@ -89,10 +92,21 @@ object V2BoardAutoSync {
                         Log.d("$TAG: Created pending profile: $uuid")
                         SyncLog.add("配置已创建: $uuid")
                         patch(uuid, profileName, subscribeUrl, intervalMs)
+
+                        // 立即激活配置
+                        val profile = queryByUUID(uuid)
+                        if (profile != null) {
+                            setActive(profile)
+                            Log.d("$TAG: Set active profile: ${profile.uuid}")
+                            SyncLog.add("已激活配置: ${profile.name}")
+                        }
+
                         var commitSuccess = false
                         for (attempt in 1..MAX_RETRY) {
                             try {
-                                commit(uuid)
+                                withContext(NonCancellable) {
+                                    commit(uuid)
+                                }
                                 commitSuccess = true
                                 Log.d("$TAG: Committed profile: $uuid (attempt $attempt)")
                                 SyncLog.add("配置提交成功 (尝试 $attempt)")
@@ -106,24 +120,10 @@ object V2BoardAutoSync {
                             }
                         }
                         if (commitSuccess) {
-                            val profile = queryByUUID(uuid)
-                            if (profile != null) {
-                                setActive(profile)
-                                Log.d("$TAG: Set active profile: ${profile.uuid}")
-                                SyncLog.add("已激活配置: ${profile.name}")
-                                Result.success("订阅已添加")
-                            } else {
-                                Log.w("$TAG: Profile created but not found: $uuid")
-                                SyncLog.add("错误: 配置已创建但查询不到")
-                                Result.failure(Exception("Profile created but not found"))
-                            }
+                            Result.success("订阅已添加")
                         } else {
-                            // 清理失败的配置
-                            Log.w("$TAG: Cleaning up failed profile: $uuid")
-                            SyncLog.add("清理失败的配置...")
-                            try { delete(uuid) } catch (_: Exception) {}
-                            SyncLog.add("错误: 创建订阅失败，已重试 $MAX_RETRY 次")
-                            Result.failure(Exception("Failed to create subscription after $MAX_RETRY attempts"))
+                            SyncLog.add("错误: 订阅下载失败，已重试 $MAX_RETRY 次")
+                            Result.failure(Exception("Failed to commit subscription after $MAX_RETRY attempts"))
                         }
                     }
                 }
