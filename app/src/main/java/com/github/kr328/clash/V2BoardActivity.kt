@@ -446,18 +446,13 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         AndroidBridge.onSubscribeError('未找到登录凭证');
                         return;
                     }
-                    // 添加 Bearer 前缀（如果需要）
-                    var authHeader = auth;
-                    if (authHeader && !authHeader.startsWith('Bearer ')) {
-                        authHeader = 'Bearer ' + authHeader;
-                    }
                     // API 使用后端地址（与前端 n["l"] 一致）
                     var baseUrl = '${serverUrl.replace("'", "\\'")}' || window.location.origin;
                     var apiUrl = baseUrl + '/api/v1/user/getSubscribe';
                     fetch(apiUrl, {
                         method: 'GET',
                         headers: {
-                            'authorization': authHeader,
+                            'authorization': auth,
                             'Accept': 'application/json'
                         }
                     }).then(function(r) { return r.json(); })

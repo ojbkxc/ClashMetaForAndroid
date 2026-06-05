@@ -82,8 +82,8 @@ class V2BoardSync(private val context: Context) {
                     SyncLog.add("找到可用域名: $workingDomain")
                 }
 
-                // 尝试添加 Bearer 前缀
-                val authHeader = if (auth.startsWith("Bearer ")) auth else "Bearer $auth"
+                // 直接使用原始 auth_data，不加 Bearer 前缀
+                val authHeader = auth
 
                 val apiUrl = "$currentUrl/api/v1/user/getSubscribe"
                 Log.d("V2BoardSync: Fetching subscribe from: $apiUrl")
@@ -145,9 +145,9 @@ class V2BoardSync(private val context: Context) {
                     Log.w("V2BoardSync: HTTP error: ${response.code}")
 
                     if (response.code == 401 || response.code == 403) {
-                        session.clear()
-                        SyncLog.add("登录凭证已失效 (HTTP ${response.code})，需要重新登录")
-                        Result.failure(Exception("Session expired, please login again"))
+                        // 不自动清除 session，让用户手动决定是否重新登录
+                        SyncLog.add("请求被拒绝 (HTTP ${response.code})，可能需要重新登录")
+                        Result.failure(Exception("HTTP ${response.code}，可能需要重新登录"))
                     } else {
                         try {
                             val json = JSONObject(responseBody)

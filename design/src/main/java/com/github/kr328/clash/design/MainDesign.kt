@@ -21,7 +21,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenHelp,
         OpenAbout,
         OpenV2BoardLogin,
-        SyncSubscription,
     }
 
     private val binding = DesignMainBinding

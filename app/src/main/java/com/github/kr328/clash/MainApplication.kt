@@ -9,6 +9,7 @@ import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.clashDir
 import com.github.kr328.clash.v2board.ConfigManager
+import com.github.kr328.clash.v2board.SyncLog
 import java.io.File
 import java.io.FileOutputStream
 
@@ -26,6 +27,9 @@ class MainApplication : Application() {
 
         // Initialize unified configuration from assets/v2board.properties
         ConfigManager.init(this)
+
+        // Initialize sync log file
+        SyncLog.init(this)
 
         val processName = currentProcessName
         extractGeoFiles()

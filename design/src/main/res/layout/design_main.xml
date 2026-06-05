@@ -133,14 +133,6 @@
                     app:icon="@drawable/ic_baseline_vpn_lock"
                     app:text="@{isLoggedIn ? @string/v2board_dashboard : @string/v2board_login}" />
 
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.SyncSubscription)}"
-                    app:icon="@drawable/ic_baseline_sync"
-                    app:text="@string/v2board_sync" />
-
                 <!-- 同步日志区域 -->
                 <LinearLayout
                     android:layout_width="match_parent"

@@ -95,8 +95,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             if (sync.session.isLoggedIn) {
                                 // 已登录，直接触发同步
                                 launch {
-                                    SyncLog.clear()
-                                    SyncLog.add("--- 登录后自动同步 ---")
+                                    SyncLog.add("--- 登录后同步 ---")
                                     updateSyncUI()
                                     autoSyncSubscription(design)
                                     updateSyncUI()
@@ -104,15 +103,6 @@ class MainActivity : BaseActivity<MainDesign>() {
                             } else {
                                 // 未登录，打开登录页（登录成功后3秒会自动同步）
                                 startActivity(V2BoardActivity.openLogin(this@MainActivity))
-                            }
-                        }
-                        MainDesign.Request.SyncSubscription -> {
-                            launch {
-                                SyncLog.clear()
-                                SyncLog.add("--- 手动同步 ---")
-                                updateSyncUI()
-                                autoSyncSubscription(design)
-                                updateSyncUI()
                             }
                         }
                     }
@@ -211,19 +201,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         } else {
             val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
             SyncLog.add("API获取订阅失败: $errorMsg")
-
-            // 如果是 token 失效，需要重新登录
-            if (errorMsg.contains("expired", ignoreCase = true) ||
-                errorMsg.contains("login", ignoreCase = true) ||
-                errorMsg.contains("401") || errorMsg.contains("403")) {
-                SyncLog.add("凭证已失效，需要重新登录")
-                design.showToast("登录凭证已失效，请重新登录", ToastDuration.Long)
-                // 打开登录页面让用户重新登录
-                startActivity(V2BoardActivity.openLogin(this@MainActivity))
-            } else {
-                // 网络错误等，提示用户但不跳转登录
-                design.showToast("同步失败: $errorMsg", ToastDuration.Long)
-            }
+            design.showToast("同步失败: $errorMsg", ToastDuration.Long)
         }
 
         design.setSyncLog(SyncLog.getFormatted())
