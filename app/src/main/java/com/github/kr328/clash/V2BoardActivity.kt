@@ -349,10 +349,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             Log.d("V2Board: onSubscribeUrl called, url=$subscribeUrl")
 
             activity.launch {
+                Log.d("V2Board: Starting sync with URL: $subscribeUrl")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
+                        Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
                         activity.design?.showToast(
                             syncResult.getOrNull() ?: "同步完成",
                             ToastDuration.Short
@@ -364,6 +366,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         } else {
                             error?.javaClass?.simpleName ?: "Unknown error"
                         }
+                        Log.w("V2Board: Sync failed: $errorMsg")
                         activity.design?.showToast(
                             "同步失败: $errorMsg",
                             ToastDuration.Long
@@ -371,6 +374,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     }
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun log(message: String) {
+            Log.d("V2Board JS", message)
         }
 
         @JavascriptInterface
@@ -427,13 +435,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         AndroidBridge.onSubscribeError('未找到登录凭证');
                         return;
                     }
+                    // 添加 Bearer 前缀（如果需要）
+                    var authHeader = auth;
+                    if (authHeader && !authHeader.startsWith('Bearer ')) {
+                        authHeader = 'Bearer ' + authHeader;
+                    }
                     // API 使用后端地址（与前端 n["l"] 一致）
                     var baseUrl = '${serverUrl.replace("'", "\\'")}' || window.location.origin;
                     var apiUrl = baseUrl + '/api/v1/user/getSubscribe';
                     fetch(apiUrl, {
                         method: 'GET',
                         headers: {
-                            'authorization': auth,
+                            'authorization': authHeader,
                             'Accept': 'application/json'
                         }
                     }).then(function(r) { return r.json(); })
@@ -441,8 +454,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         if (json && json.data) {
                             var subscribeUrl = json.data.subscribe_url || '';
                             var token = json.data.token || '';
-                            // 与前端逻辑完全一致：subscribe_url || (location.origin + "/api/v1/client/subscribe?token=" + token)
-                            var finalUrl = subscribeUrl || (location.origin + '/api/v1/client/subscribe?token=' + token);
+                            // 使用 baseUrl 而不是 location.origin 来构造订阅 URL
+                            var finalUrl = subscribeUrl || (baseUrl + '/api/v1/client/subscribe?token=' + token);
                             if (finalUrl) {
                                 AndroidBridge.onSubscribeUrl(finalUrl);
                             } else {
