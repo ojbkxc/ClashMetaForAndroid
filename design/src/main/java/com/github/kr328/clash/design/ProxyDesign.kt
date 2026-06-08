@@ -153,9 +153,6 @@ class ProxyDesign(
                 })
             }
 
-            binding.tabLayoutView.tabIconTint = null
-            binding.tabLayoutView.tabIconGravity = com.google.android.material.tabs.TabLayout.ICON_GRAVITY_TEXT_START
-
             TabLayoutMediator(binding.tabLayoutView, binding.pagesView) { tab, index ->
                 tab.text = groupNames[index]
                 val iconRes = getGroupIconRes(groupNames[index])
