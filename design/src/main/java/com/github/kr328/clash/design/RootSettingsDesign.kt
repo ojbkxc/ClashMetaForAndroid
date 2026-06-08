@@ -73,12 +73,12 @@ class RootSettingsDesign(
                 summary = R.string.root_lock_background_summary,
                 configure = rootDependencies::add,
             ) {
-                enabled = rootAvailable
-                listener = OnChangedListener {
+                setEnabled(rootAvailable)
+                setListener(OnChangedListener {
                     if (srvStore.rootLockBackground) {
                         requests.trySend(Request.ApplyLockBackground)
                     }
-                }
+                })
             }
 
             switch(
