@@ -62,18 +62,16 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                // 页面开始加载时就注入 auth_data，确保前端 router guard 能读取
-                if (view != null) {
-                    restoreAuthToLocalStorage(view)
-                }
+                // 不在 onPageStarted 注入，DOM 未就绪会失败
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
                     if (url != null && !url.startsWith("file://")) {
-                        // 先注入 auth_data 到 localStorage
-                        restoreAuthToLocalStorage(view)
+                        // 先检查 localStorage 是否已有 auth_data（前端可能已刷新）
+                        // 如果有，保存到本地；如果没有，注入保存的值
+                        syncLocalStorageWithBackend(view)
                         // 再注入登录检测
                         injectAuthDetector(view)
 
@@ -202,23 +200,42 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         }
     }
 
-    // 将已保存的 auth_data 注入到 WebView 的 localStorage
-    // 确保前端 router guard 能读取到登录状态
-    private fun restoreAuthToLocalStorage(webView: WebView) {
-        val authData = sync.session.authData
-        if (authData.isBlank()) return
-
+    // 双向同步：优先使用 localStorage 中的值（前端可能已刷新 token）
+    // 只有 localStorage 为空时才注入保存的旧值
+    private fun syncLocalStorageWithBackend(webView: WebView) {
+        val savedAuth = sync.session.authData
         val js = """
             (function() {
                 try {
-                    var key = '__AURORA__authorization';
-                    // vue-ls 用 JSON.stringify({value: v}) 存储
-                    var value = JSON.stringify({value: '${authData.replace("'", "\\'")}'});
-                    var current = localStorage.getItem(key) || '';
-                    if (!current || current !== value) {
+                    var keys = ['__AURORA__authorization', 'authorization', 'auth_data'];
+                    var existing = '';
+                    for (var i = 0; i < keys.length; i++) {
+                        var val = localStorage.getItem(keys[i]);
+                        if (val) {
+                            // vue-ls 格式: {"value":"xxx"}
+                            try {
+                                var parsed = JSON.parse(val);
+                                if (parsed && typeof parsed === 'object' && parsed.value) {
+                                    existing = parsed.value;
+                                } else if (typeof parsed === 'string') {
+                                    existing = parsed;
+                                } else {
+                                    existing = val;
+                                }
+                            } catch(e) { existing = val; }
+                            if (existing) break;
+                        }
+                    }
+                    if (existing && typeof existing === 'string' && existing.length > 10) {
+                        // localStorage 有值，回传给 native 保存
+                        AndroidBridge.onLocalStorageAuth(existing);
+                    } else if ('${savedAuth.replace("'", "\\'")}'.length > 10) {
+                        // localStorage 为空，注入保存的值
+                        var key = '__AURORA__authorization';
+                        var value = JSON.stringify({value: '${savedAuth.replace("'", "\\'")}'});
                         localStorage.setItem(key, value);
                     }
-                } catch(e) {}
+                } catch(e) { AndroidBridge.log('syncAuth error: ' + e.message); }
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
@@ -348,7 +365,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         @JavascriptInterface
         fun onAuthData(authData: String, token: String, serverUrl: String) {
             if (authData.isBlank()) return
-            if (activity.loginDetected) return
 
             // 清理 auth_data：处理 vue-ls 的 {"value":"JWT"} 格式
             var cleanAuth = authData.trim().removeSurrounding("\"").removeSurrounding("'")
@@ -363,7 +379,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
             // 如果已登录且 auth_data 相同，不重复触发同步
             val existingAuth = activity.sync.session.authData
-            if (existingAuth.isNotBlank() && existingAuth == cleanAuth) {
+            if (existingAuth.isNotBlank() && existingAuth == cleanAuth && activity.loginDetected) {
                 activity.loginDetected = true
                 SyncLog.add("已登录，跳过重复同步")
                 return
@@ -444,6 +460,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun log(message: String) {
             Log.d("V2Board JS: $message")
             SyncLog.add("JS: $message")
+        }
+
+        @JavascriptInterface
+        fun onLocalStorageAuth(authData: String) {
+            if (authData.isBlank() || authData.length < 10) return
+            val existing = activity.sync.session.authData
+            // 只在值不同时更新，避免不必要的写入
+            if (existing != authData) {
+                activity.sync.session.save(authData, "", "")
+                Log.d("V2Board: Saved refreshed auth_data from localStorage")
+                SyncLog.add("检测到前端刷新了认证，已同步保存")
+            }
+            activity.loginDetected = true
         }
 
         @JavascriptInterface

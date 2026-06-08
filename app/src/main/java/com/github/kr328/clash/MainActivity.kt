@@ -163,6 +163,37 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             setProfileFlowInfo(flowInfo)
             setProfileFlowProgress(flowProgress)
+
+            // 订阅到期提醒
+            if (active != null && active.expire > 0) {
+                val daysLeft = ((active.expire - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+                if (daysLeft <= 0) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        DesignR.string.subscription_expired,
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                } else if (daysLeft <= 3) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        getString(DesignR.string.subscription_expiring_soon, daysLeft),
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+            // 流量超 90% 提醒
+            if (active != null && active.total > 1) {
+                val usedBytes = active.upload + active.download
+                val usagePercent = (usedBytes * 100.0 / active.total).toInt()
+                if (usagePercent >= 90) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        DesignR.string.subscription_traffic_warning,
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
 
