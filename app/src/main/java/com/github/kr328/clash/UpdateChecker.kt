@@ -76,7 +76,7 @@ object UpdateChecker {
     }
 
     // 简单版本比较: "1.2.3" > "1.2.2"
-    private fun compareVersions(v1: String, v2: String): Int {
+    fun compareVersions(v1: String, v2: String): Int {
         val parts1 = v1.trimStart('v').split(".").map { it.toIntOrNull() ?: 0 }
         val parts2 = v2.trimStart('v').split(".").map { it.toIntOrNull() ?: 0 }
         for (i in 0 until maxOf(parts1.size, parts2.size)) {

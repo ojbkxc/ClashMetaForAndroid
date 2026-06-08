@@ -30,6 +30,15 @@ object ProfileProcessor {
     private val profileLock = Mutex()
     private val processLock = Mutex()
 
+    // UA 轮换列表，当默认 UA 被屏蔽时自动切换
+    private val USER_AGENTS = listOf(
+        "ClashMetaForAndroid",
+        "clash-verge/v2.2.3",
+        "ClashforWindows/0.19.23",
+        "clash.meta",
+        "mihomo"
+    )
+
     suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
         withContext(NonCancellable) {
             processLock.withLock {
@@ -77,47 +86,65 @@ object ProfileProcessor {
                         if (snapshot?.type == Profile.Type.Url) {
                             if (snapshot.source.startsWith("https://", true)) {
                                 val client = OkHttpClient()
-                                val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
-                                val request = Request.Builder()
-                                    .url(snapshot.source)
-                                    .header("User-Agent", "ClashMetaForAndroid/$versionName")
-                                    .build()
+                                val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
 
-                                client.newCall(request).execute().use { response ->
-                                    val userinfo = response.headers["subscription-userinfo"]
-                                    if (response.isSuccessful && userinfo != null) {
-                                        val flags = userinfo.split(";")
-                                        for (flag in flags) {
-                                            val info = flag.split("=")
-                                            if (info.size < 2 || info[1].isEmpty()) continue
-                                            when {
-                                                info[0].contains("upload") -> upload =
-                                                    BigDecimal(info[1].split('.').first()).longValueExact()
+                                // UA 轮换：依次尝试不同 UA 获取订阅信息
+                                var lastException: Exception? = null
+                                for (ua in USER_AGENTS) {
+                                    try {
+                                        val userAgent = "$ua/$versionName"
+                                        val request = Request.Builder()
+                                            .url(snapshot.source)
+                                            .header("User-Agent", userAgent)
+                                            .build()
 
-                                                info[0].contains("download") -> download =
-                                                    BigDecimal(info[1].split('.').first()).longValueExact()
+                                        client.newCall(request).execute().use { response ->
+                                            val userinfo = response.headers["subscription-userinfo"]
+                                            if (response.isSuccessful && userinfo != null) {
+                                                val flags = userinfo.split(";")
+                                                for (flag in flags) {
+                                                    val info = flag.split("=")
+                                                    if (info.size < 2 || info[1].isEmpty()) continue
+                                                    when {
+                                                        info[0].contains("upload") -> upload =
+                                                            BigDecimal(info[1].split('.').first()).longValueExact()
 
-                                                info[0].contains("total") -> total =
-                                                    BigDecimal(info[1].split('.').first()).longValueExact()
+                                                        info[0].contains("download") -> download =
+                                                            BigDecimal(info[1].split('.').first()).longValueExact()
 
-                                                info[0].contains("expire") ->
-                                                    expire = (info[1].toDouble() * 1000).toLong()
+                                                        info[0].contains("total") -> total =
+                                                            BigDecimal(info[1].split('.').first()).longValueExact()
+
+                                                        info[0].contains("expire") ->
+                                                            expire = (info[1].toDouble() * 1000).toLong()
+                                                    }
+                                                }
                                             }
-                                        }
-                                    }
 
-                                    val updateIntervalHeader = response.headers["profile-update-interval"]
-                                    if (old == null && snapshot.interval == 0L && response.isSuccessful && updateIntervalHeader != null) {
-                                        val intervalHours = updateIntervalHeader.toLongOrNull()
-                                        if (intervalHours != null) {
-                                            updateInterval = if (intervalHours > 0) {
-                                                java.util.concurrent.TimeUnit.HOURS.toMillis(intervalHours)
-                                                    .coerceAtLeast(java.util.concurrent.TimeUnit.MINUTES.toMillis(15))
-                                            } else {
-                                                0L
+                                            val updateIntervalHeader = response.headers["profile-update-interval"]
+                                            if (old == null && snapshot.interval == 0L && response.isSuccessful && updateIntervalHeader != null) {
+                                                val intervalHours = updateIntervalHeader.toLongOrNull()
+                                                if (intervalHours != null) {
+                                                    updateInterval = if (intervalHours > 0) {
+                                                        java.util.concurrent.TimeUnit.HOURS.toMillis(intervalHours)
+                                                            .coerceAtLeast(java.util.concurrent.TimeUnit.MINUTES.toMillis(15))
+                                                    } else {
+                                                        0L
+                                                    }
+                                                }
                                             }
+
+                                            // 请求成功，跳出 UA 轮换循环
+                                            if (response.isSuccessful) break
                                         }
+                                    } catch (e: Exception) {
+                                        lastException = e
+                                        Log.w("ProfileProcessor: UA '$ua' failed: ${e.message}")
+                                        // 继续尝试下一个 UA
                                     }
+                                }
+                                if (upload == 0L && download == 0L && total == 0L && lastException != null) {
+                                    Log.w("ProfileProcessor: all UAs failed, last error: ${lastException?.message}")
                                 }
                             }
                             val new = Imported(

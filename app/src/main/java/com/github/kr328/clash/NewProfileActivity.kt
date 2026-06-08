@@ -79,6 +79,33 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                                             null
                                         }
                                     }
+
+                                    is ProfileProvider.Template -> {
+                                        // 从 assets 读取模板并创建配置文件
+                                        val templateContent = withContext(Dispatchers.IO) {
+                                            assets.open("rule_template.yaml").use { stream ->
+                                                stream.bufferedReader().readText()
+                                            }
+                                        }
+
+                                        val uuid = create(
+                                            Profile.Type.File,
+                                            "Rule Template"
+                                        )
+
+                                        // 将模板内容写入 pending 目录的 config.yaml
+                                        if (uuid != null) {
+                                            withContext(Dispatchers.IO) {
+                                                val pendingDir = java.io.File(filesDir, "pending/$uuid")
+                                                val configFile = java.io.File(pendingDir, "config.yaml")
+                                                if (configFile.exists()) {
+                                                    configFile.writeText(templateContent)
+                                                }
+                                            }
+                                        }
+
+                                        uuid
+                                    }
                                 }
 
                                 if (uuid != null)
@@ -164,7 +191,8 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             listOf(
                 ProfileProvider.File(self),
                 ProfileProvider.Url(self),
-                ProfileProvider.QR(self)
+                ProfileProvider.QR(self),
+                ProfileProvider.Template(self)
             ) + providers
         }
     }

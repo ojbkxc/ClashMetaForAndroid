@@ -57,6 +57,11 @@ class UiStore(context: Context) {
         values = ProxySort.values()
     )
 
+    var proxyRegionFilter: String by store.string(
+        key = "proxy_region_filter",
+        defaultValue = ""
+    )
+
     var proxyLastGroup: String by store.string(
         key = "proxy_last_group",
         defaultValue = ""

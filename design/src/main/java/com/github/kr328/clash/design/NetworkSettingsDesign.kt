@@ -93,6 +93,15 @@ class NetworkSettingsDesign(
                 )
             }
 
+            category(R.string.network_behavior)
+
+            switch(
+                value = srvStore::clearConnectionsOnNetworkChange,
+                title = R.string.clear_connections_on_network_change,
+                summary = R.string.clear_connections_on_network_change_summary,
+                configure = vpnDependencies::add,
+            )
+
             selectableList(
                 value = srvStore::tunStackMode,
                 values = arrayOf(

@@ -65,4 +65,9 @@ class ServiceStore(context: Context) {
         key = "dynamic_notification",
         defaultValue = true
     )
+
+    var clearConnectionsOnNetworkChange by store.boolean(
+        key = "clear_connections_on_network_change",
+        defaultValue = false
+    )
 }

@@ -369,4 +369,20 @@
     <string name="v2board_open_in_browser">Open in browser</string>
     <string name="v2board_sync_log">Log</string>
     <string name="format_v2board_traffic">%1$s / %2$s | Expires: %3$s</string>
+
+    <string name="network_behavior">Network Behavior</string>
+    <string name="clear_connections_on_network_change">Clear Connections on Switch</string>
+    <string name="clear_connections_on_network_change_summary">Automatically close all connections when network changes (WiFi/mobile data switch)</string>
+
+    <string name="region_filter">Region</string>
+    <string name="region_all">All</string>
+    <string name="region_hk">Hong Kong</string>
+    <string name="region_jp">Japan</string>
+    <string name="region_tw">Taiwan</string>
+    <string name="region_us">United States</string>
+    <string name="region_sg">Singapore</string>
+    <string name="region_kr">Korea</string>
+
+    <string name="template">Template</string>
+    <string name="import_from_template">Import from preset template</string>
 </resources>

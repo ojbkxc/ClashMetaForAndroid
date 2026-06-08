@@ -52,6 +52,23 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
+        // 启动时自动检测更新（后台执行，不阻塞UI）
+        launch {
+            try {
+                val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+                val release = withContext(Dispatchers.IO) {
+                    UpdateChecker.checkForUpdate(this@MainActivity)
+                }
+                if (release != null && UpdateChecker.compareVersions(currentVersion, release.tagName) < 0) {
+                    withContext(Dispatchers.Main) {
+                        UpdateChecker.showUpdateDialog(this@MainActivity, currentVersion, release)
+                    }
+                }
+            } catch (_: Exception) {
+                // 静默失败，不影响用户体验
+            }
+        }
+
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
         while (isActive) {
@@ -120,7 +137,36 @@ class MainActivity : BaseActivity<MainDesign>() {
         setHasProviders(providers.isNotEmpty())
 
         withProfile {
-            setProfileName(queryActive()?.name)
+            val active = queryActive()
+            setProfileName(active?.name)
+
+            // 显示订阅流量信息
+            val flowInfo = if (active != null && active.total > 0) {
+                val usedBytes = active.upload + active.download
+                val usedStr = formatBytes(usedBytes)
+                val totalStr = formatBytes(active.total)
+                val expireStr = if (active.expire > 0) {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    sdf.format(java.util.Date(active.expire))
+                } else ""
+
+                if (expireStr.isNotEmpty()) {
+                    context.getString(DesignR.string.format_v2board_traffic, usedStr, totalStr, expireStr)
+                } else {
+                    "$usedStr / $totalStr"
+                }
+            } else null
+
+            setProfileFlowInfo(flowInfo)
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "${bytes}B"
+            bytes < 1024 * 1024 -> "%.1fKB".format(bytes / 1024.0)
+            bytes < 1024 * 1024 * 1024 -> "%.1fMB".format(bytes / (1024.0 * 1024))
+            else -> "%.2fGB".format(bytes / (1024.0 * 1024 * 1024))
         }
     }
 

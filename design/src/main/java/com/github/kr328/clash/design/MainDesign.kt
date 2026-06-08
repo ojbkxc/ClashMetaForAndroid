@@ -71,6 +71,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    suspend fun setProfileFlowInfo(info: String?) {
+        withContext(Dispatchers.Main) {
+            binding.profileFlowInfo = info
+        }
+    }
+
     init {
         binding.self = this
 

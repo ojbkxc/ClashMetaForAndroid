@@ -70,6 +70,34 @@ class ProxyMenu(
 
                 requests.trySend(ProxyDesign.Request.ReloadAll)
             }
+            R.id.region_all -> {
+                uiStore.proxyRegionFilter = ""
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_hk -> {
+                uiStore.proxyRegionFilter = "HK|Hong Kong|香港"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_jp -> {
+                uiStore.proxyRegionFilter = "JP|Japan|日本|东京|大阪"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_tw -> {
+                uiStore.proxyRegionFilter = "TW|Taiwan|台湾"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_us -> {
+                uiStore.proxyRegionFilter = "US|United States|美国|美"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_sg -> {
+                uiStore.proxyRegionFilter = "SG|Singapore|新加坡|狮城"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_kr -> {
+                uiStore.proxyRegionFilter = "KR|Korea|韩国|韩"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
             R.id.dont_modify -> {
                 requests.trySend(ProxyDesign.Request.PatchMode(null))
             }
@@ -112,6 +140,17 @@ class ProxyMenu(
                 TunnelState.Mode.Global -> findItem(R.id.global_mode).isChecked = true
                 TunnelState.Mode.Rule -> findItem(R.id.rule_mode).isChecked = true
                 else -> {}
+            }
+
+            when (uiStore.proxyRegionFilter) {
+                "" -> findItem(R.id.region_all).isChecked = true
+                "HK|Hong Kong|香港" -> findItem(R.id.region_hk).isChecked = true
+                "JP|Japan|日本|东京|大阪" -> findItem(R.id.region_jp).isChecked = true
+                "TW|Taiwan|台湾" -> findItem(R.id.region_tw).isChecked = true
+                "US|United States|美国|美" -> findItem(R.id.region_us).isChecked = true
+                "SG|Singapore|新加坡|狮城" -> findItem(R.id.region_sg).isChecked = true
+                "KR|Korea|韩国|韩" -> findItem(R.id.region_kr).isChecked = true
+                else -> findItem(R.id.region_all).isChecked = true
             }
         }
 

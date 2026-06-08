@@ -250,4 +250,20 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">相機權限受限，請前往設定開啟。</string>
     <string name="import_from_qr_exception">發生系統未知異常，操作失敗。</string>
+
+    <string name="network_behavior">網路行為</string>
+    <string name="clear_connections_on_network_change">網路切換時清理連線</string>
+    <string name="clear_connections_on_network_change_summary">網路變化時自動關閉所有連線（WiFi/流動數據切換）</string>
+
+    <string name="region_filter">區域</string>
+    <string name="region_all">全部</string>
+    <string name="region_hk">香港</string>
+    <string name="region_jp">日本</string>
+    <string name="region_tw">台灣</string>
+    <string name="region_us">美國</string>
+    <string name="region_sg">新加坡</string>
+    <string name="region_kr">韓國</string>
+
+    <string name="template">範本</string>
+    <string name="import_from_template">從預設範本匯入</string>
 </resources>

@@ -6,17 +6,26 @@ import android.os.Build
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
+import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.asSocketAddressText
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 class NetworkObserveModule(service: Service) : Module<Network>(service) {
     private val connectivity = service.getSystemService<ConnectivityManager>()!!
     private val networks: Channel<Network> = Channel(Channel.UNLIMITED)
+    private val store = ServiceStore(service)
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(2, TimeUnit.SECONDS)
+        .build()
     private val request = NetworkRequest.Builder().apply {
         addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
         addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -56,6 +65,22 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             Log.i("NetworkObserve onLost network=$network")
             networkInfos.remove(network)
             notifyDnsChange()
+
+            // 网络切换时自动清理连接（异步执行，不阻塞回调线程）
+            if (store.clearConnectionsOnNetworkChange) {
+                Thread {
+                    try {
+                        val request = Request.Builder()
+                            .url("http://127.0.0.1:9090/connections")
+                            .delete()
+                            .build()
+                        httpClient.newCall(request).execute().close()
+                        Log.i("NetworkObserve: cleared connections on network change")
+                    } catch (e: Exception) {
+                        Log.w("NetworkObserve: failed to clear connections: ${e.message}")
+                    }
+                }.start()
+            }
 
             networks.trySend(network)
         }

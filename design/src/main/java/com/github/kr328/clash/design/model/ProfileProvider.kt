@@ -42,6 +42,15 @@ sealed class ProfileProvider {
         val intent: Intent,
     ) : ProfileProvider()
 
+    class Template(private val context: Context) : ProfileProvider() {
+        override val name: String
+            get() = context.getString(R.string.template)
+        override val summary: String
+            get() = context.getString(R.string.import_from_template)
+        override val icon: Drawable?
+            get() = context.getDrawableCompat(R.drawable.ic_baseline_assignment)
+    }
+
     abstract val name: String
     abstract val summary: String
     abstract val icon: Drawable?
