@@ -88,12 +88,12 @@ class RootSettingsDesign(
                 summary = R.string.root_dns_hijack_summary,
                 configure = rootDependencies::add,
             ) {
-                enabled = rootAvailable
-                listener = OnChangedListener {
+                setEnabled(rootAvailable)
+                setListener(OnChangedListener {
                     if (srvStore.rootDnsHijack) {
                         requests.trySend(Request.ApplyDnsHijack)
                     }
-                }
+                })
             }
         }
 
