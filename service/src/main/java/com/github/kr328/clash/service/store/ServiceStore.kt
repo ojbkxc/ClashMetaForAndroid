@@ -70,20 +70,4 @@ class ServiceStore(context: Context) {
         key = "clear_connections_on_network_change",
         defaultValue = false
     )
-
-    // Root 功能配置
-    var rootTransparentProxy by store.boolean(
-        key = "root_transparent_proxy",
-        defaultValue = false
-    )
-
-    var rootLockBackground by store.boolean(
-        key = "root_lock_background",
-        defaultValue = false
-    )
-
-    var rootDnsHijack by store.boolean(
-        key = "root_dns_hijack",
-        defaultValue = false
-    )
 }

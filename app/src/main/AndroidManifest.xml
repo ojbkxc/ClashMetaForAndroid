@@ -166,11 +166,6 @@
             android:exported="false"
             android:label="@string/meta_features" />
         <activity
-            android:name=".RootSettingsActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/root_settings" />
-        <activity
             android:name=".AccessControlActivity"
             android:configChanges="uiMode"
             android:exported="false"

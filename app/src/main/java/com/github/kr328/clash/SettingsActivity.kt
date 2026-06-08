@@ -27,8 +27,6 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(OverrideSettingsActivity::class.intent)
                         SettingsDesign.Request.StartMetaFeature ->
                             startActivity(MetaFeatureSettingsActivity::class.intent)
-                        SettingsDesign.Request.StartRoot ->
-                            startActivity(RootSettingsActivity::class.intent)
                         SettingsDesign.Request.ViewSyncLog ->
                             startActivity(SyncLogActivity::class.intent)
                     }

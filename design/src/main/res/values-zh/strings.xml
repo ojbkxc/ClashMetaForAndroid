@@ -320,20 +320,4 @@
     <string name="logged_out">已退出登录</string>
     <string name="auto_syncing_subscription">正在自动同步订阅…</string>
     <string name="login_success_syncing">登录成功，3秒后自动同步订阅…</string>
-
-    <string name="root_settings">Root 设置</string>
-    <string name="root_not_available">设备未获取 Root 权限</string>
-    <string name="root_granted">已获取 Root 权限</string>
-    <string name="root_requesting">正在申请 Root 权限…</string>
-    <string name="root_transparent_proxy">透明代理</string>
-    <string name="root_transparent_proxy_summary">使用 iptables 重定向所有流量，无需 VPN 模式。需要 Root。</string>
-    <string name="root_lock_background">锁定后台</string>
-    <string name="root_lock_background_summary">防止系统杀掉后台 Clash 服务。需要 Root。</string>
-    <string name="root_dns_hijack">Root DNS 劫持</string>
-    <string name="root_dns_hijack_summary">通过 iptables 劫持所有 DNS 查询。比 VPN DNS 模式更彻底。</string>
-    <string name="root_warning_title">警告</string>
-    <string name="root_warning_message">Root 功能会修改系统 iptables 规则，请谨慎使用。错误的规则可能导致网络问题。\n\n是否继续？</string>
-    <string name="root_apply_success">Root 规则已生效</string>
-    <string name="root_apply_failed">Root 规则应用失败: %s</string>
-    <string name="root_rules_cleared">Root 规则已清除</string>
 </resources>

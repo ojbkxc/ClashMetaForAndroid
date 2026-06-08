@@ -59,13 +59,6 @@
                 <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartRoot)}"
-                    app:icon="@drawable/ic_baseline_adb"
-                    app:text="@string/root_settings" />
-
-                <com.github.kr328.clash.design.view.ActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:onClick="@{() -> self.request(Request.ViewSyncLog)}"
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/v2board_sync_log" />
