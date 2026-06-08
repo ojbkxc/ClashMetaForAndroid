@@ -87,7 +87,7 @@ class ProxyMenu(
                 requests.trySend(ProxyDesign.Request.ReloadAll)
             }
             R.id.region_us -> {
-                uiStore.proxyRegionFilter = "US|United States|美国|美"
+                uiStore.proxyRegionFilter = "US|United States|America|美国|美"
                 requests.trySend(ProxyDesign.Request.ReloadAll)
             }
             R.id.region_sg -> {
