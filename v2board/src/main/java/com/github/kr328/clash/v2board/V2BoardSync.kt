@@ -107,13 +107,6 @@ class V2BoardSync(private val context: Context) {
                     return@withContext Result.failure(Exception("Not logged in"))
                 }
 
-                // 预检：JWT 是否已过期
-                if (session.isTokenLikelyExpired()) {
-                    SyncLog.add("认证已过期，需要重新登录")
-                    session.clear()
-                    return@withContext Result.failure(Exception("Token expired, please re-login"))
-                }
-
                 var currentUrl = getActiveUrl()
                 SyncLog.add("后端地址: ${SyncLog.maskUrl(currentUrl)}")
 
@@ -184,8 +177,7 @@ class V2BoardSync(private val context: Context) {
                     Log.w("V2BoardSync: HTTP error: ${response.code}")
 
                     if (response.code == 401 || response.code == 403) {
-                        SyncLog.add("认证已失效 (HTTP ${response.code})，自动清除登录状态")
-                        session.clear()
+                        SyncLog.add("认证已失效 (HTTP ${response.code})，请重新登录")
                         Result.failure(Exception("认证已失效，请重新登录"))
                     } else {
                         try {

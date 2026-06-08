@@ -57,6 +57,20 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             useWideViewPort = true
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
             mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+            // 持久化存储：设置数据库路径（API < 19 需要，更高版本自动使用应用私有目录）
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.KITKAT) {
+                val webViewDir = context.getDir("webview_storage", Context.MODE_PRIVATE)
+                setDatabasePath(webViewDir.absolutePath)
+            }
+        }
+
+        // 持久化 Cookie
+        android.webkit.CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                setAcceptThirdPartyCookies(binding.webView, true)
+            }
         }
 
         binding.webView.webChromeClient = object : WebChromeClient() {
