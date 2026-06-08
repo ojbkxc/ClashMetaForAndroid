@@ -382,7 +382,4 @@
     <string name="region_us">United States</string>
     <string name="region_sg">Singapore</string>
     <string name="region_kr">Korea</string>
-
-    <string name="template">Template</string>
-    <string name="import_from_template">Import from preset template</string>
 </resources>

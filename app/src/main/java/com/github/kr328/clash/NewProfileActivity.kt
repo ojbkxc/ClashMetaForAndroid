@@ -50,15 +50,6 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         is NewProfileDesign.Request.Create -> {
-                            // Template 模板需要先在外部读取 assets（withProfile 作用域内无法访问）
-                            val templateContent: String? = if (it.provider is ProfileProvider.Template) {
-                                withContext(Dispatchers.IO) {
-                                    assets.open("rule_template.yaml").use { stream ->
-                                        stream.bufferedReader().readText()
-                                    }
-                                }
-                            } else null
-
                             withProfile {
                                 val name = getString(R.string.new_profile)
 
@@ -86,28 +77,6 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                                             )
                                         } else {
                                             null
-                                        }
-                                    }
-
-                                    is ProfileProvider.Template -> {
-                                        if (templateContent == null) {
-                                            null
-                                        } else {
-                                            val createdUuid = create(
-                                                Profile.Type.File,
-                                                "Rule Template"
-                                            )
-
-                                            // 将模板内容写入 pending 目录的 config.yaml
-                                            withContext(Dispatchers.IO) {
-                                                val pendingDir = java.io.File(filesDir, "pending/$createdUuid")
-                                                val configFile = java.io.File(pendingDir, "config.yaml")
-                                                if (configFile.exists()) {
-                                                    configFile.writeText(templateContent)
-                                                }
-                                            }
-
-                                            createdUuid
                                         }
                                     }
                                 }
@@ -195,8 +164,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
             listOf(
                 ProfileProvider.File(self),
                 ProfileProvider.Url(self),
-                ProfileProvider.QR(self),
-                ProfileProvider.Template(self)
+                ProfileProvider.QR(self)
             ) + providers
         }
     }

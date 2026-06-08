@@ -294,7 +294,4 @@
     <string name="region_us">美国</string>
     <string name="region_sg">新加坡</string>
     <string name="region_kr">韩国</string>
-
-    <string name="template">模板</string>
-    <string name="import_from_template">从预置模板导入</string>
 </resources>

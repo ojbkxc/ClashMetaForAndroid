@@ -77,6 +77,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    suspend fun setProfileFlowProgress(progress: Int) {
+        withContext(Dispatchers.Main) {
+            binding.profileFlowProgress = progress
+        }
+    }
+
     init {
         binding.self = this
 

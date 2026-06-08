@@ -157,7 +157,12 @@ class MainActivity : BaseActivity<MainDesign>() {
                 }
             } else null
 
+            val flowProgress = if (active != null && active.total > 1) {
+                ((active.upload + active.download) / (active.total / 1000)).toInt().coerceIn(0, 1000)
+            } else 0
+
             setProfileFlowInfo(flowInfo)
+            setProfileFlowProgress(flowProgress)
         }
     }
 
