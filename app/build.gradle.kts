@@ -84,15 +84,15 @@ task("downloadGeoFiles") {
     }
 }
 
-afterEvaluate {
-    val downloadGeoFilesTask = tasks["downloadGeoFiles"]
-
-    tasks.forEach {
-        if (it.name.startsWith("assemble")) {
-            it.dependsOn(downloadGeoFilesTask)
-        }
-    }
-}
+// afterEvaluate {
+//     val downloadGeoFilesTask = tasks["downloadGeoFiles"]
+//
+//     tasks.forEach {
+//         if (it.name.startsWith("assemble")) {
+//             it.dependsOn(downloadGeoFilesTask)
+//         }
+//     }
+// }
 
 tasks.getByName("clean", type = Delete::class) {
     delete(file(geoFilesDownloadDir))
