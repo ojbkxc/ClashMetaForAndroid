@@ -50,21 +50,20 @@ class RootSettingsDesign(
             category(R.string.root_settings)
 
             switch(
-                value = srvStore::rootTransparentProxy,
-                icon = R.drawable.ic_baseline_vpn_lock,
-                title = R.string.root_transparent_proxy,
-                summary = R.string.root_transparent_proxy_summary,
-                configure = rootDependencies::add,
-            ) {
-                setEnabled(rootAvailable)
-                setListener(OnChangedListener {
-                    if (srvStore.rootTransparentProxy) {
-                        requests.trySend(Request.ApplyTransparentProxy)
-                    } else {
-                        requests.trySend(Request.ClearAllRules)
-                    }
-                })
+            value = srvStore::rootTransparentProxy,
+            icon = R.drawable.ic_baseline_vpn_lock,
+            title = R.string.root_transparent_proxy,
+            summary = R.string.root_transparent_proxy_summary,
+            configure = rootDependencies::add,
+            enabled = rootAvailable,
+            listener = OnChangedListener {
+                if (srvStore.rootTransparentProxy) {
+                    requests.trySend(Request.ApplyTransparentProxy)
+                } else {
+                    requests.trySend(Request.ClearAllRules)
+                }
             }
+        )
 
             switch(
                 value = srvStore::rootLockBackground,
