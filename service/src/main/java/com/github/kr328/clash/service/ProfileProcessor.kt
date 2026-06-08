@@ -90,7 +90,9 @@ object ProfileProcessor {
 
                                 // UA 轮换：依次尝试不同 UA 获取订阅信息
                                 var lastException: Exception? = null
+                                var uaSuccess = false
                                 for (ua in USER_AGENTS) {
+                                    if (uaSuccess) break
                                     try {
                                         val userAgent = "$ua/$versionName"
                                         val request = Request.Builder()
@@ -134,8 +136,8 @@ object ProfileProcessor {
                                                 }
                                             }
 
-                                            // 请求成功，跳出 UA 轮换循环
-                                            if (response.isSuccessful) break
+                                            // 请求成功，标记跳出 UA 轮换循环
+                                            if (response.isSuccessful) uaSuccess = true
                                         }
                                     } catch (e: Exception) {
                                         lastException = e
