@@ -412,4 +412,10 @@
     <string name="root_settings">Root Settings</string>
     <string name="rootTransparentProxy">Transparent Proxy</string>
     <string name="rootDnsHijack">DNS Hijack</string>
+    <string name="root_transparent_proxy">Transparent Proxy</string>
+    <string name="root_transparent_proxy_summary">Redirect all traffic through VPN (requires root)</string>
+    <string name="root_lock_background">Lock Background</string>
+    <string name="root_lock_background_summary">Prevent system from killing Clash in background</string>
+    <string name="root_dns_hijack">DNS Hijack</string>
+    <string name="root_dns_hijack_summary">Intercept DNS queries and route through Clash (requires root)</string>
 </resources>
