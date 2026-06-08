@@ -153,8 +153,15 @@ class ProxyDesign(
                 })
             }
 
+            binding.tabLayoutView.tabIconTint = null
+            binding.tabLayoutView.tabIconGravity = com.google.android.material.tabs.TabLayout.ICON_GRAVITY_TEXT_START
+
             TabLayoutMediator(binding.tabLayoutView, binding.pagesView) { tab, index ->
                 tab.text = groupNames[index]
+                val iconRes = getGroupIconRes(groupNames[index])
+                if (iconRes != null) {
+                    tab.icon = androidx.core.content.ContextCompat.getDrawable(context, iconRes)
+                }
             }.attach()
 
             val initialPosition = groupNames.indexOf(uiStore.proxyLastGroup)
