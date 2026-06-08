@@ -168,12 +168,12 @@ class MainActivity : BaseActivity<MainDesign>() {
             if (active != null && active.expire > 0) {
                 val daysLeft = ((active.expire - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
                 if (daysLeft <= 0) {
-                    design.showToast(
+                    design?.showToast(
                         DesignR.string.subscription_expired,
                         com.github.kr328.clash.design.ui.ToastDuration.Long
                     )
                 } else if (daysLeft <= 3) {
-                    design.showToast(
+                    design?.showToast(
                         getString(DesignR.string.subscription_expiring_soon, daysLeft),
                         com.github.kr328.clash.design.ui.ToastDuration.Long
                     )
@@ -185,7 +185,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val usedBytes = active.upload + active.download
                 val usagePercent = (usedBytes * 100.0 / active.total).toInt()
                 if (usagePercent >= 90) {
-                    design.showToast(
+                    design?.showToast(
                         DesignR.string.subscription_traffic_warning,
                         com.github.kr328.clash.design.ui.ToastDuration.Long
                     )
