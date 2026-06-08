@@ -418,4 +418,8 @@
     <string name="root_lock_background_summary">Prevent system from killing Clash in background</string>
     <string name="root_dns_hijack">DNS Hijack</string>
     <string name="root_dns_hijack_summary">Intercept DNS queries and route through Clash (requires root)</string>
+    <string name="root_apply_success">Applied successfully</string>
+    <string name="root_rules_cleared">Rules cleared</string>
+    <string name="root_warning_title">Warning</string>
+    <string name="root_apply_failed">Failed to apply: %s</string>
 </resources>
