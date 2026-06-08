@@ -56,14 +56,14 @@ class RootSettingsDesign(
                 summary = R.string.root_transparent_proxy_summary,
                 configure = rootDependencies::add,
             ) {
-                enabled = rootAvailable
-                listener = OnChangedListener {
+                setEnabled(rootAvailable)
+                setListener(OnChangedListener {
                     if (srvStore.rootTransparentProxy) {
                         requests.trySend(Request.ApplyTransparentProxy)
                     } else {
                         requests.trySend(Request.ClearAllRules)
                     }
-                }
+                })
             }
 
             switch(
