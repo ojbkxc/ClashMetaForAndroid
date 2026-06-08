@@ -54,8 +54,8 @@ class RootSettingsDesign(
                 icon = R.drawable.ic_baseline_vpn_lock,
                 title = R.string.root_transparent_proxy,
                 summary = R.string.root_transparent_proxy_summary,
-                configure = rootDependencies::add,
             ) {
+                rootDependencies.add(this)
                 enabled = rootAvailable
                 listener = OnChangedListener {
                     if (srvStore.rootTransparentProxy) {
@@ -71,8 +71,8 @@ class RootSettingsDesign(
                 icon = R.drawable.ic_baseline_restore,
                 title = R.string.root_lock_background,
                 summary = R.string.root_lock_background_summary,
-                configure = rootDependencies::add,
             ) {
+                rootDependencies.add(this)
                 enabled = rootAvailable
                 listener = OnChangedListener {
                     if (srvStore.rootLockBackground) {
@@ -86,8 +86,8 @@ class RootSettingsDesign(
                 icon = R.drawable.ic_baseline_dns,
                 title = R.string.root_dns_hijack,
                 summary = R.string.root_dns_hijack_summary,
-                configure = rootDependencies::add,
             ) {
+                rootDependencies.add(this)
                 enabled = rootAvailable
                 listener = OnChangedListener {
                     if (srvStore.rootDnsHijack) {
