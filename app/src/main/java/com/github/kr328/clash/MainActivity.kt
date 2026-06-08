@@ -168,17 +168,15 @@ class MainActivity : BaseActivity<MainDesign>() {
             if (active != null && active.expire > 0) {
                 val daysLeft = ((active.expire - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
                 if (daysLeft <= 0) {
-                    android.widget.Toast.makeText(
-                        this@MainActivity,
+                    design.showToast(
                         DesignR.string.subscription_expired,
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
+                        com.github.kr328.clash.design.ui.ToastDuration.Long
+                    )
                 } else if (daysLeft <= 3) {
-                    android.widget.Toast.makeText(
-                        this@MainActivity,
+                    design.showToast(
                         getString(DesignR.string.subscription_expiring_soon, daysLeft),
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
+                        com.github.kr328.clash.design.ui.ToastDuration.Long
+                    )
                 }
             }
 
@@ -187,11 +185,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val usedBytes = active.upload + active.download
                 val usagePercent = (usedBytes * 100.0 / active.total).toInt()
                 if (usagePercent >= 90) {
-                    android.widget.Toast.makeText(
-                        this@MainActivity,
+                    design.showToast(
                         DesignR.string.subscription_traffic_warning,
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
+                        com.github.kr328.clash.design.ui.ToastDuration.Long
+                    )
                 }
             }
         }
@@ -262,16 +259,16 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
             if (syncResult.isSuccess) {
-                design.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
+                design.showToast(getString(DesignR.string.sync_success), ToastDuration.Short)
                 design.fetch()
             } else {
-                val errorMsg = syncResult.exceptionOrNull()?.message ?: "未知错误"
-                design.showToast("同步失败: $errorMsg", ToastDuration.Long)
+                val errorMsg = syncResult.exceptionOrNull()?.message ?: ""
+                design.showToast(getString(DesignR.string.sync_failed, errorMsg), ToastDuration.Long)
             }
         } else {
-            val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
+            val errorMsg = result.exceptionOrNull()?.message ?: ""
             SyncLog.add("API获取订阅失败: $errorMsg")
-            design.showToast("同步失败: $errorMsg", ToastDuration.Long)
+            design.showToast(getString(DesignR.string.sync_failed, errorMsg), ToastDuration.Long)
         }
     }
 
@@ -315,8 +312,8 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             // Show a dialog indicating check in progress
             val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                .setTitle("检查更新")
-                .setMessage("正在检查...")
+                .setTitle(DesignR.string.check_update)
+                .setMessage(DesignR.string.checking_update)
                 .setCancelable(false)
                 .create()
             progressDialog.show()
@@ -328,9 +325,9 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             if (release == null) {
                 androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle("检查更新")
-                    .setMessage("检查更新失败，请稍后重试。")
-                    .setPositiveButton("确定", null)
+                    .setTitle(DesignR.string.check_update)
+                    .setMessage(DesignR.string.check_update_failed)
+                    .setPositiveButton(DesignR.string.btn_ok, null)
                     .show()
                 return@launch
             }

@@ -143,6 +143,10 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.webView.addJavascriptInterface(obj, name)
     }
 
+    fun removeJavascriptInterface(name: String) {
+        binding.webView.removeJavascriptInterface(name)
+    }
+
     fun evaluateJavascript(script: String) {
         binding.webView.evaluateJavascript(script, null)
     }
@@ -153,6 +157,12 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
     }
 
     fun destroyWebView() {
-        binding.webView.destroy()
+        binding.webView.apply {
+            stopLoading()
+            loadUrl("about:blank")
+            clearHistory()
+            removeAllViews()
+            destroy()
+        }
     }
 }

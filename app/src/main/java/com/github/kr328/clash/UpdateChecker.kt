@@ -57,21 +57,24 @@ object UpdateChecker {
     fun showUpdateDialog(context: Context, currentVersion: String, release: ReleaseInfo) {
         val needUpdate = compareVersions(currentVersion, release.tagName) < 0
         val message = if (needUpdate) {
-            "当前版本: $currentVersion\n最新版本: ${release.tagName}\n\n更新内容:\n${release.body.take(200)}"
+            context.getString(com.github.kr328.clash.design.R.string.update_current_version,
+                currentVersion, release.tagName, release.body.take(200))
         } else {
-            "当前已是最新版本 ($currentVersion)"
+            context.getString(com.github.kr328.clash.design.R.string.update_is_latest, currentVersion)
         }
 
         AlertDialog.Builder(context)
-            .setTitle(if (needUpdate) "发现新版本" else "已是最新")
+            .setTitle(if (needUpdate) com.github.kr328.clash.design.R.string.update_found
+                      else com.github.kr328.clash.design.R.string.update_already_latest)
             .setMessage(message)
-            .setPositiveButton(if (needUpdate) "下载更新" else "确定") { _, _ ->
+            .setPositiveButton(if (needUpdate) com.github.kr328.clash.design.R.string.btn_download
+                              else com.github.kr328.clash.design.R.string.btn_ok) { _, _ ->
                 if (needUpdate) {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(release.apkDownloadUrl))
                     context.startActivity(intent)
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(com.github.kr328.clash.design.R.string.btn_cancel, null)
             .show()
     }
 

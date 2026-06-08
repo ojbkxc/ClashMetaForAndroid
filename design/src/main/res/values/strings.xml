@@ -386,4 +386,42 @@
     <string name="subscription_expiring_soon">Subscription expires in %d days</string>
     <string name="subscription_expired">Subscription has expired</string>
     <string name="subscription_traffic_warning">Data usage exceeds 90%%</string>
+
+    <string name="sync_success">Sync successful</string>
+    <string name="sync_failed">Sync failed: %s</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="log_title">Logs</string>
+    <string name="log_file_path">File: %s</string>
+    <string name="log_read_failed">Failed to read log: %s</string>
+    <string name="log_empty">No logs yet</string>
+    <string name="btn_copy">Copy</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_ok">OK</string>
+    <string name="btn_download">Download</string>
+    <string name="check_update">Check for Updates</string>
+    <string name="checking_update">Checking…</string>
+    <string name="check_update_failed">Update check failed, please try again later.</string>
+    <string name="update_found">New Version Found</string>
+    <string name="update_already_latest">Already Latest</string>
+    <string name="update_current_version">Current version: %s\nLatest version: %s\n\nChangelog:\n%s</string>
+    <string name="update_is_latest">Already the latest version (%s)</string>
+    <string name="logged_out">Logged out</string>
+    <string name="auto_syncing_subscription">Auto syncing subscription…</string>
+    <string name="login_success_syncing">Login successful, syncing subscription in 3s…</string>
+
+    <string name="root_settings">Root</string>
+    <string name="root_not_available">Root permission not available</string>
+    <string name="root_granted">Root permission granted</string>
+    <string name="root_requesting">Requesting root permission…</string>
+    <string name="root_transparent_proxy">Transparent Proxy</string>
+    <string name="root_transparent_proxy_summary">Use iptables to redirect all traffic without VPN mode. Requires root.</string>
+    <string name="root_lock_background">Lock Background</string>
+    <string name="root_lock_background_summary">Prevent the system from killing Clash service in background. Requires root.</string>
+    <string name="root_dns_hijack">Root DNS Hijack</string>
+    <string name="root_dns_hijack_summary">Hijack all DNS queries via iptables. More thorough than VPN DNS mode.</string>
+    <string name="root_warning_title">Warning</string>
+    <string name="root_warning_message">Root features modify system iptables rules. Use with caution. Incorrect rules may cause network issues.\n\nContinue?</string>
+    <string name="root_apply_success">Root rules applied successfully</string>
+    <string name="root_apply_failed">Failed to apply root rules: %s</string>
+    <string name="root_rules_cleared">Root rules cleared</string>
 </resources>

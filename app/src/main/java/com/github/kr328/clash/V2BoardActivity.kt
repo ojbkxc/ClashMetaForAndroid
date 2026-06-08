@@ -110,7 +110,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                                     }
                                     withContext(Dispatchers.Main) {
                                         design?.showToast(
-                                            "正在自动同步订阅...",
+                                            getString(com.github.kr328.clash.design.R.string.auto_syncing_subscription),
                                             ToastDuration.Short
                                         )
                                         fetchSubscribeViaJs()
@@ -403,7 +403,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "登录成功，3秒后自动同步订阅...",
+                        activity.getString(com.github.kr328.clash.design.R.string.login_success_syncing),
                         ToastDuration.Short
                     )
                 }
@@ -435,7 +435,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
                         activity.design?.showToast(
-                            syncResult.getOrNull() ?: "同步完成",
+                            activity.getString(com.github.kr328.clash.design.R.string.sync_success),
                             ToastDuration.Short
                         )
                     } else {
@@ -448,7 +448,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         Log.w("V2Board: Sync failed: $errorMsg")
                         SyncLog.add("同步失败: $errorMsg")
                         activity.design?.showToast(
-                            "同步失败: $errorMsg",
+                            activity.getString(com.github.kr328.clash.design.R.string.sync_failed, errorMsg ?: ""),
                             ToastDuration.Long
                         )
                     }
@@ -482,7 +482,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "获取订阅失败: $error",
+                        activity.getString(com.github.kr328.clash.design.R.string.sync_failed, error),
                         ToastDuration.Long
                     )
                 }
@@ -496,7 +496,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "已退出登录",
+                        activity.getString(com.github.kr328.clash.design.R.string.logged_out),
                         ToastDuration.Short
                     )
                 }
@@ -588,7 +588,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     override fun onDestroy() {
+        // 先移除 JS 接口，防止回调访问已销毁的 Activity
+        try {
+            design?.removeJavascriptInterface("AndroidBridge")
+        } catch (_: Exception) {}
         design?.destroyWebView()
+        design = null
         super.onDestroy()
     }
 

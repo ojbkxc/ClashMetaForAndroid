@@ -127,6 +127,7 @@
                     android:visibility="@{profileFlowInfo != null &amp;&amp; !profileFlowInfo.isEmpty() ? View.VISIBLE : View.GONE}" />
 
                 <ProgressBar
+                    android:id="@+id/profileFlowProgressBar"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
