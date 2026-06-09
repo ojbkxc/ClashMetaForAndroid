@@ -26,7 +26,7 @@ class StatusClient(private val context: Context) {
 
             result?.getString("name")
         } catch (e: Exception) {
-            AppLog.w("StatusClient", "Query current profile: $e", e)
+            AppLog.w("StatusClient", "Query current profile: $e")
 
             null
         }
