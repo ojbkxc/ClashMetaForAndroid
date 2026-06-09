@@ -17,12 +17,12 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
     override suspend fun main() {
         val srvStore = ServiceStore(this)
 
-        // 检测 root 权限
-        val rootAvailable = withContext(Dispatchers.IO) {
-            RootChecker.isRooted()
+        // 主动申请 root 权限（会触发 superuser 弹窗）
+        var rootAvailable = withContext(Dispatchers.IO) {
+            RootChecker.requestRoot()
         }
 
-        val design = RootSettingsDesign(
+        var design = RootSettingsDesign(
             this,
             srvStore,
             rootAvailable,
@@ -45,6 +45,23 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
                 }
                 design.requests.onReceive {
                     when (it) {
+                        RootSettingsDesign.Request.RequestRoot -> {
+                            // 重新申请 root 权限
+                            rootAvailable = withContext(Dispatchers.IO) {
+                                RootChecker.requestRoot()
+                            }
+                            // 重新创建设计以更新 UI 状态
+                            design = RootSettingsDesign(
+                                this@RootSettingsActivity,
+                                srvStore,
+                                rootAvailable,
+                            )
+                            setContentDesign(design)
+                            if (rootAvailable) {
+                                design.showToast(DesignR.string.root_apply_success,
+                                    com.github.kr328.clash.design.ui.ToastDuration.Short)
+                            }
+                        }
                         RootSettingsDesign.Request.ApplyTransparentProxy -> {
                             showWarningAndApply {
                                 withContext(Dispatchers.IO) {

@@ -12,24 +12,36 @@ object RootChecker {
     private const val TAG = "RootChecker"
 
     /**
-     * 检测设备是否有 root 权限
+     * 检测设备是否有 root 权限（不主动申请，不触发授权弹窗）
+     * 只检查 su 文件是否存在，不执行 su 命令
      */
     fun isRooted(): Boolean {
         return try {
-            // 方法1：检查 su 文件
+            // 检查 su 文件是否存在
             val paths = arrayOf(
                 "/system/bin/su", "/system/xbin/su",
                 "/sbin/su", "/system/su",
                 "/data/local/xbin/su", "/data/local/bin/su"
             )
-            if (paths.any { java.io.File(it).exists() }) return true
+            paths.any { java.io.File(it).exists() }
+        } catch (e: Exception) {
+            Log.d(TAG, "Root check failed: ${e.message}")
+            false
+        }
+    }
 
-            // 方法2：尝试执行 su
+    /**
+     * 主动申请 root 权限
+     * 会触发 superuser 弹窗请求用户授权
+     * @return true 如果已获得 root 权限
+     */
+    fun requestRoot(): Boolean {
+        return try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
             val exitCode = process.waitFor()
             exitCode == 0
         } catch (e: Exception) {
-            Log.d(TAG, "Root check failed: ${e.message}")
+            Log.d(TAG, "Root request failed: ${e.message}")
             false
         }
     }

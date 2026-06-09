@@ -23,6 +23,7 @@ class RootSettingsDesign(
         ApplyLockBackground,
         ApplyDnsHijack,
         ClearAllRules,
+        RequestRoot,
     }
 
     private val binding = DesignSettingsCommonBinding
@@ -48,6 +49,17 @@ class RootSettingsDesign(
             val rootDependencies: MutableList<Preference> = mutableListOf()
 
             category(R.string.root_settings)
+
+            // 当 root 不可用时，显示重新申请按钮
+            if (!rootAvailable) {
+                clickable(
+                    icon = R.drawable.ic_baseline_refresh,
+                    title = R.string.root_request_permission,
+                    summary = R.string.root_request_permission_summary,
+                ) {
+                    requests.trySend(Request.RequestRoot)
+                }
+            }
 
             switch(
                 value = srvStore::rootTransparentProxy,
