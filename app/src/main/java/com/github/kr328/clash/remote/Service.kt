@@ -5,7 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
 import android.os.IBinder
-import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.service.RemoteService
 import com.github.kr328.clash.service.remote.IRemoteService
@@ -33,7 +33,7 @@ class Service(private val context: Application, val crashed: () -> Unit) {
             }
 
             lastCrashed = System.currentTimeMillis()
-            Log.w("RemoteService killed or crashed")
+            AppLog.w("Remote", "RemoteService killed or crashed")
         }
     }
 

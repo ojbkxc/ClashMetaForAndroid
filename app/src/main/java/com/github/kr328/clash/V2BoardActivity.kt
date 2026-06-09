@@ -9,7 +9,7 @@ import android.net.http.SslError
 import android.os.Bundle
 import android.view.View
 import android.webkit.*
-import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.design.V2BoardDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.withProfile
@@ -388,7 +388,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.loginDetected = true
             activity.sync.session.save(cleanAuth, token, "")
 
-            Log.d("V2Board: onAuthData called")
+            AppLog.d("V2Board", "onAuthData called")
             SyncLog.add("登录成功，获取到认证信息")
             SyncLog.add("后端地址: ${SyncLog.maskUrl(serverUrl)}")
             SyncLog.add("auth_data: ${cleanAuth.take(30)}...")
@@ -397,7 +397,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
                 activity.sync.resetApi()
-                Log.d("V2Board: Saved backend URL")
+                AppLog.d("V2Board", "Saved backend URL")
             }
 
             activity.launch {
@@ -423,16 +423,16 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         @JavascriptInterface
         fun onSubscribeUrl(subscribeUrl: String) {
             if (subscribeUrl.isBlank()) return
-            Log.d("V2Board: onSubscribeUrl called")
+            AppLog.d("V2Board", "onSubscribeUrl called")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
 
             activity.launch {
-                Log.d("V2Board: Starting sync")
+                AppLog.d("V2Board", "Starting sync")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
-                        Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
+                        AppLog.d("V2Board", "Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
                         activity.design?.showToast(
                             activity.getString(com.github.kr328.clash.design.R.string.sync_success),
@@ -445,7 +445,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         } else {
                             error?.javaClass?.simpleName ?: "Unknown error"
                         }
-                        Log.w("V2Board: Sync failed: $errorMsg")
+                        AppLog.w("V2Board", "Sync failed: $errorMsg")
                         SyncLog.add("同步失败: $errorMsg")
                         activity.design?.showToast(
                             activity.getString(com.github.kr328.clash.design.R.string.sync_failed, errorMsg ?: ""),
@@ -458,7 +458,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun log(message: String) {
-            Log.d("V2Board JS: $message")
+            AppLog.d("V2Board JS", message)
             SyncLog.add("JS: $message")
         }
 
@@ -469,7 +469,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             // 只在值不同时更新，避免不必要的写入
             if (existing != authData) {
                 activity.sync.session.save(authData, "", "")
-                Log.d("V2Board: Saved refreshed auth_data from localStorage")
+                AppLog.d("V2Board", "Saved refreshed auth_data from localStorage")
                 SyncLog.add("检测到前端刷新了认证，已同步保存")
             }
             activity.loginDetected = true
@@ -477,7 +477,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onSubscribeError(error: String) {
-            Log.w("V2Board: onSubscribeError: $error")
+            AppLog.w("V2Board", "onSubscribeError: $error")
             SyncLog.add("获取订阅失败: $error")
             activity.launch {
                 withContext(Dispatchers.Main) {

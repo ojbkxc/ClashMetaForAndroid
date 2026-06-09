@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.github.kr328.clash.common.Global
 import com.github.kr328.clash.common.compat.currentProcessName
-import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.clashDir
@@ -26,7 +26,7 @@ class MainApplication : Application() {
         val processName = currentProcessName
         extractGeoFiles()
 
-        Log.d("Process $processName started")
+        AppLog.d("Process $processName started")
 
         if (processName == packageName) {
             Remote.launch()
@@ -66,7 +66,7 @@ class MainApplication : Application() {
             // ASN.mmdb will be downloaded automatically by Clash core if not present
             // so we don't extract it from assets here
         } catch (e: Exception) {
-            Log.w("Failed to extract geo files: ${e.message}")
+            AppLog.w("Failed to extract geo files: ${e.message}")
         }
     }
 

@@ -15,7 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.github.kr328.clash.common.compat.getColorCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.compat.startForegroundCompat
-import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.log.LogcatCache
@@ -112,7 +112,7 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.De
                     }
                 }
             } catch (e: IOException) {
-                Log.e("Write log file: $e", e)
+                AppLog.e("Logcat", "Write log file: $e", e)
             } finally {
                 withContext(NonCancellable) {
                     if (binder.isBinderAlive) {

@@ -8,7 +8,7 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.compat.startForegroundServiceCompat
-import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.common.util.fileName
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
@@ -49,7 +49,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         val messages = try {
             LogcatReader(this, file).readAll()
         } catch (e: Exception) {
-            Log.e("Fail to read log file ${file.fileName}: ${e.message}")
+            AppLog.e("Logcat", "Fail to read log file ${file.fileName}: ${e.message}")
             return showInvalid()
         }
 

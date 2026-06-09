@@ -4,7 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.util.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -49,7 +49,7 @@ object UpdateChecker {
 
             ReleaseInfo(tagName, apkUrl, body)
         } catch (e: Exception) {
-            Log.w("UpdateChecker error: ${e.message}")
+            AppLog.w("UpdateChecker", "Error: ${e.message}")
             null
         }
     }
