@@ -421,5 +421,6 @@
     <string name="root_apply_success">Applied successfully</string>
     <string name="root_rules_cleared">Rules cleared</string>
     <string name="root_warning_title">Warning</string>
+    <string name="root_warning_message">Are you sure you want to apply this change? This action requires root privileges.</string>
     <string name="root_apply_failed">Failed to apply: %s</string>
 </resources>

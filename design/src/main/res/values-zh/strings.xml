@@ -323,5 +323,6 @@
     <string name="root_apply_success">应用成功</string>
     <string name="root_rules_cleared">规则已清除</string>
     <string name="root_warning_title">警告</string>
+    <string name="root_warning_message">确定要应用此更改吗？此操作需要 root 权限。</string>
     <string name="root_apply_failed">应用失败：%s</string>
 </resources>
