@@ -1,8 +1,73 @@
 # 蓝星网络 (LanXing Network)
 
+[![Android](https://img.shields.io/badge/Android-5.0%2B-green.svg)](https://developer.android.com/about/versions/lollipop)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 基于 [ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid) 定制的 V2Board 订阅客户端，集成了 V2Board 账号登录、订阅自动同步、多域名回退等功能，同时完整保留原版 Clash Meta 的代理能力。
 
+---
+
+## ⚠️ Regional Restrictions / 地区限制
+
+**This software is strictly prohibited from use in mainland China (People's Republic of China).**
+
+This application is designed exclusively for overseas Chinese communities, including but not limited to users in:
+- Singapore
+- Malaysia
+- Taiwan
+- Hong Kong
+- Macau
+- Other regions outside mainland China
+
+By using this software, you acknowledge and agree that you are not located in mainland China and will not use this software within mainland China.
+
+---
+
+**本软件严格禁止在中国大陆（中华人民共和国）境内使用。**
+
+本应用程序专为海外华侨设计，包括但不限于以下地区的用户：
+- 新加坡
+- 马来西亚
+- 台湾
+- 香港
+- 澳门
+- 中国大陆以外的其他地区
+
+使用本软件即表示您确认并同意您不在中国大陆境内，并且不会在中国大陆境内使用本软件。
+
+---
+
 ## 功能特性
+
+### 代理模式对比
+
+本应用提供两种代理模式，适用于不同用户需求：
+
+| 功能 | 普通用户模式（VPN） | Root 用户模式（透明代理） |
+|------|---------------------|--------------------------|
+| **权限要求** | 无需 root 权限 | 需要 root 权限 |
+| **代理方式** | Android VPN Service | iptables 透明代理 |
+| **状态栏图标** | 显示 VPN 图标 | 无额外图标 |
+| **代理范围** | 应用层流量 | 全部流量（含系统服务） |
+| **DNS 处理** | 应用内 DNS | 支持 DNS 劫持 |
+| **后台保活** | 系统管理 | 支持锁定后台 |
+| **兼容性** | 通用兼容 | 部分设备可能冲突 |
+| **安全性** | 系统级保护 | 需信任应用 |
+
+#### 普通用户模式（推荐新手）
+
+- ✅ 无需 root 权限，兼容性好
+- ✅ 使用 Android 系统 VPN Service，稳定可靠
+- ✅ 不会触发安全软件警告
+- ✅ 系统级保护，VPN 断开时自动恢复网络
+
+#### Root 用户模式（高级用户）
+
+- ✅ 无 VPN 图标，状态栏更干净
+- ✅ 透明代理所有流量，包括系统级流量
+- ✅ 更底层的网络控制，兼容性更好
+- ✅ 支持 DNS 劫持，DNS 解析更可靠
+- ✅ 支持锁定后台，防止系统杀进程
 
 ### V2Board 集成
 
@@ -19,6 +84,8 @@
 - TUN 模式全局代理（需 VPN 权限）
 - 规则路由、DNS 覆盖、Fake-IP 等高级功能
 - 支持 GeoIP / GeoSite 数据库进行地域分流
+
+---
 
 ## 项目结构
 
@@ -46,6 +113,8 @@ ClashMetaForAndroid/
 └── hideapi/                # Android 隐藏 API 访问
 ```
 
+---
+
 ## 环境要求
 
 | 依赖 | 版本要求 |
@@ -56,6 +125,8 @@ ClashMetaForAndroid/
 | Go | 1.20+ |
 | CMake | 3.0+ |
 | Gradle | 8.8.0+ |
+
+---
 
 ## 快速开始
 
@@ -105,7 +176,7 @@ v2board.app.name=蓝星网络
 
 多域名通过 `v2board.server.domains` 字段配置，**多个 URL 用英文逗号 `,` 分隔**，不要有空格。
 
-**配置示例**（实际项目中的写法）：
+**配置示例**：
 
 ```properties
 # 主域名 + 2 个备用域名
@@ -120,8 +191,6 @@ v2board.server.domains=https://jc.lxseek.com,https://go.lxkjzh.top,https://cdn.l
 3. 若主域名不通，依次尝试 v2board.server.domains 中的每个域名
 4. 全部失败 → 提示用户检查网络
 ```
-
-> **注意**：修改此文件后需重新编译 APK 才能生效。配置在构建时注入 `BuildConfig`，运行时由 `ConfigManager` 从 assets 中读取，两者保持一致。
 
 ### 4. 配置签名（可选，发布时需要）
 
@@ -146,6 +215,31 @@ key.password=<password>
 ```
 
 编译产物输出至 `app/release/` 目录。
+
+---
+
+## Root 功能配置
+
+### 启用 Root 功能
+
+1. 确保设备已获取 root 权限
+2. 打开应用 → 设置 → Root 设置
+3. 系统会自动弹出 superuser 授权对话框
+4. 点击"允许"授权
+5. 启用所需功能：
+   - **透明代理** — 通过 iptables 重定向所有流量
+   - **DNS 劫持** — 拦截 DNS 查询并路由到 Clash
+   - **锁定后台** — 防止系统杀死 Clash 进程
+
+### Root 功能说明
+
+| 功能 | 说明 |
+|------|------|
+| 透明代理 | 使用 TPROXY 模式重定向所有 TCP/UDP 流量 |
+| DNS 劫持 | 将所有 DNS 查询（端口 53）重定向到 Clash |
+| 锁定后台 | 使用 iptables 标记防止系统杀死进程 |
+
+---
 
 ## 架构说明
 
@@ -186,16 +280,7 @@ key.password=<password>
 | `V2BoardAutoSync.kt` | 订阅自动同步到 Profile |
 | `V2BoardDesign.kt` | WebView UI 层 |
 
-### 更新地址接口格式
-
-域名更新地址应返回如下格式的 JSON：
-
-```json
-{
-  "domains": ["https://new-domain1.com", "https://new-domain2.com"],
-  "update_url": "https://new-update-server.com"
-}
-```
+---
 
 ## 产品变体
 
@@ -208,6 +293,8 @@ key.password=<password>
 
 可通过 `local.properties` 中 `remove.suffix=true` 去掉包名后缀。
 
+---
+
 ## 依赖说明
 
 | 组件 | 用途 |
@@ -219,8 +306,18 @@ key.password=<password>
 | kaidl | AIDL 接口代码生成 |
 | AndroidX | 基础 UI 组件 |
 
+---
+
 ## 许可证
 
 本项目基于 [GPLv3](LICENSE) 许可证发布。
 
 贡献代码即表示您同意将代码合并至项目的闭源分支，其余条款遵循 GPLv3 协议。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+---
+
+## 免责声明
+
+本软件仅供学习和研究使用，用户需自行承担使用风险。开发者不对因使用本软件而产生的任何直接或间接损失负责。
+
+本软件严格禁止在中国大陆境内使用，用户需遵守所在地区的法律法规。

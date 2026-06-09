@@ -250,4 +250,9 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">相機權限受限，請前往設定開啟。</string>
     <string name="import_from_qr_exception">發生系統未知異常，操作失敗。</string>
+
+    <!-- Regional Restrictions / 地區限制 -->
+    <string name="regional_restriction_title">地區限制</string>
+    <string name="regional_restriction_message">本軟體嚴格禁止在中國大陸境內使用。本應用程式專為海外華僑設計，包括但不限於新加坡、馬來西亞、臺灣、香港、澳門及中國大陸以外的其他地區的用戶。\n\nThis software is strictly prohibited from use in mainland China. This application is designed exclusively for overseas Chinese communities.</string>
+    <string name="regional_restriction_confirm">我已瞭解 / I Understand</string>
 </resources>

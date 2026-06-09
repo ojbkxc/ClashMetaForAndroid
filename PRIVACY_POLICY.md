@@ -2,6 +2,16 @@
 
 The Clash for Android is built as an Open Source software. This app is provided by personal at no cost and is intended for use as is.
 
+**Regional Restrictions / 地区限制**
+
+This software is strictly prohibited from use in mainland China (People's Republic of China). This application is designed exclusively for overseas Chinese communities, including but not limited to users in Singapore, Malaysia, Taiwan, Hong Kong, Macau, and other regions outside mainland China.
+
+本软件严格禁止在中国大陆（中华人民共和国）境内使用。本应用程序专为海外华侨设计，包括但不限于新加坡、马来西亚、台湾、香港、澳门及中国大陆以外的其他地区的用户。
+
+By using this software, you acknowledge and agree that you are not located in mainland China and will not use this software within mainland China.
+
+使用本软件即表示您确认并同意您不在中国大陆境内，并且不会在中国大陆境内使用本软件。
+
 This page is used to inform visitors regarding our policies with the collection, use, and disclosure of Personal Information if anyone decided to use our app.
 
 If you choose to use our app, then you agree to the collection and use of information in relation to this policy. The Personal Information that we collect is used for providing and improving the app. We will not use or share your information with anyone except as described in this Privacy Policy.

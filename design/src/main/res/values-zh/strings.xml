@@ -325,4 +325,9 @@
     <string name="root_warning_title">警告</string>
     <string name="root_warning_message">确定要应用此更改吗？此操作需要 root 权限。</string>
     <string name="root_apply_failed">应用失败：%s</string>
+
+    <!-- Regional Restrictions / 地区限制 -->
+    <string name="regional_restriction_title">地区限制</string>
+    <string name="regional_restriction_message">本软件严格禁止在中国大陆境内使用。本应用程序专为海外华侨设计，包括但不限于新加坡、马来西亚、台湾、香港、澳门及中国大陆以外的其他地区的用户。\n\nThis software is strictly prohibited from use in mainland China. This application is designed exclusively for overseas Chinese communities.</string>
+    <string name="regional_restriction_confirm">我已了解 / I Understand</string>
 </resources>
