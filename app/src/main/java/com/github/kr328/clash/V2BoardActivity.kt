@@ -491,16 +491,10 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onLogout() {
-            activity.sync.session.clear()
-            activity.loginDetected = false
-            activity.launch {
-                withContext(Dispatchers.Main) {
-                    activity.design?.showToast(
-                        activity.getString(com.github.kr328.clash.design.R.string.logged_out),
-                        ToastDuration.Short
-                    )
-                }
-            }
+            // 不清理登录认证，保留 auth_data 和 session 信息
+            // 用户登录后，认证信息应持久保存，返回也不清除
+            AppLog.d("V2Board", "onLogout called from JS, but auth preserved")
+            SyncLog.add("前端触发退出登录，但保留本地认证信息")
         }
 
         @JavascriptInterface
