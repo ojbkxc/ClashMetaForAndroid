@@ -258,4 +258,23 @@
     <string name="share_app">分享應用</string>
     <string name="share_app_message">下載藍星網路：\nhttps://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk</string>
     <string name="copied_to_clipboard">下載地址已複製到剪貼簿</string>
+
+    <!-- Root 設定 -->
+    <string name="root_not_available">Root 權限不可用</string>
+    <string name="root_settings">Root 設定</string>
+    <string name="root_transparent_proxy">透明代理</string>
+    <string name="root_transparent_proxy_summary">透過 VPN 重新導向所有流量（需要 root）</string>
+    <string name="root_lock_background">鎖定背景</string>
+    <string name="root_lock_background_summary">防止系統在背景終止 Clash</string>
+    <string name="root_dns_hijack">DNS 劫持</string>
+    <string name="root_dns_hijack_summary">攔截 DNS 查詢並透過 Clash 路由（需要 root）</string>
+    <string name="root_apply_success">套用成功</string>
+    <string name="root_rules_cleared">規則已清除</string>
+    <string name="root_warning_title">警告</string>
+    <string name="root_warning_message">確定要套用此變更嗎？此操作需要 root 權限。</string>
+    <string name="root_apply_failed">套用失敗：%s</string>
+    <string name="root_request_permission">請求 Root 權限</string>
+    <string name="root_request_permission_summary">點擊請求超級使用者權限</string>
+    <string name="root_requesting">正在請求 root 權限…</string>
+    <string name="root_request_failed">Root 權限請求失敗</string>
 </resources>

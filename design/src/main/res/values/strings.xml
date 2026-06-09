@@ -403,7 +403,7 @@
     <string name="check_update_failed">Update check failed, please try again later.</string>
     <string name="update_found">New Version Found</string>
     <string name="update_already_latest">Already Latest</string>
-    <string name="update_current_version">Current version: %s\nLatest version: %s\n\nChangelog:\n%s</string>
+    <string name="update_current_version" formatted="false">Current version: %s\nLatest version: %s\n\nChangelog:\n%s</string>
     <string name="update_is_latest">Already the latest version (%s)</string>
     <string name="logged_out">Logged out</string>
     <string name="auto_syncing_subscription">Auto syncing subscription…</string>
