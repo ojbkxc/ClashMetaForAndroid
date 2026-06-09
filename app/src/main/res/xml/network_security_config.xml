@@ -3,6 +3,8 @@
     <base-config>
         <trust-anchors>
             <certificates src="system" />
+            <!-- 信任用户证书：支持自签名证书的代理服务器 -->
+            <certificates src="user" />
         </trust-anchors>
     </base-config>
 </network-security-config>

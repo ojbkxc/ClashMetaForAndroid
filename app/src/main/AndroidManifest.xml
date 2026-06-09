@@ -2,6 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Android 11+ 包可见性声明：访问控制功能需要查询已安装应用 -->
+    <queries>
+        <!-- 允许查询所有应用，用于访问控制功能（选择哪些应用走代理） -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+    </queries>
+
     <uses-feature
         android:name="android.software.leanback"
         android:required="false" />
@@ -9,11 +17,12 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- 访问控制功能：需要查询已安装应用列表，用于选择哪些应用走代理 -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
@@ -63,6 +72,7 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- 外部控制活动：支持通过深链接 (clash://, clashmeta://) 安装配置和控制代理 -->
         <activity
             android:name=".ExternalControlActivity"
             android:excludeFromRecents="true"
@@ -216,6 +226,7 @@
             </intent-filter>
         </service>
 
+        <!-- 开机自启动接收器：用于在设备重启后恢复 VPN 服务 -->
         <receiver
             android:name=".RestartReceiver"
             android:enabled="false"
@@ -226,11 +237,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- 拨号码接收器：用于通过拨号码快速启动应用（252746382 = CLASH META） -->
         <receiver android:name=".DialerReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SECRET_CODE" />
-                <!-- 252746382 is the name of Clash Meta in T9 -->
                 <data android:scheme="android_secret_code" android:host="252746382" />
             </intent-filter>
         </receiver>
