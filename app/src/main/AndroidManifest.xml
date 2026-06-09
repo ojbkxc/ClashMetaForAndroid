@@ -19,9 +19,8 @@
 
     <application
         android:name=".MainApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:banner="@mipmap/ic_banner"
-        android:fullBackupContent="@xml/full_backup_content"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/application_name"
         android:localeConfig="@xml/locales_config"

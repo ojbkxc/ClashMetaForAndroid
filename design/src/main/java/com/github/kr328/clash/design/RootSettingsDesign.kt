@@ -53,7 +53,7 @@ class RootSettingsDesign(
             // 当 root 不可用时，显示重新申请按钮
             if (!rootAvailable) {
                 clickable(
-                    icon = R.drawable.ic_baseline_refresh,
+                    icon = R.drawable.ic_baseline_sync,
                     title = R.string.root_request_permission,
                     summary = R.string.root_request_permission_summary,
                 ) {
