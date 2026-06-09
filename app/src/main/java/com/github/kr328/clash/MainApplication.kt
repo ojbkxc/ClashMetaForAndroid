@@ -36,37 +36,37 @@ class MainApplication : Application() {
     }
 
     private fun extractGeoFiles() {
-        clashDir.mkdirs()
+        try {
+            clashDir.mkdirs()
 
-        val updateDate = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
-        val geoipFile = File(clashDir, "geoip.metadb")
-        if (geoipFile.exists() && geoipFile.lastModified() < updateDate) {
-            geoipFile.delete()
-        }
-        if (!geoipFile.exists()) {
-            FileOutputStream(geoipFile).use {
-                assets.open("geoip.metadb").copyTo(it)
-            }
-        }
+            val updateDate = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
 
-        val geositeFile = File(clashDir, "geosite.dat")
-        if (geositeFile.exists() && geositeFile.lastModified() < updateDate) {
-            geositeFile.delete()
-        }
-        if (!geositeFile.exists()) {
-            FileOutputStream(geositeFile).use {
-                assets.open("geosite.dat").copyTo(it)
+            // Extract geoip.metadb
+            val geoipFile = File(clashDir, "geoip.metadb")
+            if (geoipFile.exists() && geoipFile.lastModified() < updateDate) {
+                geoipFile.delete()
             }
-        }
+            if (!geoipFile.exists()) {
+                FileOutputStream(geoipFile).use {
+                    assets.open("geoip.metadb").copyTo(it)
+                }
+            }
 
-        val asnFile = File(clashDir, "ASN.mmdb")
-        if (asnFile.exists() && asnFile.lastModified() < updateDate) {
-            asnFile.delete()
-        }
-        if (!asnFile.exists()) {
-            FileOutputStream(asnFile).use {
-                assets.open("ASN.mmdb").copyTo(it)
+            // Extract geosite.dat
+            val geositeFile = File(clashDir, "geosite.dat")
+            if (geositeFile.exists() && geositeFile.lastModified() < updateDate) {
+                geositeFile.delete()
             }
+            if (!geositeFile.exists()) {
+                FileOutputStream(geositeFile).use {
+                    assets.open("geosite.dat").copyTo(it)
+                }
+            }
+
+            // ASN.mmdb will be downloaded automatically by Clash core if not present
+            // so we don't extract it from assets here
+        } catch (e: Exception) {
+            Log.w("Failed to extract geo files: ${e.message}")
         }
     }
 
