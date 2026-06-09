@@ -88,6 +88,21 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
                                 }
                             }
                         }
+                        RootSettingsDesign.Request.ClearTransparentProxy -> {
+                            withContext(Dispatchers.IO) {
+                                RootHelper.clearTransparentProxyRules()
+                            }
+                        }
+                        RootSettingsDesign.Request.ClearLockBackground -> {
+                            withContext(Dispatchers.IO) {
+                                RootHelper.clearLockBackgroundRules()
+                            }
+                        }
+                        RootSettingsDesign.Request.ClearDnsHijack -> {
+                            withContext(Dispatchers.IO) {
+                                RootHelper.clearDnsHijackRules()
+                            }
+                        }
                         RootSettingsDesign.Request.ClearAllRules -> {
                             withContext(Dispatchers.IO) {
                                 RootHelper.clearAllRules()
@@ -137,15 +152,34 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
     }
 
     private suspend fun applyEnabledRules(srvStore: ServiceStore) {
+        val design = this.design ?: return
         withContext(Dispatchers.IO) {
             if (srvStore.rootTransparentProxy) {
-                RootHelper.applyTransparentProxy()
+                val (success, msg) = RootHelper.applyTransparentProxy()
+                if (!success) {
+                    withContext(Dispatchers.Main) {
+                        design.showToast(getString(DesignR.string.root_apply_failed, msg),
+                            com.github.kr328.clash.design.ui.ToastDuration.Long)
+                    }
+                }
             }
             if (srvStore.rootLockBackground) {
-                RootHelper.applyLockBackground()
+                val (success, msg) = RootHelper.applyLockBackground()
+                if (!success) {
+                    withContext(Dispatchers.Main) {
+                        design.showToast(getString(DesignR.string.root_apply_failed, msg),
+                            com.github.kr328.clash.design.ui.ToastDuration.Long)
+                    }
+                }
             }
             if (srvStore.rootDnsHijack) {
-                RootHelper.applyDnsHijack()
+                val (success, msg) = RootHelper.applyDnsHijack()
+                if (!success) {
+                    withContext(Dispatchers.Main) {
+                        design.showToast(getString(DesignR.string.root_apply_failed, msg),
+                            com.github.kr328.clash.design.ui.ToastDuration.Long)
+                    }
+                }
             }
         }
     }

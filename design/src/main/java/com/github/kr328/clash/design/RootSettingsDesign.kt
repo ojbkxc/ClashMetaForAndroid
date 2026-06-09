@@ -22,6 +22,9 @@ class RootSettingsDesign(
         ApplyTransparentProxy,
         ApplyLockBackground,
         ApplyDnsHijack,
+        ClearTransparentProxy,
+        ClearLockBackground,
+        ClearDnsHijack,
         ClearAllRules,
         RequestRoot,
     }
@@ -67,7 +70,7 @@ class RootSettingsDesign(
                     if (srvStore.rootTransparentProxy) {
                         requests.trySend(Request.ApplyTransparentProxy)
                     } else {
-                        requests.trySend(Request.ClearAllRules)
+                        requests.trySend(Request.ClearTransparentProxy)
                     }
                 }
             }
@@ -83,6 +86,8 @@ class RootSettingsDesign(
                 listener = OnChangedListener {
                     if (srvStore.rootLockBackground) {
                         requests.trySend(Request.ApplyLockBackground)
+                    } else {
+                        requests.trySend(Request.ClearLockBackground)
                     }
                 }
             }
@@ -98,6 +103,8 @@ class RootSettingsDesign(
                 listener = OnChangedListener {
                     if (srvStore.rootDnsHijack) {
                         requests.trySend(Request.ApplyDnsHijack)
+                    } else {
+                        requests.trySend(Request.ClearDnsHijack)
                     }
                 }
             }
