@@ -7,26 +7,31 @@ object RootHelper {
     private const val DNS_HIJACK_PORT = 1053
     private const val PACKAGE_NAME = "com.github.kr328.clash"
 
-    // Chain names
-    private const val CHAIN_META = "CLASH_META"
+    // Chain names - 统一命名风格（参考 Surfing）
+    private const val CHAIN_EXTERNAL = "CLASH_EXTERNAL"
+    private const val CHAIN_LOCAL = "CLASH_LOCAL"
     private const val CHAIN_LOCK_BG = "CLASH_LOCK_BG"
-    private const val CHAIN_DNS_HIJACK = "CLASH_DNS_HIJACK"
+    private const val CHAIN_DNS_EXTERNAL = "CLASH_DNS_EXTERNAL"
+    private const val CHAIN_DNS_LOCAL = "CLASH_DNS_LOCAL"
     private const val CHAIN_DIVERT = "CLASH_DIVERT"
+    private const val CHAIN_BYPASS = "CLASH_BYPASS"
+    private const val CHAIN_LOCAL_IP = "CLASH_LOCAL_IP"
+    private const val CHAIN_LOCAL_IP_V6 = "CLASH_LOCAL_IP_V6"
 
     // 路由标记和表ID（参考 Surfing）
     private const val MARK_ID = "0x1/0x1"
+    private const val MARK_VALUE = "0x1"
     private const val TABLE_ID = "100"
     private const val TABLE_PREF = "100"
 
-    // 记录当前使用的代理模式，用于清理
-    private var currentProxyMode: String = "none"
+    // DNS劫持模式：true=使用nat表REDIRECT，false=使用mangle表TPROXY
+    private var useNatTableForDns = true
 
     // 缓存动态获取的 UID
     private var cachedProxyUid: Int = -1
 
     /**
      * 初始化应用 UID（由 Activity 调用，传入 applicationInfo.uid）
-     * 这是最可靠的方式，比 shell 命令获取更稳定
      */
     fun initAppUid(uid: Int) {
         cachedProxyUid = uid
@@ -47,12 +52,18 @@ object RootHelper {
     }
 
     /**
+     * 设置 DNS 劫持模式
+     * @param useNatTable true=使用nat表REDIRECT，false=使用mangle表TPROXY
+     */
+    fun setDnsHijackMode(useNatTable: Boolean) {
+        useNatTableForDns = useNatTable
+    }
+
+    /**
      * 获取应用 UID
-     * 优先使用 initAppUid() 设置的值，回退到 shell 命令获取
      */
     private fun getAppUid(): Int {
         if (cachedProxyUid > 0) return cachedProxyUid
-        // 回退：通过 shell 命令获取
         val (code, output) = RootChecker.execute("dumpsys package $PACKAGE_NAME")
         if (code == 0) {
             val match = Regex("userId=(\\d+)").find(output)
@@ -65,16 +76,31 @@ object RootHelper {
     }
 
     /**
+     * 获取本地 IPv4 地址列表
+     */
+    private fun getLocalIpv4Addresses(): List<String> {
+        val (code, output) = RootChecker.execute("ip -4 a | grep inet | awk '{print \$2}' | grep -vE '^127.0.0.1'")
+        if (code != 0) return emptyList()
+        return output.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.contains("::") }
+    }
+
+    /**
+     * 获取本地 IPv6 地址列表
+     */
+    private fun getLocalIpv6Addresses(): List<String> {
+        val (code, output) = RootChecker.execute("ip -6 a | grep inet6 | awk '{print \$2}' | grep -vE '^fe80|^::1|^::/'")
+        if (code != 0) return emptyList()
+        return output.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    /**
      * 创建 iptables chain，如果已存在则先清理再创建
-     * 避免 "Chain already exists" 错误
      */
     private fun ensureChain(table: String, chain: String): Boolean {
-        // 先尝试从 OUTPUT 链断开、清空、删除（忽略错误）
         RootChecker.execute("iptables -t $table -D OUTPUT -j $chain 2>/dev/null")
         RootChecker.execute("iptables -t $table -D PREROUTING -j $chain 2>/dev/null")
         RootChecker.execute("iptables -t $table -F $chain 2>/dev/null")
         RootChecker.execute("iptables -t $table -X $chain 2>/dev/null")
-        // 创建新 chain
         val (code, _) = RootChecker.execute("iptables -t $table -N $chain")
         return code == 0
     }
@@ -83,32 +109,33 @@ object RootHelper {
      * 检测内核是否支持 TPROXY
      */
     private fun isTProxySupported(): Boolean {
-        // 先清理可能残留的测试 chain
         RootChecker.execute("iptables -t mangle -F CLASH_TPROXY_TEST 2>/dev/null")
         RootChecker.execute("iptables -t mangle -X CLASH_TPROXY_TEST 2>/dev/null")
-        // 创建测试 chain
         val (c1, _) = RootChecker.execute("iptables -t mangle -N CLASH_TPROXY_TEST")
         if (c1 != 0) return false
-        // 尝试添加 TPROXY 规则（同时测试 TCP 和 UDP）
         val (c2, _) = RootChecker.execute("iptables -t mangle -A CLASH_TPROXY_TEST -p tcp -j TPROXY --tproxy-mark 0x1/0x1 --on-port 1")
         val (c3, _) = RootChecker.execute("iptables -t mangle -A CLASH_TPROXY_TEST -p udp -j TPROXY --tproxy-mark 0x1/0x1 --on-port 1")
-        // 清理测试 chain
         RootChecker.execute("iptables -t mangle -F CLASH_TPROXY_TEST 2>/dev/null")
         RootChecker.execute("iptables -t mangle -X CLASH_TPROXY_TEST 2>/dev/null")
         return c2 == 0 && c3 == 0
     }
 
     /**
-     * 优化内核参数，提升 UDP 性能（参考 Surfing）
+     * 优化内核参数（参考 Surfing）
      */
     private fun optimizeKernel(): Boolean {
-        // 尝试设置 UDP conntrack 超时
         val commands = listOf(
+            // UDP conntrack 超时优化
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout=30 2>/dev/null",
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=15 2>/dev/null",
             // 直接写入 proc 文件（某些设备 sysctl 被禁用）
             "echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout 2>/dev/null",
-            "echo 15 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null"
+            "echo 15 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null",
+            // TCP conntrack 优化
+            "sysctl -w net.netfilter.nf_conntrack_tcp_timeout_established=3600 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_tw_reuse=1 2>/dev/null",
+            // IP forward
+            "sysctl -w net.ipv4.ip_forward=1 2>/dev/null"
         )
         for (cmd in commands) {
             RootChecker.execute(cmd)
@@ -117,142 +144,144 @@ object RootHelper {
     }
 
     /**
-     * Apply transparent proxy iptables rules.
-     * 优先使用 TPROXY 模式（支持 TCP+UDP），不支持时回退到 REDIRECT 模式（仅 TCP）
-     * 参考 Surfing 的 iptables 方案
-     * @return Pair(success, errorMessage)
+     * Apply transparent proxy rules
+     * 参考 Surfing 的完整 TPROXY 方案
      */
     suspend fun applyTransparentProxy(): Pair<Boolean, String> {
         clearTransparentProxy()
 
         val proxyUid = getAppUid()
         if (proxyUid < 0) {
-            return Pair(false, "无法获取应用 UID，请确认应用已正确安装")
+            return Pair(false, "无法获取应用 UID")
         }
 
-        // 优化内核参数
         optimizeKernel()
 
-        // 检测 TPROXY 支持（现在会测试 UDP）
         if (isTProxySupported()) {
             val result = applyTProxy(proxyUid)
             if (result.first) {
-                currentProxyMode = "tproxy"
                 return Pair(true, "TPROXY 模式（支持 TCP+UDP）")
             }
             clearTransparentProxy()
         }
 
-        // 回退到 REDIRECT 模式（仅 TCP，兼容所有设备）
         val result = applyRedirect(proxyUid)
         if (result.first) {
-            currentProxyMode = "redirect"
             return Pair(true, "REDIRECT 模式（仅支持 TCP）")
         }
         return result
     }
 
     /**
-     * TPROXY 模式：支持 TCP + UDP，需要内核支持
-     * 参考 Surfing 的完整实现方案
+     * TPROXY 模式 - 参考 Surfing 完整实现
      */
     private fun applyTProxy(proxyUid: Int): Pair<Boolean, String> {
-        // 1. 设置路由规则（参考 Surfing）
-        val routeSteps = listOf(
-            // 删除旧的路由规则（如果存在）
-            Pair("ip rule del fwmark 1 table $TABLE_ID 2>/dev/null", "清理旧路由规则"),
-            Pair("ip route del local 0.0.0.0/0 dev lo table $TABLE_ID 2>/dev/null", "清理旧路由表"),
-            // 添加新的路由规则
-            Pair("ip rule add fwmark 1 table $TABLE_ID pref $TABLE_PREF", "添加路由规则"),
-            Pair("ip route add local 0.0.0.0/0 dev lo table $TABLE_ID", "添加本地路由表"),
-        )
-        for ((cmd, desc) in routeSteps) {
-            val (code, output) = RootChecker.execute(cmd)
-            if (code != 0 && desc.contains("添加")) {
-                return Pair(false, "TPROXY $desc 失败: $output")
+        val proxyUidStr = proxyUid.toString()
+
+        // ========== 1. 设置路由规则（IPv4） ==========
+        RootChecker.execute("ip rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
+        RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")
+        var (code, output) = RootChecker.execute("ip rule add fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF")
+        if (code != 0) return Pair(false, "设置路由规则失败: $output")
+        (code, output) = RootChecker.execute("ip route add local default dev lo table $TABLE_ID")
+        if (code != 0) return Pair(false, "设置本地路由表失败: $output")
+
+        // ========== 2. 创建 CLASH_LOCAL_IP 链（IPv4本地地址） ==========
+        if (!ensureChain("mangle", CHAIN_LOCAL_IP)) {
+            return Pair(false, "创建 LOCAL_IP 链失败")
+        }
+        val localIpv4List = getLocalIpv4Addresses()
+        for (ip in localIpv4List) {
+            RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL_IP -d $ip -j RETURN")
+        }
+
+        // ========== 3. 创建 CLASH_LOCAL_IP_V6 链（IPv6本地地址） ==========
+        if (!ensureChain("mangle", CHAIN_LOCAL_IP_V6)) {
+            // IPv6 可能不支持，继续
+        } else {
+            val localIpv6List = getLocalIpv6Addresses()
+            for (ip in localIpv6List) {
+                RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_IP_V6 -d $ip -j RETURN 2>/dev/null")
             }
         }
 
-        // 2. 创建 mangle 表的 CHAIN_META chain
-        if (!ensureChain("mangle", CHAIN_META)) {
-            return Pair(false, "TPROXY 创建 mangle chain 失败")
+        // ========== 4. 创建 BOX_EXTERNAL 链（PREROUTING） ==========
+        if (!ensureChain("mangle", CHAIN_EXTERNAL)) {
+            return Pair(false, "创建 BOX_EXTERNAL 链失败")
         }
 
-        // 3. 添加 socket 透明连接处理（关键！参考 Surfing）
-        // 透明 socket 连接直接打标记，避免重复处理
-        RootChecker.execute("iptables -t mangle -A $CHAIN_META -p tcp -m socket -j MARK --set-xmark $MARK_ID")
-        RootChecker.execute("iptables -t mangle -A $CHAIN_META -p udp -m socket -j MARK --set-xmark $MARK_ID")
-        RootChecker.execute("iptables -t mangle -A $CHAIN_META -m socket -j RETURN")
+        // 第1-2位：跳过 DNS 53 端口（UDP 和 TCP）
+        RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 1 -p udp --dport 53 -j RETURN")
+        RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 2 -p tcp --dport 53 -j RETURN")
 
-        // 4. 跳过局域网流量（参考 Surfing 的 intranet 方案）
-        val bypassCommands = listOf(
-            "iptables -t mangle -A $CHAIN_META -d 127.0.0.0/8 -j RETURN",
-            "iptables -t mangle -A $CHAIN_META -d 10.0.0.0/8 -j RETURN",
-            "iptables -t mangle -A $CHAIN_META -d 172.16.0.0/12 -j RETURN",
-            "iptables -t mangle -A $CHAIN_META -d 192.168.0.0/16 -j RETURN",
-            "iptables -t mangle -A $CHAIN_META -d 224.0.0.0/4 -j RETURN",
-            "iptables -t mangle -A $CHAIN_META -d 240.0.0.0/4 -j RETURN",
+        // 跳过局域网流量（参考 Surfing）
+        val bypassSubnets = listOf(
+            "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "224.0.0.0/4", "240.0.0.0/4"
         )
-        for (cmd in bypassCommands) {
-            RootChecker.execute(cmd)
+        for (subnet in bypassSubnets) {
+            RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -d $subnet -j RETURN")
         }
 
-        // 5. CONNMARK 恢复标记（参考 Surfing：在规则链开始时恢复连接标记）
-        RootChecker.execute("iptables -t mangle -I $CHAIN_META 1 -j CONNMARK --restore-mark")
-        RootChecker.execute("iptables -t mangle -I $CHAIN_META 2 -m mark --mark 0 -j RETURN")
+        // 处理本地 IP 地址
+        RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -j $CHAIN_LOCAL_IP")
 
-        // 6. 跳过代理进程自身流量
-        RootChecker.execute("iptables -t mangle -A $CHAIN_META -m owner --uid-owner $proxyUid -j RETURN")
+        // TPROXY 规则 - 设置在 lo 接口上（参考 Surfing）
+        RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+        RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
 
-        // 7. CONNMARK 保存标记（在规则链末尾保存连接标记）
-        RootChecker.execute("iptables -t mangle -A $CHAIN_META -j CONNMARK --save-mark")
+        // 添加到 PREROUTING 链
+        RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_EXTERNAL")
 
-        // 8. 添加到 PREROUTING 链（处理来自其他应用的数据包）
-        RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_META")
-
-        // 9. 添加 TPROXY 规则（同时支持 TCP 和 UDP）
-        val tproxySteps = listOf(
-            Pair("iptables -t mangle -A $CHAIN_META -p tcp -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT", "设置 TCP TPROXY"),
-            Pair("iptables -t mangle -A $CHAIN_META -p udp -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT", "设置 UDP TPROXY"),
-        )
-        for ((cmd, desc) in tproxySteps) {
-            val (code, output) = RootChecker.execute(cmd)
-            if (code != 0) return Pair(false, "TPROXY $desc 失败: $output")
+        // ========== 5. 创建 BOX_LOCAL 链（OUTPUT） ==========
+        if (!ensureChain("mangle", CHAIN_LOCAL)) {
+            return Pair(false, "创建 BOX_LOCAL 链失败")
         }
 
-        // 10. 创建 OUTPUT 链处理本地发出的流量
-        if (!ensureChain("mangle", "${CHAIN_META}_LOCAL")) {
-            return Pair(false, "TPROXY 创建 OUTPUT chain 失败")
+        // 第1位：跳过代理进程自身
+        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 1 -m owner --uid-owner $proxyUidStr -j RETURN")
+
+        // 第2位：CONNMARK 恢复标记
+        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 2 -j CONNMARK --restore-mark")
+
+        // 第3位：跳过已标记的连接
+        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 3 -m mark --mark $MARK_ID -j ACCEPT")
+
+        // 第4-5位：跳过 DNS 53 端口
+        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 4 -p udp --dport 53 -j RETURN")
+        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 5 -p tcp --dport 53 -j RETURN")
+
+        // 跳过局域网流量
+        for (subnet in bypassSubnets) {
+            RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -d $subnet -j RETURN")
         }
 
-        val outputChain = "${CHAIN_META}_LOCAL"
-        val outputSteps = listOf(
-            // CONNMARK 恢复
-            Pair("iptables -t mangle -A $outputChain -j CONNMARK --restore-mark", "OUTPUT恢复标记"),
-            Pair("iptables -t mangle -A $outputChain -m mark --mark 0 -j RETURN", "OUTPUT跳过已标记"),
-            // 跳过代理进程
-            Pair("iptables -t mangle -A $outputChain -m owner --uid-owner $proxyUid -j RETURN", "OUTPUT跳过代理进程"),
-            // 跳过局域网
-            Pair("iptables -t mangle -A $outputChain -d 127.0.0.0/8 -j RETURN", "OUTPUT跳过回环"),
-            Pair("iptables -t mangle -A $outputChain -d 10.0.0.0/8 -j RETURN", "OUTPUT跳过10.x"),
-            Pair("iptables -t mangle -A $outputChain -d 172.16.0.0/12 -j RETURN", "OUTPUT跳过172.16.x"),
-            Pair("iptables -t mangle -A $outputChain -d 192.168.0.0/16 -j RETURN", "OUTPUT跳过192.168.x"),
-            Pair("iptables -t mangle -A $outputChain -d 224.0.0.0/4 -j RETURN", "OUTPUT跳过组播"),
-            Pair("iptables -t mangle -A $outputChain -d 240.0.0.0/4 -j RETURN", "OUTPUT跳过保留"),
-            // 设置标记
-            Pair("iptables -t mangle -A $outputChain -p tcp -j MARK --set-xmark $MARK_ID", "OUTPUT标记TCP"),
-            Pair("iptables -t mangle -A $outputChain -p udp -j MARK --set-xmark $MARK_ID", "OUTPUT标记UDP"),
-            // CONNMARK 保存
-            Pair("iptables -t mangle -A $outputChain -j CONNMARK --save-mark", "OUTPUT保存标记"),
-        )
-        for ((cmd, desc) in outputSteps) {
-            RootChecker.execute(cmd)
-        }
+        // 处理本地 IP 地址
+        RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -j $CHAIN_LOCAL_IP")
+
+        // 设置标记（TCP 和 UDP）
+        RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -p tcp -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -p udp -j MARK --set-xmark $MARK_ID")
+
+        // 末尾：CONNMARK 保存标记
+        RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -j CONNMARK --save-mark")
 
         // 添加到 OUTPUT 链
-        RootChecker.execute("iptables -t mangle -I OUTPUT -j $outputChain")
+        RootChecker.execute("iptables -t mangle -I OUTPUT -j $CHAIN_LOCAL")
 
-        // 11. 创建 DIVERT 链加速已建立连接（参考 Surfing）
+        // ========== 6. DNS 劫持（参考 Surfing） ==========
+        if (useNatTableForDns) {
+            // 使用 nat 表 REDIRECT 模式
+            if (!applyDnsHijackNatMode(proxyUidStr)) {
+                return Pair(false, "DNS 劫持失败")
+            }
+        } else {
+            // 使用 mangle 表 TPROXY 模式
+            if (!applyDnsHijackMangleMode(proxyUidStr, TPROXY_PORT)) {
+                return Pair(false, "DNS 劫持失败")
+            }
+        }
+
+        // ========== 7. 创建 DIVERT 链加速已建立连接 ==========
         if (!ensureChain("mangle", CHAIN_DIVERT)) {
             // DIVERT 非必需，继续执行
         } else {
@@ -265,93 +294,146 @@ object RootHelper {
     }
 
     /**
-     * REDIRECT 模式：仅支持 TCP，兼容所有 Android 设备
+     * DNS 劫持 - nat 表 REDIRECT 模式（参考 Surfing）
+     */
+    private fun applyDnsHijackNatMode(proxyUidStr: String): Boolean {
+        // CLASH_DNS_EXTERNAL（PREROUTING）
+        if (!ensureChain("nat", CHAIN_DNS_EXTERNAL)) {
+            return false
+        }
+        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+        RootChecker.execute("iptables -t nat -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
+
+        // CLASH_DNS_LOCAL（OUTPUT）
+        if (!ensureChain("nat", CHAIN_DNS_LOCAL)) {
+            return false
+        }
+        if (proxyUidStr.isNotEmpty()) {
+            RootChecker.execute("iptables -t nat -I $CHAIN_DNS_LOCAL 1 -m owner --uid-owner $proxyUidStr -j RETURN")
+        }
+        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+        RootChecker.execute("iptables -t nat -I OUTPUT -j $CHAIN_DNS_LOCAL")
+
+        return true
+    }
+
+    /**
+     * DNS 劫持 - mangle 表 TPROXY 模式（参考 Surfing）
+     * 用于 use_nat_table=false 的情况
+     */
+    private fun applyDnsHijackMangleMode(proxyUidStr: String, dnsPort: Int): Boolean {
+        // CLASH_DNS_EXTERNAL（PREROUTING）
+        if (!ensureChain("mangle", CHAIN_DNS_EXTERNAL)) {
+            return false
+        }
+        RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $dnsPort")
+        RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
+
+        // CLASH_DNS_LOCAL（OUTPUT）
+        if (!ensureChain("mangle", CHAIN_DNS_LOCAL)) {
+            return false
+        }
+        if (proxyUidStr.isNotEmpty()) {
+            RootChecker.execute("iptables -t mangle -I $CHAIN_DNS_LOCAL 1 -m owner --uid-owner $proxyUidStr -j RETURN")
+        }
+        RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_LOCAL -p udp --dport 53 -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("iptables -t mangle -I OUTPUT -j $CHAIN_DNS_LOCAL")
+
+        return true
+    }
+
+    /**
+     * REDIRECT 模式 - 仅支持 TCP
      */
     private fun applyRedirect(proxyUid: Int): Pair<Boolean, String> {
-        if (!ensureChain("nat", CHAIN_META)) {
-            return Pair(false, "REDIRECT 创建 chain 失败")
+        if (!ensureChain("nat", CHAIN_EXTERNAL)) {
+            return Pair(false, "创建 chain 失败")
         }
 
-        data class Step(val cmd: String, val desc: String)
         val steps = listOf(
-            // 跳过代理进程流量
-            Step("iptables -t nat -A $CHAIN_META -m owner --uid-owner $proxyUid -j RETURN", "跳过代理进程流量"),
-            // 跳过局域网流量
-            Step("iptables -t nat -A $CHAIN_META -d 127.0.0.0/8 -j RETURN", "跳过本地回环"),
-            Step("iptables -t nat -A $CHAIN_META -d 10.0.0.0/8 -j RETURN", "跳过局域网 10.x"),
-            Step("iptables -t nat -A $CHAIN_META -d 172.16.0.0/12 -j RETURN", "跳过局域网 172.16.x"),
-            Step("iptables -t nat -A $CHAIN_META -d 192.168.0.0/16 -j RETURN", "跳过局域网 192.168.x"),
-            // TCP 重定向
-            Step("iptables -t nat -A $CHAIN_META -p tcp -j REDIRECT --to-ports $TPROXY_PORT", "设置 TCP REDIRECT"),
-            // 应用到 OUTPUT 链
-            Step("iptables -t nat -I OUTPUT -j $CHAIN_META", "应用 chain 到 OUTPUT"),
+            "iptables -t nat -A $CHAIN_EXTERNAL -m owner --uid-owner $proxyUid -j RETURN",
+            "iptables -t nat -A $CHAIN_EXTERNAL -d 127.0.0.0/8 -j RETURN",
+            "iptables -t nat -A $CHAIN_EXTERNAL -d 10.0.0.0/8 -j RETURN",
+            "iptables -t nat -A $CHAIN_EXTERNAL -d 172.16.0.0/12 -j RETURN",
+            "iptables -t nat -A $CHAIN_EXTERNAL -d 192.168.0.0/16 -j RETURN",
+            "iptables -t nat -A $CHAIN_EXTERNAL -p tcp -j REDIRECT --to-ports $TPROXY_PORT",
+            "iptables -t nat -I OUTPUT -j $CHAIN_EXTERNAL",
         )
-        for ((cmd, desc) in steps) {
+        for (cmd in steps) {
             val (code, output) = RootChecker.execute(cmd)
             if (code != 0) {
                 clearTransparentProxy()
-                return Pair(false, "REDIRECT $desc 失败: $output")
+                return Pair(false, "REDIRECT 执行失败: $output")
             }
         }
         return Pair(true, "")
     }
 
     /**
-     * 清除透明代理规则（同时清理两种模式的残留规则）
+     * 清除透明代理规则 - 完整清理（参考 Surfing stop_tproxy）
      */
     private fun clearTransparentProxy() {
-        val outputChain = "${CHAIN_META}_LOCAL"
-        val commands = listOf(
-            // 清理路由规则
-            "ip rule del fwmark 1 table $TABLE_ID 2>/dev/null",
-            "ip route del local 0.0.0.0/0 dev lo table $TABLE_ID 2>/dev/null",
-            // 清理 DIVERT 链
-            "iptables -t mangle -D PREROUTING -p tcp -m socket -j $CHAIN_DIVERT 2>/dev/null",
-            "iptables -t mangle -F $CHAIN_DIVERT 2>/dev/null",
-            "iptables -t mangle -X $CHAIN_DIVERT 2>/dev/null",
-            // 清理 OUTPUT chain
-            "iptables -t mangle -D OUTPUT -j $outputChain 2>/dev/null",
-            "iptables -t mangle -F $outputChain 2>/dev/null",
-            "iptables -t mangle -X $outputChain 2>/dev/null",
-            // 清理 mangle 表
-            "iptables -t mangle -D PREROUTING -j $CHAIN_META 2>/dev/null",
-            "iptables -t mangle -D OUTPUT -j $CHAIN_META 2>/dev/null",
-            "iptables -t mangle -F $CHAIN_META 2>/dev/null",
-            "iptables -t mangle -X $CHAIN_META 2>/dev/null",
-            // 清理 nat 表
-            "iptables -t nat -D OUTPUT -j $CHAIN_META 2>/dev/null",
-            "iptables -t nat -F $CHAIN_META 2>/dev/null",
-            "iptables -t nat -X $CHAIN_META 2>/dev/null",
-        )
-        RootChecker.execute(commands.joinToString(" ; "))
-        currentProxyMode = "none"
+        // 清理 IPv4 路由规则
+        RootChecker.execute("ip rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
+        RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")
+
+        // 清理 DIVERT 链
+        RootChecker.execute("iptables -t mangle -D PREROUTING -p tcp -m socket -j $CHAIN_DIVERT 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -F $CHAIN_DIVERT 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -X $CHAIN_DIVERT 2>/dev/null")
+
+        // 清理 DNS 链（mangle 和 nat 表）
+        for (table in listOf("nat", "mangle")) {
+            RootChecker.execute("iptables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -F $CHAIN_DNS_EXTERNAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -X $CHAIN_DNS_EXTERNAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -F $CHAIN_DNS_LOCAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -X $CHAIN_DNS_LOCAL 2>/dev/null")
+        }
+
+        // 清理 BOX_LOCAL 和 BOX_EXTERNAL
+        RootChecker.execute("iptables -t mangle -D PREROUTING -j $CHAIN_EXTERNAL 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -D OUTPUT -j $CHAIN_LOCAL 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -F $CHAIN_EXTERNAL 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -X $CHAIN_EXTERNAL 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -F $CHAIN_LOCAL 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -X $CHAIN_LOCAL 2>/dev/null")
+
+        // 清理 nat 表
+        RootChecker.execute("iptables -t nat -D OUTPUT -j $CHAIN_EXTERNAL 2>/dev/null")
+        RootChecker.execute("iptables -t nat -F $CHAIN_EXTERNAL 2>/dev/null")
+        RootChecker.execute("iptables -t nat -X $CHAIN_EXTERNAL 2>/dev/null")
+
+        // 清理 LOCAL_IP 链
+        RootChecker.execute("iptables -t mangle -F $CHAIN_LOCAL_IP 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -X $CHAIN_LOCAL_IP 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -F $CHAIN_LOCAL_IP_V6 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -X $CHAIN_LOCAL_IP_V6 2>/dev/null")
     }
 
     /**
-     * Apply lock background iptables rules.
-     * 使用 CONNMARK 为连接打标记，配合 TPROXY 的 fwmark 实现后台锁定
-     * @return Pair(success, errorMessage)
+     * Apply lock background rules
      */
     suspend fun applyLockBackground(): Pair<Boolean, String> {
         clearLockBackground()
 
         if (!ensureChain("mangle", CHAIN_LOCK_BG)) {
-            return Pair(false, "锁定后台创建 chain 失败")
+            return Pair(false, "创建锁定 chain 失败")
         }
 
-        data class Step(val cmd: String, val desc: String)
         val steps = listOf(
-            Step("iptables -t mangle -A $CHAIN_LOCK_BG -j CONNMARK --restore-mark", "恢复连接标记"),
-            Step("iptables -t mangle -A $CHAIN_LOCK_BG -m mark ! --mark 0 -j RETURN", "跳过已标记连接"),
-            Step("iptables -t mangle -A $CHAIN_LOCK_BG -j MARK --set-xmark $MARK_ID", "设置 fwmark"),
-            Step("iptables -t mangle -A $CHAIN_LOCK_BG -j CONNMARK --save-mark", "保存连接标记"),
-            Step("iptables -t mangle -I OUTPUT -j $CHAIN_LOCK_BG", "应用 chain 到 OUTPUT"),
+            "iptables -t mangle -A $CHAIN_LOCK_BG -j CONNMARK --restore-mark",
+            "iptables -t mangle -A $CHAIN_LOCK_BG -m mark ! --mark 0 -j RETURN",
+            "iptables -t mangle -A $CHAIN_LOCK_BG -j MARK --set-xmark $MARK_ID",
+            "iptables -t mangle -A $CHAIN_LOCK_BG -j CONNMARK --save-mark",
+            "iptables -t mangle -I OUTPUT -j $CHAIN_LOCK_BG",
         )
-        for ((cmd, desc) in steps) {
+        for (cmd in steps) {
             val (code, output) = RootChecker.execute(cmd)
             if (code != 0) {
                 clearLockBackground()
-                return Pair(false, "锁定后台 $desc 失败: $output")
+                return Pair(false, "锁定后台执行失败: $output")
             }
         }
         return Pair(true, "")
@@ -361,42 +443,29 @@ object RootHelper {
      * 清除锁定后台规则
      */
     private fun clearLockBackground() {
-        val commands = listOf(
-            "iptables -t mangle -D OUTPUT -j $CHAIN_LOCK_BG 2>/dev/null",
-            "iptables -t mangle -F $CHAIN_LOCK_BG 2>/dev/null",
-            "iptables -t mangle -X $CHAIN_LOCK_BG 2>/dev/null",
-        )
-        RootChecker.execute(commands.joinToString(" ; "))
+        RootChecker.execute("iptables -t mangle -D OUTPUT -j $CHAIN_LOCK_BG 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -F $CHAIN_LOCK_BG 2>/dev/null")
+        RootChecker.execute("iptables -t mangle -X $CHAIN_LOCK_BG 2>/dev/null")
     }
 
     /**
-     * Apply DNS hijack iptables rules.
-     * 将所有 DNS 查询（UDP/TCP 53 端口）重定向到 Clash 的 DNS 端口
-     * 使用 REDIRECT 模式（参考 Surfing 的 DNS 劫持方案）
-     * @return Pair(success, errorMessage)
+     * Apply DNS hijack rules（独立调用）
      */
     suspend fun applyDnsHijack(): Pair<Boolean, String> {
         clearDnsHijack()
 
         val proxyUid = getAppUid()
+        val proxyUidStr = if (proxyUid > 0) proxyUid.toString() else ""
 
-        // 1. 创建 nat 表的 DNS 劫持 chain
-        if (!ensureChain("nat", CHAIN_DNS_HIJACK)) {
-            return Pair(false, "DNS 劫持创建 chain 失败")
+        if (useNatTableForDns) {
+            if (!applyDnsHijackNatMode(proxyUidStr)) {
+                return Pair(false, "创建 DNS 劫持链失败")
+            }
+        } else {
+            if (!applyDnsHijackMangleMode(proxyUidStr, DNS_HIJACK_PORT)) {
+                return Pair(false, "创建 DNS 劫持链失败")
+            }
         }
-
-        // 2. 跳过代理进程自身的 DNS 查询（避免循环）
-        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_HIJACK -m owner --uid-owner $proxyUid -j RETURN")
-
-        // 3. DNS 重定向规则（使用 REDIRECT，参考 Surfing）
-        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_HIJACK -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
-        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_HIJACK -p tcp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
-
-        // 4. 添加到 OUTPUT 链
-        RootChecker.execute("iptables -t nat -I OUTPUT -j $CHAIN_DNS_HIJACK")
-
-        // 5. 添加到 PREROUTING 链（处理来自其他应用的数据包）
-        RootChecker.execute("iptables -t nat -I PREROUTING -j $CHAIN_DNS_HIJACK")
 
         return Pair(true, "")
     }
@@ -405,13 +474,14 @@ object RootHelper {
      * 清除 DNS 劫持规则
      */
     private fun clearDnsHijack() {
-        val commands = listOf(
-            "iptables -t nat -D OUTPUT -j $CHAIN_DNS_HIJACK 2>/dev/null",
-            "iptables -t nat -D PREROUTING -j $CHAIN_DNS_HIJACK 2>/dev/null",
-            "iptables -t nat -F $CHAIN_DNS_HIJACK 2>/dev/null",
-            "iptables -t nat -X $CHAIN_DNS_HIJACK 2>/dev/null",
-        )
-        RootChecker.execute(commands.joinToString(" ; "))
+        for (table in listOf("nat", "mangle")) {
+            RootChecker.execute("iptables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -F $CHAIN_DNS_EXTERNAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -X $CHAIN_DNS_EXTERNAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -F $CHAIN_DNS_LOCAL 2>/dev/null")
+            RootChecker.execute("iptables -t $table -X $CHAIN_DNS_LOCAL 2>/dev/null")
+        }
     }
 
     /**
@@ -436,7 +506,7 @@ object RootHelper {
     }
 
     /**
-     * Clear all iptables rules applied by this helper.
+     * Clear all rules
      */
     suspend fun clearAllRules() {
         clearTransparentProxy()
