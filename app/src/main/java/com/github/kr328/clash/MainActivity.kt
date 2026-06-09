@@ -51,6 +51,23 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
+        // 启动时自动检测 root 权限（仅检测，不阻塞 UI）
+        launch {
+            try {
+                val isRooted = withContext(Dispatchers.IO) {
+                    com.github.kr328.clash.common.RootChecker.isRooted()
+                }
+                if (isRooted) {
+                    AppLog.d("MainActivity", "Device is rooted, requesting root access...")
+                    withContext(Dispatchers.IO) {
+                        com.github.kr328.clash.common.RootChecker.requestRoot()
+                    }
+                }
+            } catch (_: Exception) {
+                // 静默失败，不影响用户体验
+            }
+        }
+
         // 启动时自动检测更新（后台执行，不阻塞UI）
         launch {
             try {
@@ -104,6 +121,13 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(V2BoardActivity.openKnowledge(this@MainActivity))
                         MainDesign.Request.OpenAbout ->
                             startActivity(V2BoardActivity.openAbout(this@MainActivity))
+                        MainDesign.Request.ShareApp -> {
+                            val downloadUrl = "https://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk"
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Download URL", downloadUrl)
+                            clipboard.setPrimaryClip(clip)
+                            design.showToast(getString(DesignR.string.copied_to_clipboard), ToastDuration.Short)
+                        }
                         MainDesign.Request.OpenV2BoardLogin -> {
                             // 始终打开 WebView（已登录时显示仪表盘，未登录时显示登录页）
                             startActivity(V2BoardActivity.openLogin(this@MainActivity))

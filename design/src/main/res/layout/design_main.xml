@@ -188,6 +188,14 @@
                     android:visibility="gone"
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/about" />
+
+                <com.github.kr328.clash.design.view.LargeActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
+                    android:onClick="@{() -> self.request(Request.ShareApp)}"
+                    app:icon="@drawable/ic_baseline_content_copy"
+                    app:text="@string/share_app" />
             </LinearLayout>
         </ScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
