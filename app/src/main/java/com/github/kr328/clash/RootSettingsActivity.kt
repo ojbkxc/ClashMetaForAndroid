@@ -75,11 +75,11 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
                             }
                         }
                         RootSettingsDesign.Request.ApplyLockBackground -> {
-                            withContext(Dispatchers.IO) {
-                                RootHelper.applyLockBackground()
+                            showWarningAndApply {
+                                withContext(Dispatchers.IO) {
+                                    RootHelper.applyLockBackground()
+                                }
                             }
-                            design.showToast(DesignR.string.root_apply_success,
-                                com.github.kr328.clash.design.ui.ToastDuration.Short)
                         }
                         RootSettingsDesign.Request.ApplyDnsHijack -> {
                             showWarningAndApply {
@@ -119,13 +119,19 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
 
         if (!confirmed) return
 
-        val (success, error) = apply()
+        val (success, message) = apply()
         val design = this.design ?: return
         if (success) {
-            design.showToast(DesignR.string.root_apply_success,
-                com.github.kr328.clash.design.ui.ToastDuration.Short)
+            if (message.isNotBlank()) {
+                // 成功但有附加信息（如 REDIRECT 模式提示）
+                design.showToast(message,
+                    com.github.kr328.clash.design.ui.ToastDuration.Long)
+            } else {
+                design.showToast(DesignR.string.root_apply_success,
+                    com.github.kr328.clash.design.ui.ToastDuration.Short)
+            }
         } else {
-            design.showToast(getString(DesignR.string.root_apply_failed, error),
+            design.showToast(getString(DesignR.string.root_apply_failed, message),
                 com.github.kr328.clash.design.ui.ToastDuration.Long)
         }
     }
