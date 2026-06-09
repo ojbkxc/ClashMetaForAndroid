@@ -406,25 +406,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         activity.getString(com.github.kr328.clash.design.R.string.login_success_syncing),
                         ToastDuration.Short
                     )
-                }
-
-                // 等待前端 localStorage 写入 auth_data（最多等待1秒）
-                SyncLog.add("等待前端写入认证信息...")
-                val maxWaitMs = 1000L
-                val checkIntervalMs = 100L
-                var waitedMs = 0L
-                while (waitedMs < maxWaitMs) {
-                    kotlinx.coroutines.delay(checkIntervalMs)
-                    waitedMs += checkIntervalMs
-                    // 检查 auth_data 是否已保存（登录时已触发保存）
-                    if (activity.sync.session.authData.isNotBlank()) {
-                        break
-                    }
-                }
-
-                withContext(Dispatchers.Main) {
-                    // 用 JavaScript 调用前端的 API，自动带正确的 authorization header
-                    SyncLog.add("通过JS获取订阅URL...")
+                    // 登录成功后立即获取订阅，不再固定等待
+                    SyncLog.add("登录成功，立即获取订阅...")
                     activity.fetchSubscribeViaJs()
                 }
             }
