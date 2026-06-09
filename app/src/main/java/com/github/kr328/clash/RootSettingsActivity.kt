@@ -16,7 +16,10 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
     override suspend fun main() {
         val srvStore = ServiceStore(this)
 
-        // 检测 root 权限（参考 Shizuku 的 startRoot 方案）
+        // 初始化应用 UID（最可靠的方式）
+        RootHelper.initAppUid(applicationInfo.uid)
+
+        // 检测 root 权限
         var rootAvailable = withContext(Dispatchers.IO) {
             RootHelper.isRootAvailable()
         }

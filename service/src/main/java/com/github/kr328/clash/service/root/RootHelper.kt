@@ -19,6 +19,14 @@ object RootHelper {
     private var cachedProxyUid: Int = -1
 
     /**
+     * 初始化应用 UID（由 Activity 调用，传入 applicationInfo.uid）
+     * 这是最可靠的方式，比 shell 命令获取更稳定
+     */
+    fun initAppUid(uid: Int) {
+        cachedProxyUid = uid
+    }
+
+    /**
      * 检查 root 权限是否可用
      */
     fun isRootAvailable(): Boolean {
@@ -33,23 +41,15 @@ object RootHelper {
     }
 
     /**
-     * 动态获取应用 UID（参考 SagerNet 方案）
-     * 使用 pm show 命令获取，而不是硬编码
+     * 获取应用 UID
+     * 优先使用 initAppUid() 设置的值，回退到 shell 命令获取
      */
     private fun getAppUid(): Int {
         if (cachedProxyUid > 0) return cachedProxyUid
-        val (code, output) = RootChecker.execute("pm show $PACKAGE_NAME | grep userId")
+        // 回退：通过 shell 命令获取
+        val (code, output) = RootChecker.execute("dumpsys package $PACKAGE_NAME")
         if (code == 0) {
             val match = Regex("userId=(\\d+)").find(output)
-            if (match != null) {
-                cachedProxyUid = match.groupValues[1].toInt()
-                return cachedProxyUid
-            }
-        }
-        // 回退：使用 dumpsys
-        val (code2, output2) = RootChecker.execute("dumpsys package $PACKAGE_NAME | grep userId")
-        if (code2 == 0) {
-            val match = Regex("userId=(\\d+)").find(output2)
             if (match != null) {
                 cachedProxyUid = match.groupValues[1].toInt()
                 return cachedProxyUid
