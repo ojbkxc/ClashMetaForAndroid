@@ -7,18 +7,17 @@ object RootHelper {
     private const val DNS_HIJACK_PORT = 1053
     private const val PACKAGE_NAME = "com.github.kr328.clash"
 
-    // Chain names - 统一命名风格（参考 Surfing）
+    // Chain names - 统一命名风格(参考 Surfing)
     private const val CHAIN_EXTERNAL = "CLASH_EXTERNAL"
     private const val CHAIN_LOCAL = "CLASH_LOCAL"
     private const val CHAIN_LOCK_BG = "CLASH_LOCK_BG"
     private const val CHAIN_DNS_EXTERNAL = "CLASH_DNS_EXTERNAL"
     private const val CHAIN_DNS_LOCAL = "CLASH_DNS_LOCAL"
     private const val CHAIN_DIVERT = "CLASH_DIVERT"
-    private const val CHAIN_BYPASS = "CLASH_BYPASS"
     private const val CHAIN_LOCAL_IP = "CLASH_LOCAL_IP"
     private const val CHAIN_LOCAL_IP_V6 = "CLASH_LOCAL_IP_V6"
 
-    // 路由标记和表ID（参考 Surfing）
+    // 路由标记和表ID(参考 Surfing)
     private const val MARK_ID = "0x1/0x1"
     private const val MARK_VALUE = "0x1"
     private const val TABLE_ID = "100"
@@ -31,7 +30,7 @@ object RootHelper {
     private var cachedProxyUid: Int = -1
 
     /**
-     * 初始化应用 UID（由 Activity 调用，传入 applicationInfo.uid）
+     * 初始化应用 UID(由 Activity 调用，传入 applicationInfo.uid)
      */
     fun initAppUid(uid: Int) {
         cachedProxyUid = uid
@@ -45,7 +44,7 @@ object RootHelper {
     }
 
     /**
-     * 重新请求 root 权限（带重试）
+     * 重新请求 root 权限(带重试)
      */
     fun requestRootWithRetry(): Boolean {
         return RootChecker.requestRootWithRetry()
@@ -94,16 +93,16 @@ object RootHelper {
     }
 
     /**
-     * 获取热点网络接口列表（使用通配符匹配，参考 Surfing）
+     * 获取热点网络接口列表(使用通配符匹配，参考 Surfing)
      * 热点接口的数据也需要通过TPROXY代理
      * 
      * 支持的接口类型：
      * - wlan+ : wlan0, wlan1, wlan1-usb 等
      * - ap+   : ap0, ap1 等
-     * - rndis+: rndis0 等（USB网络共享）
-     * - ncm+  : ncm0 等（USB网络共享）
-     * - eth+  : eth0 等（以太网）
-     * - p2p+  : p2p0 等（WiFi Direct）
+     * - rndis+: rndis0 等(USB网络共享)
+     * - ncm+  : ncm0 等(USB网络共享)
+     * - eth+  : eth0 等(以太网)
+     * - p2p+  : p2p0 等(WiFi Direct)
      */
     private fun getHotspotInterfaces(): List<String> {
         val hotspotIfaces = mutableSetOf<String>()
@@ -114,7 +113,7 @@ object RootHelper {
         
         val allInterfaces = output.lines().map { it.trim() }.filter { it.isNotEmpty() }
         
-        // 通配符模式（参考 Surfing 的 ap_list）
+        // 通配符模式(参考 Surfing 的 ap_list)
         val wildcardPatterns = listOf("wlan", "ap", "rndis", "ncm", "eth", "p2p")
         
         for (iface in allInterfaces) {
@@ -122,7 +121,7 @@ object RootHelper {
                 // 匹配: wlan0, ap1, rndis0, ncm0, eth0, p2p0 等
                 if (iface.startsWith(pattern) && iface.length > pattern.length) {
                     val suffix = iface.substring(pattern.length)
-                    // 确保后面的字符是数字或特殊字符（不是字母组成的单词）
+                    // 确保后面的字符是数字或特殊字符(不是字母组成的单词)
                     if (suffix.matches(Regex("^[0-9].*") ) || suffix.matches(Regex("^[-_].*"))) {
                         hotspotIfaces.add(iface)
                         break
@@ -170,7 +169,7 @@ object RootHelper {
             val subnetPrefix = subnetMask.toIntOrNull() ?: return false
             val parentPrefix = parentMask.toIntOrNull() ?: return false
             
-            // 如果父网段前缀更短（更大），则父网段更宽
+            // 如果父网段前缀更短(更大)，则父网段更宽
             if (parentPrefix >= subnetPrefix) {
                 return false
             }
@@ -230,14 +229,14 @@ object RootHelper {
     }
 
     /**
-     * 优化内核参数（参考 Surfing）
+     * 优化内核参数(参考 Surfing)
      */
     private fun optimizeKernel(): Boolean {
         val commands = listOf(
             // UDP conntrack 超时优化
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout=30 2>/dev/null",
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=15 2>/dev/null",
-            // 直接写入 proc 文件（某些设备 sysctl 被禁用）
+            // 直接写入 proc 文件(某些设备 sysctl 被禁用)
             "echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout 2>/dev/null",
             "echo 15 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null",
             // TCP conntrack 优化
@@ -269,33 +268,25 @@ object RootHelper {
         if (isTProxySupported()) {
             val result = applyTProxy(proxyUid)
             if (result.first) {
-                return Pair(true, "TPROXY 模式（支持 TCP+UDP）")
+                return Pair(true, "TPROXY mode (TCP+UDP supported)")
             }
             clearTransparentProxy()
         }
 
         val result = applyRedirect(proxyUid)
         if (result.first) {
-            return Pair(true, "REDIRECT 模式（仅支持 TCP）")
+            return Pair(true, "REDIRECT mode (TCP only)")
         }
         return result
     }
 
     /**
-     * TPROXY 模式 - 完全参考 Surfing 实现
-     * 
-     * 流程：
-     * 1. 设置路由规则（ip rule + ip route）
-     * 2. BOX_EXTERNAL 链处理 PREROUTING（来自其他应用/热点的数据包）
-     * 3. BOX_LOCAL 链处理 OUTPUT（本地发出的数据包）
-     * 4. CLASH_DNS_* 链处理 DNS 劫持
-     * 5. DIVERT 链加速已建立连接
-     * 6. 热点接口支持（ap0/rndis0/wlan1等）
+     * TPROXY mode - reference Surfing implementation
      */
     private fun applyTProxy(proxyUid: Int): Pair<Boolean, String> {
         val proxyUidStr = proxyUid.toString()
 
-        // ========== 1. 设置路由规则（IPv4） ==========
+        // ========== 1. Setup routing rules (IPv4) ==========
         RootChecker.execute("ip rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
         RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")
         var (code, output) = RootChecker.execute("ip rule add fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF")
@@ -303,27 +294,27 @@ object RootHelper {
         (code, output) = RootChecker.execute("ip route add local default dev lo table $TABLE_ID")
         if (code != 0) return Pair(false, "设置本地路由表失败: $output")
 
-        // ========== 2. 创建 BOX_EXTERNAL 链（PREROUTING） ==========
-        // 参考 Surfing: 先处理 socket 透明连接，再 bypass 局域网
+        // ========== 2. Create CLASH_EXTERNAL chain (PREROUTING) ==========
+        // Reference Surfing: handle socket transparent connection first, then bypass LAN
         if (!ensureChain("mangle", CHAIN_EXTERNAL)) {
-            return Pair(false, "创建 BOX_EXTERNAL 链失败")
+            return Pair(false, "Create CLASH_EXTERNAL chain failed")
         }
 
-        // socket 透明连接处理（参考 Surfing - 使用 --transparent 标志）
+        // Socket transparent connection handling (reference Surfing --transparent flag)
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -m socket --transparent -j MARK --set-xmark $MARK_ID")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -m socket --transparent -j MARK --set-xmark $MARK_ID")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -m socket -j RETURN")
 
-        // DNS 跳过规则（只有 use_nat_table=true 时才需要，参考 Surfing）
+        // DNS skip rules (only when use_nat_table=true, reference Surfing)
         if (useNatTableForDns) {
             RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 1 -p udp --dport 53 -j RETURN")
             RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 2 -p tcp --dport 53 -j RETURN")
         }
 
-        // 获取热点网段（这些网段不应该被bypass，需要被代理）
+        // Get hotspot subnets (these subnets should not be bypassed, need to be proxied)
         val hotspotSubnets = getHotspotSubnets()
 
-        // 创建 LOCAL_IP 链（IPv4本地地址）
+        // Create LOCAL_IP chain (IPv4 local addresses)
         if (!ensureChain("mangle", CHAIN_LOCAL_IP)) {
             return Pair(false, "创建 LOCAL_IP 链失败")
         }
@@ -332,14 +323,16 @@ object RootHelper {
             RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL_IP -d $ip -j RETURN")
         }
 
-        // 跳过局域网流量（参考 Surfing - 在 LOCAL_IP 之前）
+        // Bypass LAN traffic (reference Surfing - before LOCAL_IP)
         // 但需要排除热点网段，否则热点客户端的流量会被bypass
         val bypassSubnets = listOf(
-            "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "224.0.0.0/4", "240.0.0.0/4"
+            "0.0.0.0/8", "10.0.0.0/8", "100.0.0.0/8", "127.0.0.0/8",
+            "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
+            "224.0.0.0/4", "240.0.0.0/4", "255.255.255.255/32"
         )
         for (subnet in bypassSubnets) {
             // 检查是否需要排除热点网段
-            // 热点网段（如192.168.43.0/24）不应该被bypass
+            // Hotspot subnet (e.g. 192.168.43.0/24) should not be bypassed
             var shouldSkip = false
             for (hotspotSubnet in hotspotSubnets) {
                 // 如果热点网段包含在这个大网段中，则跳过
@@ -357,11 +350,11 @@ object RootHelper {
         // 跳转到 LOCAL_IP 链
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -j $CHAIN_LOCAL_IP")
 
-        // TPROXY 规则 - 设置在 lo 接口上（参考 Surfing）
+        // TPROXY rules - set on lo interface (reference Surfing)
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
 
-        // 热点/网络共享接口 TPROXY 规则（参考 Surfing 的 ap_list 处理）
+        // Hotspot/network sharing interface TPROXY rules (reference Surfing ap_list)
         // 热点接口的流量应该被TPROXY处理，而不是bypass
         val hotspotIfaces = getHotspotInterfaces()
         for (iface in hotspotIfaces) {
@@ -372,12 +365,12 @@ object RootHelper {
         // 添加到 PREROUTING 链
         RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_EXTERNAL")
 
-        // ========== 3. 创建 BOX_LOCAL 链（OUTPUT） ==========
+        // ========== 3. Create CLASH_LOCAL chain (OUTPUT) ==========
         // 参考 Surfing 的规则顺序：
         // 1. 跳过代理自身
         // 2. CONNMARK restore
         // 3. 跳过已标记连接
-        // 4-5. DNS 跳过（仅 use_nat_table=true）
+        // 4-5. DNS 跳过(仅 use_nat_table=true)
         // 6+. 局域网 bypass + LOCAL_IP
         // n. 设置标记
         // n+1. CONNMARK save
@@ -394,7 +387,7 @@ object RootHelper {
         // 第3位：跳过已标记的连接
         RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 3 -m mark --mark $MARK_ID -j ACCEPT")
 
-        // 第4-5位：DNS 跳过规则（只有 use_nat_table=true 时才需要，参考 Surfing）
+        // 第4-5位：DNS 跳过规则(只有 use_nat_table=true 时才需要，参考 Surfing)
         if (useNatTableForDns) {
             RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 4 -p udp --dport 53 -j RETURN")
             RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 5 -p tcp --dport 53 -j RETURN")
@@ -408,7 +401,7 @@ object RootHelper {
         // 处理本地 IP 地址
         RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -j $CHAIN_LOCAL_IP")
 
-        // 设置标记（TCP 和 UDP）
+        // 设置标记(TCP 和 UDP)
         RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -p tcp -j MARK --set-xmark $MARK_ID")
         RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL -p udp -j MARK --set-xmark $MARK_ID")
 
@@ -418,7 +411,7 @@ object RootHelper {
         // 添加到 OUTPUT 链
         RootChecker.execute("iptables -t mangle -I OUTPUT -j $CHAIN_LOCAL")
 
-        // ========== 4. DNS 劫持（参考 Surfing） ==========
+        // ========== 4. DNS hijack (reference Surfing) ==========
         if (useNatTableForDns) {
             if (!applyDnsHijackNatMode(proxyUidStr)) {
                 return Pair(false, "DNS 劫持失败")
@@ -438,7 +431,7 @@ object RootHelper {
             RootChecker.execute("iptables -t mangle -I PREROUTING -p tcp -m socket -j $CHAIN_DIVERT")
         }
 
-        // ========== 6. 创建 CLASH_LOCAL_IP_V6 链（IPv6本地地址） ==========
+        // ========== 6. Create CLASH_LOCAL_IP_V6 chain (IPv6 local addresses) ==========
         if (!ensureChain("mangle", CHAIN_LOCAL_IP_V6)) {
             // IPv6 可能不支持，继续
         } else {
@@ -452,17 +445,17 @@ object RootHelper {
     }
 
     /**
-     * DNS 劫持 - nat 表 REDIRECT 模式（参考 Surfing）
+     * DNS hijack - nat table REDIRECT mode (reference Surfing)
      */
     private fun applyDnsHijackNatMode(proxyUidStr: String): Boolean {
-        // CLASH_DNS_EXTERNAL（PREROUTING）
+        // CLASH_DNS_EXTERNAL(PREROUTING)
         if (!ensureChain("nat", CHAIN_DNS_EXTERNAL)) {
             return false
         }
         RootChecker.execute("iptables -t nat -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
         RootChecker.execute("iptables -t nat -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
 
-        // CLASH_DNS_LOCAL（OUTPUT）
+        // CLASH_DNS_LOCAL(OUTPUT)
         if (!ensureChain("nat", CHAIN_DNS_LOCAL)) {
             return false
         }
@@ -476,18 +469,18 @@ object RootHelper {
     }
 
     /**
-     * DNS 劫持 - mangle 表 TPROXY 模式（参考 Surfing）
+     * DNS hijack - mangle table TPROXY mode (reference Surfing)
      * 用于 use_nat_table=false 的情况
      */
     private fun applyDnsHijackMangleMode(proxyUidStr: String, dnsPort: Int): Boolean {
-        // CLASH_DNS_EXTERNAL（PREROUTING）
+        // CLASH_DNS_EXTERNAL(PREROUTING)
         if (!ensureChain("mangle", CHAIN_DNS_EXTERNAL)) {
             return false
         }
         RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $dnsPort")
         RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
 
-        // CLASH_DNS_LOCAL（OUTPUT）
+        // CLASH_DNS_LOCAL(OUTPUT)
         if (!ensureChain("mangle", CHAIN_DNS_LOCAL)) {
             return false
         }
@@ -501,7 +494,7 @@ object RootHelper {
     }
 
     /**
-     * REDIRECT 模式 - 仅支持 TCP（参考 Surfing）
+     * REDIRECT mode - TCP only (reference Surfing)
      * 需要处理热点接口
      */
     private fun applyRedirect(proxyUid: Int): Pair<Boolean, String> {
@@ -509,23 +502,43 @@ object RootHelper {
             return Pair(false, "创建 chain 失败")
         }
 
-        // 基础规则
-        val baseSteps = listOf(
-            "iptables -t nat -A $CHAIN_EXTERNAL -m owner --uid-owner $proxyUid -j RETURN",
-            "iptables -t nat -A $CHAIN_EXTERNAL -d 127.0.0.0/8 -j RETURN",
-            "iptables -t nat -A $CHAIN_EXTERNAL -d 10.0.0.0/8 -j RETURN",
-            "iptables -t nat -A $CHAIN_EXTERNAL -d 172.16.0.0/12 -j RETURN",
-            "iptables -t nat -A $CHAIN_EXTERNAL -d 192.168.0.0/16 -j RETURN",
+        // 基础规则(参考 Surfing 的 intranet 列表)
+        // 注意：REDIRECT 模式也需要排除热点网段
+        val redirectBypassSubnets = listOf(
+            "0.0.0.0/8", "10.0.0.0/8", "100.0.0.0/8", "127.0.0.0/8",
+            "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
+            "224.0.0.0/4", "240.0.0.0/4", "255.255.255.255/32"
         )
-        for (cmd in baseSteps) {
-            val (code, output) = RootChecker.execute(cmd)
+        // 获取热点网段(这些网段不应该被bypass)
+        val hotspotSubnets = getHotspotSubnets()
+
+        for (subnet in redirectBypassSubnets) {
+            // 检查是否需要排除热点网段
+            var shouldSkip = false
+            for (hotspotSubnet in hotspotSubnets) {
+                if (isSubnetContained(hotspotSubnet, subnet)) {
+                    shouldSkip = true
+                    break
+                }
+            }
+            if (shouldSkip) {
+                continue
+            }
+            val (code, output) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -d $subnet -j RETURN")
             if (code != 0) {
                 clearTransparentProxy()
-                return Pair(false, "REDIRECT 执行失败: $output")
+                return Pair(false, "REDIRECT bypass 规则执行失败: $output")
             }
         }
 
-        // 热点接口的 TCP 重定向（参考 Surfing）
+        // 代理自身
+        val (uidCode, uidOutput) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -m owner --uid-owner $proxyUid -j RETURN")
+        if (uidCode != 0) {
+            clearTransparentProxy()
+            return Pair(false, "REDIRECT 代理自身规则执行失败: $uidOutput")
+        }
+
+        // 热点接口的 TCP 重定向(参考 Surfing)
         val hotspotIfaces = getHotspotInterfaces()
         for (iface in hotspotIfaces) {
             val (code, output) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -p tcp -i $iface -j REDIRECT --to-ports $TPROXY_PORT")
@@ -552,7 +565,7 @@ object RootHelper {
     }
 
     /**
-     * 清除透明代理规则 - 完整清理（参考 Surfing stop_tproxy）
+     * Clear transparent proxy rules - complete cleanup (reference Surfing stop_tproxy)
      */
     private fun clearTransparentProxy() {
         // 清理 IPv4 路由规则
@@ -564,7 +577,7 @@ object RootHelper {
         RootChecker.execute("iptables -t mangle -F $CHAIN_DIVERT 2>/dev/null")
         RootChecker.execute("iptables -t mangle -X $CHAIN_DIVERT 2>/dev/null")
 
-        // 清理 DNS 链（mangle 和 nat 表）
+        // 清理 DNS 链(mangle 和 nat 表)
         for (table in listOf("nat", "mangle")) {
             RootChecker.execute("iptables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL 2>/dev/null")
             RootChecker.execute("iptables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL 2>/dev/null")
@@ -631,7 +644,7 @@ object RootHelper {
     }
 
     /**
-     * Apply DNS hijack rules（独立调用）
+     * Apply DNS hijack rules(独立调用)
      */
     suspend fun applyDnsHijack(): Pair<Boolean, String> {
         clearDnsHijack()
