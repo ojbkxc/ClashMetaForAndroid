@@ -575,7 +575,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     override fun finish() {
-        if (isLoginMode && !loginDetected) {
+        // 只有在登录模式且未检测到登录且确实未登录时，才返回 CANCELED
+        // 如果用户已登录（session.isLoggedIn），即使本次没有触发新登录，也不应返回 CANCELED
+        if (isLoginMode && !loginDetected && !sync.session.isLoggedIn) {
             setResult(Activity.RESULT_CANCELED)
         }
         super.finish()
