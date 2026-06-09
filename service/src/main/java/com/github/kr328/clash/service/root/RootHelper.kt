@@ -94,6 +94,115 @@ object RootHelper {
     }
 
     /**
+     * 获取热点网络接口列表（使用通配符匹配，参考 Surfing）
+     * 热点接口的数据也需要通过TPROXY代理
+     * 
+     * 支持的接口类型：
+     * - wlan+ : wlan0, wlan1, wlan1-usb 等
+     * - ap+   : ap0, ap1 等
+     * - rndis+: rndis0 等（USB网络共享）
+     * - ncm+  : ncm0 等（USB网络共享）
+     * - eth+  : eth0 等（以太网）
+     * - p2p+  : p2p0 等（WiFi Direct）
+     */
+    private fun getHotspotInterfaces(): List<String> {
+        val hotspotIfaces = mutableSetOf<String>()
+        
+        // 获取所有网络接口
+        val (code, output) = RootChecker.execute("ip link show | cut -d: -f2 | tr -d ' '")
+        if (code != 0 || output.isEmpty()) return emptyList()
+        
+        val allInterfaces = output.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        
+        // 通配符模式（参考 Surfing 的 ap_list）
+        val wildcardPatterns = listOf("wlan", "ap", "rndis", "ncm", "eth", "p2p")
+        
+        for (iface in allInterfaces) {
+            for (pattern in wildcardPatterns) {
+                // 匹配: wlan0, ap1, rndis0, ncm0, eth0, p2p0 等
+                if (iface.startsWith(pattern) && iface.length > pattern.length) {
+                    val suffix = iface.substring(pattern.length)
+                    // 确保后面的字符是数字或特殊字符（不是字母组成的单词）
+                    if (suffix.matches(Regex("^[0-9].*") ) || suffix.matches(Regex("^[-_].*"))) {
+                        hotspotIfaces.add(iface)
+                        break
+                    }
+                }
+            }
+        }
+        
+        return hotspotIfaces.toList()
+    }
+
+    /**
+     * 获取热点接口的IP网段
+     * 热点网段不应该被bypass，需要被代理
+     */
+    private fun getHotspotSubnets(): List<String> {
+        val subnets = mutableListOf<String>()
+        val hotspotIfaces = getHotspotInterfaces()
+        
+        for (iface in hotspotIfaces) {
+            // 获取接口的IPv4地址
+            val (code, output) = RootChecker.execute("ip -4 addr show $iface | grep inet | awk '{print \$2}'")
+            if (code == 0 && output.isNotEmpty()) {
+                output.lines().map { it.trim() }.filter { it.isNotEmpty() }.forEach { ip ->
+                    if (!ip.contains(":")) { // 排除IPv6
+                        subnets.add(ip)
+                    }
+                }
+            }
+        }
+        
+        return subnets
+    }
+
+    /**
+     * 检查子网段是否被父网段包含
+     * 例如: 192.168.43.0/24 被 192.168.0.0/16 包含
+     */
+    private fun isSubnetContained(subnet: String, parentSubnet: String): Boolean {
+        try {
+            // 解析网段格式 "IP/前缀长度"
+            val (subnetIp, subnetMask) = subnet.split("/")
+            val (parentIp, parentMask) = parentSubnet.split("/")
+            
+            val subnetPrefix = subnetMask.toIntOrNull() ?: return false
+            val parentPrefix = parentMask.toIntOrNull() ?: return false
+            
+            // 如果父网段前缀更短（更大），则父网段更宽
+            if (parentPrefix >= subnetPrefix) {
+                return false
+            }
+            
+            // 将IP转换为整数
+            val subnetIpInt = ipToInt(subnetIp)
+            val parentIpInt = ipToInt(parentIp)
+            
+            // 计算子网掩码
+            val subnetMaskInt = if (subnetPrefix == 0) 0 else (0xFFFFFFFF shl (32 - subnetPrefix))
+            val parentMaskInt = if (parentPrefix == 0) 0 else (0xFFFFFFFF shl (32 - parentPrefix))
+            
+            // 检查子网是否在父网内
+            return (subnetIpInt and parentMaskInt) == (parentIpInt and parentMaskInt)
+        } catch (e: Exception) {
+            return false
+        }
+    }
+
+    /**
+     * 将IPv4地址转换为整数
+     */
+    private fun ipToInt(ip: String): Long {
+        val parts = ip.split(".")
+        if (parts.size != 4) return 0
+        return (parts[0].toLongOrNull() ?: 0) * 256 * 256 * 256 +
+               (parts[1].toLongOrNull() ?: 0) * 256 * 256 +
+               (parts[2].toLongOrNull() ?: 0) * 256 +
+               (parts[3].toLongOrNull() ?: 0)
+    }
+
+    /**
      * 创建 iptables chain，如果已存在则先清理再创建
      */
     private fun ensureChain(table: String, chain: String): Boolean {
@@ -173,7 +282,15 @@ object RootHelper {
     }
 
     /**
-     * TPROXY 模式 - 参考 Surfing 完整实现
+     * TPROXY 模式 - 完全参考 Surfing 实现
+     * 
+     * 流程：
+     * 1. 设置路由规则（ip rule + ip route）
+     * 2. BOX_EXTERNAL 链处理 PREROUTING（来自其他应用/热点的数据包）
+     * 3. BOX_LOCAL 链处理 OUTPUT（本地发出的数据包）
+     * 4. CLASH_DNS_* 链处理 DNS 劫持
+     * 5. DIVERT 链加速已建立连接
+     * 6. 热点接口支持（ap0/rndis0/wlan1等）
      */
     private fun applyTProxy(proxyUid: Int): Pair<Boolean, String> {
         val proxyUidStr = proxyUid.toString()
@@ -186,7 +303,27 @@ object RootHelper {
         (code, output) = RootChecker.execute("ip route add local default dev lo table $TABLE_ID")
         if (code != 0) return Pair(false, "设置本地路由表失败: $output")
 
-        // ========== 2. 创建 CLASH_LOCAL_IP 链（IPv4本地地址） ==========
+        // ========== 2. 创建 BOX_EXTERNAL 链（PREROUTING） ==========
+        // 参考 Surfing: 先处理 socket 透明连接，再 bypass 局域网
+        if (!ensureChain("mangle", CHAIN_EXTERNAL)) {
+            return Pair(false, "创建 BOX_EXTERNAL 链失败")
+        }
+
+        // socket 透明连接处理（参考 Surfing - 使用 --transparent 标志）
+        RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -m socket --transparent -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -m socket --transparent -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -m socket -j RETURN")
+
+        // DNS 跳过规则（只有 use_nat_table=true 时才需要，参考 Surfing）
+        if (useNatTableForDns) {
+            RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 1 -p udp --dport 53 -j RETURN")
+            RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 2 -p tcp --dport 53 -j RETURN")
+        }
+
+        // 获取热点网段（这些网段不应该被bypass，需要被代理）
+        val hotspotSubnets = getHotspotSubnets()
+
+        // 创建 LOCAL_IP 链（IPv4本地地址）
         if (!ensureChain("mangle", CHAIN_LOCAL_IP)) {
             return Pair(false, "创建 LOCAL_IP 链失败")
         }
@@ -195,44 +332,55 @@ object RootHelper {
             RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL_IP -d $ip -j RETURN")
         }
 
-        // ========== 3. 创建 CLASH_LOCAL_IP_V6 链（IPv6本地地址） ==========
-        if (!ensureChain("mangle", CHAIN_LOCAL_IP_V6)) {
-            // IPv6 可能不支持，继续
-        } else {
-            val localIpv6List = getLocalIpv6Addresses()
-            for (ip in localIpv6List) {
-                RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_IP_V6 -d $ip -j RETURN 2>/dev/null")
-            }
-        }
-
-        // ========== 4. 创建 BOX_EXTERNAL 链（PREROUTING） ==========
-        if (!ensureChain("mangle", CHAIN_EXTERNAL)) {
-            return Pair(false, "创建 BOX_EXTERNAL 链失败")
-        }
-
-        // 第1-2位：跳过 DNS 53 端口（UDP 和 TCP）
-        RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 1 -p udp --dport 53 -j RETURN")
-        RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 2 -p tcp --dport 53 -j RETURN")
-
-        // 跳过局域网流量（参考 Surfing）
+        // 跳过局域网流量（参考 Surfing - 在 LOCAL_IP 之前）
+        // 但需要排除热点网段，否则热点客户端的流量会被bypass
         val bypassSubnets = listOf(
             "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "224.0.0.0/4", "240.0.0.0/4"
         )
         for (subnet in bypassSubnets) {
+            // 检查是否需要排除热点网段
+            // 热点网段（如192.168.43.0/24）不应该被bypass
+            var shouldSkip = false
+            for (hotspotSubnet in hotspotSubnets) {
+                // 如果热点网段包含在这个大网段中，则跳过
+                if (isSubnetContained(hotspotSubnet, subnet)) {
+                    shouldSkip = true
+                    break
+                }
+            }
+            if (shouldSkip) {
+                continue
+            }
             RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -d $subnet -j RETURN")
         }
 
-        // 处理本地 IP 地址
+        // 跳转到 LOCAL_IP 链
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -j $CHAIN_LOCAL_IP")
 
         // TPROXY 规则 - 设置在 lo 接口上（参考 Surfing）
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
 
+        // 热点/网络共享接口 TPROXY 规则（参考 Surfing 的 ap_list 处理）
+        // 热点接口的流量应该被TPROXY处理，而不是bypass
+        val hotspotIfaces = getHotspotInterfaces()
+        for (iface in hotspotIfaces) {
+            RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -i $iface -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+            RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -i $iface -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+        }
+
         // 添加到 PREROUTING 链
         RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_EXTERNAL")
 
-        // ========== 5. 创建 BOX_LOCAL 链（OUTPUT） ==========
+        // ========== 3. 创建 BOX_LOCAL 链（OUTPUT） ==========
+        // 参考 Surfing 的规则顺序：
+        // 1. 跳过代理自身
+        // 2. CONNMARK restore
+        // 3. 跳过已标记连接
+        // 4-5. DNS 跳过（仅 use_nat_table=true）
+        // 6+. 局域网 bypass + LOCAL_IP
+        // n. 设置标记
+        // n+1. CONNMARK save
         if (!ensureChain("mangle", CHAIN_LOCAL)) {
             return Pair(false, "创建 BOX_LOCAL 链失败")
         }
@@ -246,9 +394,11 @@ object RootHelper {
         // 第3位：跳过已标记的连接
         RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 3 -m mark --mark $MARK_ID -j ACCEPT")
 
-        // 第4-5位：跳过 DNS 53 端口
-        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 4 -p udp --dport 53 -j RETURN")
-        RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 5 -p tcp --dport 53 -j RETURN")
+        // 第4-5位：DNS 跳过规则（只有 use_nat_table=true 时才需要，参考 Surfing）
+        if (useNatTableForDns) {
+            RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 4 -p udp --dport 53 -j RETURN")
+            RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 5 -p tcp --dport 53 -j RETURN")
+        }
 
         // 跳过局域网流量
         for (subnet in bypassSubnets) {
@@ -268,26 +418,34 @@ object RootHelper {
         // 添加到 OUTPUT 链
         RootChecker.execute("iptables -t mangle -I OUTPUT -j $CHAIN_LOCAL")
 
-        // ========== 6. DNS 劫持（参考 Surfing） ==========
+        // ========== 4. DNS 劫持（参考 Surfing） ==========
         if (useNatTableForDns) {
-            // 使用 nat 表 REDIRECT 模式
             if (!applyDnsHijackNatMode(proxyUidStr)) {
                 return Pair(false, "DNS 劫持失败")
             }
         } else {
-            // 使用 mangle 表 TPROXY 模式
             if (!applyDnsHijackMangleMode(proxyUidStr, TPROXY_PORT)) {
                 return Pair(false, "DNS 劫持失败")
             }
         }
 
-        // ========== 7. 创建 DIVERT 链加速已建立连接 ==========
+        // ========== 5. 创建 DIVERT 链加速已建立连接 ==========
         if (!ensureChain("mangle", CHAIN_DIVERT)) {
             // DIVERT 非必需，继续执行
         } else {
             RootChecker.execute("iptables -t mangle -A $CHAIN_DIVERT -j MARK --set-xmark $MARK_ID")
             RootChecker.execute("iptables -t mangle -A $CHAIN_DIVERT -j ACCEPT")
             RootChecker.execute("iptables -t mangle -I PREROUTING -p tcp -m socket -j $CHAIN_DIVERT")
+        }
+
+        // ========== 6. 创建 CLASH_LOCAL_IP_V6 链（IPv6本地地址） ==========
+        if (!ensureChain("mangle", CHAIN_LOCAL_IP_V6)) {
+            // IPv6 可能不支持，继续
+        } else {
+            val localIpv6List = getLocalIpv6Addresses()
+            for (ip in localIpv6List) {
+                RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_IP_V6 -d $ip -j RETURN 2>/dev/null")
+            }
         }
 
         return Pair(true, "")
@@ -343,29 +501,53 @@ object RootHelper {
     }
 
     /**
-     * REDIRECT 模式 - 仅支持 TCP
+     * REDIRECT 模式 - 仅支持 TCP（参考 Surfing）
+     * 需要处理热点接口
      */
     private fun applyRedirect(proxyUid: Int): Pair<Boolean, String> {
         if (!ensureChain("nat", CHAIN_EXTERNAL)) {
             return Pair(false, "创建 chain 失败")
         }
 
-        val steps = listOf(
+        // 基础规则
+        val baseSteps = listOf(
             "iptables -t nat -A $CHAIN_EXTERNAL -m owner --uid-owner $proxyUid -j RETURN",
             "iptables -t nat -A $CHAIN_EXTERNAL -d 127.0.0.0/8 -j RETURN",
             "iptables -t nat -A $CHAIN_EXTERNAL -d 10.0.0.0/8 -j RETURN",
             "iptables -t nat -A $CHAIN_EXTERNAL -d 172.16.0.0/12 -j RETURN",
             "iptables -t nat -A $CHAIN_EXTERNAL -d 192.168.0.0/16 -j RETURN",
-            "iptables -t nat -A $CHAIN_EXTERNAL -p tcp -j REDIRECT --to-ports $TPROXY_PORT",
-            "iptables -t nat -I OUTPUT -j $CHAIN_EXTERNAL",
         )
-        for (cmd in steps) {
+        for (cmd in baseSteps) {
             val (code, output) = RootChecker.execute(cmd)
             if (code != 0) {
                 clearTransparentProxy()
                 return Pair(false, "REDIRECT 执行失败: $output")
             }
         }
+
+        // 热点接口的 TCP 重定向（参考 Surfing）
+        val hotspotIfaces = getHotspotInterfaces()
+        for (iface in hotspotIfaces) {
+            val (code, output) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -p tcp -i $iface -j REDIRECT --to-ports $TPROXY_PORT")
+            if (code != 0) {
+                // 继续处理其他接口
+            }
+        }
+
+        // 主 TCP 重定向规则
+        val (code, output) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -p tcp -j REDIRECT --to-ports $TPROXY_PORT")
+        if (code != 0) {
+            clearTransparentProxy()
+            return Pair(false, "REDIRECT 执行失败: $output")
+        }
+
+        // 添加到 OUTPUT 链
+        val (code2, output2) = RootChecker.execute("iptables -t nat -I OUTPUT -j $CHAIN_EXTERNAL")
+        if (code2 != 0) {
+            clearTransparentProxy()
+            return Pair(false, "REDIRECT 添加 OUTPUT 失败: $output2")
+        }
+
         return Pair(true, "")
     }
 
