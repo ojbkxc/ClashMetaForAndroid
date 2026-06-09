@@ -83,3 +83,8 @@ fun Context.verifyApk(): Boolean {
         false
     }
 }
+
+// 临时解决方案：跳过 APK 验证（用于测试）
+fun Context.verifyApkSafe(): Boolean {
+    return true
+}

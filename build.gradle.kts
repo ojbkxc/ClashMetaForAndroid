@@ -197,7 +197,7 @@ subprojects {
 
         buildFeatures.apply {
             dataBinding {
-                isEnabled = name != "hideapi"
+                enable = name != "hideapi"
             }
         }
 

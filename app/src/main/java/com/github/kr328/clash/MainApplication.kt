@@ -8,8 +8,6 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.clashDir
-import com.github.kr328.clash.v2board.ConfigManager
-import com.github.kr328.clash.v2board.SyncLog
 import java.io.File
 import java.io.FileOutputStream
 
@@ -24,12 +22,6 @@ class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-        // Initialize unified configuration from assets/v2board.properties
-        ConfigManager.init(this)
-
-        // Initialize sync log file
-        SyncLog.init(this)
 
         val processName = currentProcessName
         extractGeoFiles()
@@ -67,16 +59,15 @@ class MainApplication : Application() {
             }
         }
 
-        // ASN.mmdb 后端配置未使用，已注释
-        // val asnFile = File(clashDir, "ASN.mmdb")
-        // if (asnFile.exists() && asnFile.lastModified() < updateDate) {
-        //     asnFile.delete()
-        // }
-        // if (!asnFile.exists()) {
-        //     FileOutputStream(asnFile).use {
-        //         assets.open("ASN.mmdb").copyTo(it)
-        //     }
-        // }
+        val asnFile = File(clashDir, "ASN.mmdb")
+        if (asnFile.exists() && asnFile.lastModified() < updateDate) {
+            asnFile.delete()
+        }
+        if (!asnFile.exists()) {
+            FileOutputStream(asnFile).use {
+                assets.open("ASN.mmdb").copyTo(it)
+            }
+        }
     }
 
     fun finalize() {
