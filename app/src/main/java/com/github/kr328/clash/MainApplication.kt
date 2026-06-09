@@ -8,6 +8,9 @@ import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.clashDir
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
@@ -24,9 +27,13 @@ class MainApplication : Application() {
         super.onCreate()
 
         val processName = currentProcessName
-        extractGeoFiles()
 
         AppLog.d("Process $processName started")
+
+        // 将 geo 文件提取移到后台线程，避免阻塞启动流程
+        GlobalScope.launch(Dispatchers.IO) {
+            extractGeoFiles()
+        }
 
         if (processName == packageName) {
             Remote.launch()
