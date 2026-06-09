@@ -291,8 +291,8 @@ object RootHelper {
         RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")
         var (code, output) = RootChecker.execute("ip rule add fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF")
         if (code != 0) return Pair(false, "Setup routing rules failed: $output")
-        (code, output) = RootChecker.execute("ip route add local default dev lo table $TABLE_ID")
-        if (code != 0) return Pair(false, "Setup local routing table failed: $output")
+        val (code2, output2) = RootChecker.execute("ip route add local default dev lo table $TABLE_ID")
+        if (code2 != 0) return Pair(false, "Setup local routing table failed: $output2")
 
         // ========== 2. Create CLASH_EXTERNAL chain (PREROUTING) ==========
         // Reference Surfing: handle socket transparent connection first, then bypass LAN
