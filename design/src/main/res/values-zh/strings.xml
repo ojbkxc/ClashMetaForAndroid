@@ -325,6 +325,10 @@
     <string name="root_warning_title">警告</string>
     <string name="root_warning_message">确定要应用此更改吗？此操作需要 root 权限。</string>
     <string name="root_apply_failed">应用失败：%s</string>
+    <string name="root_request_permission">请求 Root 权限</string>
+    <string name="root_request_permission_summary">点击请求超级用户权限</string>
+    <string name="root_requesting">正在请求 root 权限…</string>
+    <string name="root_request_failed">Root 权限请求失败</string>
 
     <!-- Regional Restrictions / 地区限制 -->
     <string name="regional_restriction_title">地区限制</string>
@@ -332,5 +336,4 @@
     <string name="regional_restriction_confirm">我已了解 / I Understand</string>
     <string name="share_app">分享应用</string>
     <string name="share_app_message">下载蓝星网络：\nhttps://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk</string>
-    <string name="copied_to_clipboard">下载地址已复制到剪贴板</string>
 </resources>

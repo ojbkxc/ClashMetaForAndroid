@@ -3,6 +3,7 @@ package com.github.kr328.clash.common
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 
 /**
@@ -19,23 +20,21 @@ object RootChecker {
         Shell.setDefaultBuilder(
             Shell.Builder.create()
                 .setFlags(Shell.FLAG_REDIRECT_STDERR)
-                .setTimeout(10)
+                .setTimeout(30)  // 增加超时时间，参考 Shizuku 的 30s
         )
     }
 
     /**
      * 检测设备是否有 root 权限（不主动申请，不触发授权弹窗）
-     * 只检查 su 文件是否存在，不执行 su 命令
+     * 参考 Shizuku 的 EnvironmentUtils.isRooted() 方案
+     * 通过 PATH 环境变量查找 su 二进制文件
      */
     fun isRooted(): Boolean {
         return try {
-            // 检查 su 文件是否存在
-            val paths = arrayOf(
-                "/system/bin/su", "/system/xbin/su",
-                "/sbin/su", "/system/su",
-                "/data/local/xbin/su", "/data/local/bin/su"
-            )
-            paths.any { java.io.File(it).exists() }
+            // 参考 Shizuku: 检查 PATH 环境变量中的 su 文件
+            System.getenv("PATH")
+                ?.split(File.pathSeparatorChar)
+                ?.find { File("$it/su").exists() } != null
         } catch (e: Exception) {
             Log.d(TAG, "Root check failed: ${e.message}")
             false
@@ -57,6 +56,23 @@ object RootChecker {
             isRoot
         } catch (e: Exception) {
             Log.w(TAG, "Root request failed: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * 重新请求 root 权限
+     * 关闭现有 shell 并重新获取，参考 Shizuku 的重试机制
+     * @return true 如果已获得 root 权限
+     */
+    fun requestRootWithRetry(): Boolean {
+        return try {
+            // 关闭现有 shell 缓存
+            Shell.getCachedShell()?.close()
+            // 重新请求
+            requestRoot()
+        } catch (e: Exception) {
+            Log.w(TAG, "Root retry failed: ${e.message}")
             false
         }
     }

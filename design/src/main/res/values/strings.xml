@@ -425,6 +425,8 @@
     <string name="root_apply_failed">Failed to apply: %s</string>
     <string name="root_request_permission">Request Root Permission</string>
     <string name="root_request_permission_summary">Click to request root access from superuser</string>
+    <string name="root_requesting">Requesting root access…</string>
+    <string name="root_request_failed">Root access request failed</string>
 
     <!-- Regional Restrictions / 地区限制 -->
     <string name="regional_restriction_title">Regional Restriction</string>
@@ -432,5 +434,4 @@
     <string name="regional_restriction_confirm">I Understand / 我已了解</string>
     <string name="share_app">Share App</string>
     <string name="share_app_message">Download LanXing Network:\nhttps://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk</string>
-    <string name="copied_to_clipboard">Download link copied to clipboard</string>
 </resources>

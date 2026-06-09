@@ -39,18 +39,12 @@ class RootSettingsDesign(
 
         binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
 
-        if (!rootAvailable) {
-            launch {
-                showToast(R.string.root_not_available, ToastDuration.Long)
-            }
-        }
-
         val screen = preferenceScreen(context) {
             val rootDependencies: MutableList<Preference> = mutableListOf()
 
             category(R.string.root_settings)
 
-            // 当 root 不可用时，显示重新申请按钮
+            // Root 状态提示
             if (!rootAvailable) {
                 clickable(
                     icon = R.drawable.ic_baseline_sync,

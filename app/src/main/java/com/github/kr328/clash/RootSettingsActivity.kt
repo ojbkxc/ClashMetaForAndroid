@@ -17,9 +17,9 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
     override suspend fun main() {
         val srvStore = ServiceStore(this)
 
-        // 主动申请 root 权限（会触发 superuser 弹窗）
+        // 检测 root 权限（参考 Shizuku 的 startRoot 方案）
         var rootAvailable = withContext(Dispatchers.IO) {
-            RootChecker.requestRoot()
+            RootHelper.isRootAvailable()
         }
 
         var design = RootSettingsDesign(
@@ -46,9 +46,12 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         RootSettingsDesign.Request.RequestRoot -> {
-                            // 重新申请 root 权限
+                            // 重新申请 root 权限（带重试机制）
+                            design.showToast(DesignR.string.root_requesting,
+                                com.github.kr328.clash.design.ui.ToastDuration.Short)
+
                             rootAvailable = withContext(Dispatchers.IO) {
-                                RootChecker.requestRoot()
+                                RootHelper.requestRootWithRetry()
                             }
                             // 重新创建设计以更新 UI 状态
                             design = RootSettingsDesign(
@@ -60,6 +63,9 @@ class RootSettingsActivity : BaseActivity<RootSettingsDesign>() {
                             if (rootAvailable) {
                                 design.showToast(DesignR.string.root_apply_success,
                                     com.github.kr328.clash.design.ui.ToastDuration.Short)
+                            } else {
+                                design.showToast(DesignR.string.root_request_failed,
+                                    com.github.kr328.clash.design.ui.ToastDuration.Long)
                             }
                         }
                         RootSettingsDesign.Request.ApplyTransparentProxy -> {
