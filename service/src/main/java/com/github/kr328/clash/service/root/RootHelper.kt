@@ -60,6 +60,7 @@ object RootHelper {
 
     /**
      * 清除透明代理规则
+     * 使用分号分隔命令，确保即使前面的命令失败，后续清理命令也能执行
      */
     private fun clearTransparentProxy() {
         val commands = listOf(
@@ -69,7 +70,9 @@ object RootHelper {
             "ip rule del fwmark 1 table 100 2>/dev/null",
             "ip route del local 0.0.0.0/0 dev lo table 100 2>/dev/null",
         )
-        RootChecker.executeBatch(commands)
+        // 使用分号连接，确保每条命令都执行（不因前一条失败而中断）
+        val fullCommand = commands.joinToString(" ; ")
+        RootChecker.execute(fullCommand)
     }
 
     /**
@@ -92,6 +95,7 @@ object RootHelper {
 
     /**
      * 清除锁定后台规则
+     * 使用分号分隔命令，确保即使前面的命令失败，后续清理命令也能执行
      */
     private fun clearLockBackground() {
         val commands = listOf(
@@ -99,7 +103,8 @@ object RootHelper {
             "iptables -t mangle -F $CHAIN_LOCK_BG 2>/dev/null",
             "iptables -t mangle -X $CHAIN_LOCK_BG 2>/dev/null",
         )
-        RootChecker.executeBatch(commands)
+        val fullCommand = commands.joinToString(" ; ")
+        RootChecker.execute(fullCommand)
     }
 
     /**
@@ -122,6 +127,7 @@ object RootHelper {
 
     /**
      * 清除 DNS 劫持规则
+     * 使用分号分隔命令，确保即使前面的命令失败，后续清理命令也能执行
      */
     private fun clearDnsHijack() {
         val commands = listOf(
@@ -129,7 +135,8 @@ object RootHelper {
             "iptables -t nat -F $CHAIN_DNS_HIJACK 2>/dev/null",
             "iptables -t nat -X $CHAIN_DNS_HIJACK 2>/dev/null",
         )
-        RootChecker.executeBatch(commands)
+        val fullCommand = commands.joinToString(" ; ")
+        RootChecker.execute(fullCommand)
     }
 
     /**

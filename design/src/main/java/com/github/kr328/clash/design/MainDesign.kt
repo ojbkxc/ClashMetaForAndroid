@@ -22,7 +22,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenAbout,
         OpenV2BoardLogin,
         ViewSyncLog,
-        ShareApp,
     }
 
     private val binding = DesignMainBinding

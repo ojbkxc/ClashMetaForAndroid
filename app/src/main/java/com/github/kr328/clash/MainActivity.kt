@@ -1,6 +1,5 @@
 package com.github.kr328.clash
 
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -123,13 +122,6 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(V2BoardActivity.openKnowledge(this@MainActivity))
                         MainDesign.Request.OpenAbout ->
                             startActivity(V2BoardActivity.openAbout(this@MainActivity))
-                        MainDesign.Request.ShareApp -> {
-                            val downloadUrl = "https://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk"
-                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            val clip = android.content.ClipData.newPlainText("Download URL", downloadUrl)
-                            clipboard.setPrimaryClip(clip)
-                            design.showToast(getString(DesignR.string.copied_to_clipboard), ToastDuration.Short)
-                        }
                         MainDesign.Request.OpenV2BoardLogin -> {
                             // 始终打开 WebView（已登录时显示仪表盘，未登录时显示登录页）
                             startActivity(V2BoardActivity.openLogin(this@MainActivity))

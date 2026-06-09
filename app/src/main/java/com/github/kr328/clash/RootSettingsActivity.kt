@@ -1,7 +1,6 @@
 package com.github.kr328.clash
 
 import android.app.AlertDialog
-import com.github.kr328.clash.common.RootChecker
 import com.github.kr328.clash.design.RootSettingsDesign
 import com.github.kr328.clash.design.R as DesignR
 import com.github.kr328.clash.service.store.ServiceStore

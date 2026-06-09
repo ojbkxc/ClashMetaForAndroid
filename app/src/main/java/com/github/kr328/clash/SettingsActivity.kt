@@ -1,5 +1,6 @@
 package com.github.kr328.clash
 
+import android.content.Context
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.SettingsDesign
 import com.github.kr328.clash.SyncLogActivity
@@ -31,6 +32,13 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(SyncLogActivity::class.intent)
                         SettingsDesign.Request.StartRoot ->
                             startActivity(RootSettingsActivity::class.intent)
+                        SettingsDesign.Request.ShareApp -> {
+                            val downloadUrl = "https://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk"
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Download URL", downloadUrl)
+                            clipboard.setPrimaryClip(clip)
+                            design.showToast(getString(com.github.kr328.clash.design.R.string.copied_to_clipboard), com.github.kr328.clash.design.ui.ToastDuration.Short)
+                        }
                     }
                 }
             }

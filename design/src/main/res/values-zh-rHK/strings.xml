@@ -255,6 +255,7 @@
     <string name="regional_restriction_title">地區限制</string>
     <string name="regional_restriction_message">本軟件嚴格禁止在中國大陸境內使用。本應用程式專為海外華僑設計，包括但不限於新加坡、馬來西亞、臺灣、香港、澳門及中國大陸以外的其他地區的用戶。\n\nThis software is strictly prohibited from use in mainland China. This application is designed exclusively for overseas Chinese communities.</string>
     <string name="regional_restriction_confirm">我已了解 / I Understand</string>
+    <string name="share">分享</string>
     <string name="share_app">分享應用</string>
     <string name="share_app_message">下載藍星網絡：\nhttps://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk</string>
     <string name="copied_to_clipboard">下載地址已複製到剪貼簿</string>
