@@ -7,27 +7,27 @@ import java.io.File
 import java.io.InputStreamReader
 
 /**
- * Root 权限检测与命令执行工具
- * 使用 libsu (topjohnwu) 库，参考 Shizuku 项目方案
- * 所有 root 操作都通过此类进行，确保安全性
+ * Root permission detection and command execution utility
+ * Uses libsu (topjohnwu) library, reference Shizuku project approach
+ * All root operations go through this class for security
  */
 object RootChecker {
     private const val TAG = "RootChecker"
 
-    // SELinux 状态缓存
+    // SELinux status cache
     private var selinuxEnforcing: Boolean? = null
     private var useMagiskPolicy = false
 
     init {
-        // 配置 libsu Shell，参考 Shizuku 项目方案
-        Shell.enableVerboseLogging = false
+        // Configure libsu Shell, reference Shizuku project approach
+        // Note: Shell.enableVerboseLogging removed in libsu 6.x, use Shell.setDefaultBuilder instead
         Shell.setDefaultBuilder(
             Shell.Builder.create()
                 .setFlags(Shell.FLAG_REDIRECT_STDERR)
-                .setTimeout(30)  // 增加超时时间，参考 Shizuku 的 30s
+                .setTimeout(30000)  // Timeout in milliseconds (libsu 6.x uses ms)
         )
         
-        // 检测 SELinux 状态
+        // Detect SELinux status
         checkSelinuxStatus()
     }
 
@@ -117,19 +117,25 @@ object RootChecker {
     }
 
     /**
-     * 主动申请 root 权限
-     * 使用 libsu 库获取 root shell，会触发 superuser 弹窗
-     * 参考 Shizuku 项目的 startRoot() 方案
-     * @return true 如果已获得 root 权限
+     * Request root permission actively
+     * Uses libsu library to obtain root shell, triggers superuser dialog
+     * Reference Shizuku project's startRoot() approach
+     * @return true if root permission obtained
      */
     fun requestRoot(): Boolean {
         return try {
             Log.d(TAG, "Requesting root access via libsu...")
-            val shell = Shell.getShell()
+            // libsu 6.x: Shell.getShell() returns Result<Shell>
+            val result = Shell.getShell()
+            if (!result.isSuccess) {
+                Log.w(TAG, "Root request failed: Shell.getShell() returned failure")
+                return false
+            }
+            val shell = result.getOrThrow()
             val isRoot = shell.isRoot
             Log.d(TAG, "Root shell obtained, isRoot=$isRoot")
             
-            // 如果获取到 root，尝试放宽 SELinux 限制
+            // If root obtained, try to relax SELinux restrictions
             if (isRoot) {
                 relaxSelinux()
             }
@@ -142,15 +148,15 @@ object RootChecker {
     }
 
     /**
-     * 重新请求 root 权限
-     * 关闭现有 shell 并重新获取，参考 Shizuku 的重试机制
-     * @return true 如果已获得 root 权限
+     * Re-request root permission
+     * Close existing shell and re-obtain, reference Shizuku's retry mechanism
+     * @return true if root permission obtained
      */
     fun requestRootWithRetry(): Boolean {
         return try {
-            // 关闭现有 shell 缓存
-            Shell.getCachedShell()?.close()
-            // 重新请求
+            // libsu 6.x: Use Shell.close() to release cached shell
+            Shell.close()
+            // Re-request
             requestRoot()
         } catch (e: Exception) {
             Log.w(TAG, "Root retry failed: ${e.message}")

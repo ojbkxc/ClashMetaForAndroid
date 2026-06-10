@@ -92,7 +92,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
                         is NewProfileDesign.Request.LaunchScanner -> {
                             // scanLauncher.launch(null)
-                            design.showExceptionToast(getString(DesignR.string.qr_scanner_unavailable))
+                            design.showExceptionToast(getString(R.string.qr_scanner_unavailable))
                         }
                     }
                 }
