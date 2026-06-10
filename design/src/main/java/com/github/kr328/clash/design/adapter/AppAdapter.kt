@@ -48,6 +48,10 @@ class AppAdapter(
         submitList(newApps)
     }
 
+    fun getCurrentApps(): List<AppInfo> {
+        return currentList
+    }
+
     private class AppDiffCallback : DiffUtil.ItemCallback<AppInfo>() {
         override fun areItemsTheSame(oldItem: AppInfo, newItem: AppInfo): Boolean {
             return oldItem.packageName == newItem.packageName

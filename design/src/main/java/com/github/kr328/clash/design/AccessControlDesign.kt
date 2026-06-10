@@ -38,7 +38,7 @@ class AccessControlDesign(
     }
 
     val apps: List<AppInfo>
-        get() = List(adapter.itemCount) { adapter.getItem(it) }
+        get() = adapter.getCurrentApps()
 
     override val root: View
         get() = binding.root
@@ -127,7 +127,7 @@ class AccessControlDesign(
                     }
                 }
 
-                adapter.patchDataSet(adapter::apps, apps, false, AppInfo::packageName)
+                adapter.updateApps(apps)
 
                 delay(200)
             }
