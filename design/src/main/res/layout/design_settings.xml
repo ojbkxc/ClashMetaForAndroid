@@ -73,13 +73,6 @@
                 <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartPermissionInfo)}"
-                    app:icon="@drawable/ic_baseline_info"
-                    app:text="@string/permission_info" />
-
-                <com.github.kr328.clash.design.view.ActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:onClick="@{() -> self.request(Request.ShareApp)}"
                     app:icon="@drawable/ic_baseline_send"
                     app:text="@string/share" />

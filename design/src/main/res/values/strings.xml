@@ -437,10 +437,6 @@
     <string name="root_request_failed">Root access request failed</string>
     <string name="qr_scanner_unavailable">QR scanner is temporarily unavailable</string>
     
-    <!-- Permission Info -->
-    <string name="permission_info">功能权限</string>
-    <string name="permission_info_summary">查看各功能的权限要求</string>
-
     <!-- Regional Restrictions / 地区限制 -->
     <string name="regional_restriction_title">Regional Restriction</string>
     <string name="regional_restriction_message">This software is strictly prohibited from use in mainland China. This application is designed exclusively for overseas Chinese communities, including but not limited to users in Singapore, Malaysia, Taiwan, Hong Kong, Macau, and other regions outside mainland China.\n\n本软件严格禁止在中国大陆境内使用。本应用程序专为海外华侨设计，包括但不限于新加坡、马来西亚、台湾、香港、澳门及中国大陆以外的其他地区的用户。</string>

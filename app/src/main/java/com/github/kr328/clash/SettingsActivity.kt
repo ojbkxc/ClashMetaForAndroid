@@ -32,8 +32,6 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(SyncLogActivity::class.intent)
                         SettingsDesign.Request.StartRoot ->
                             startActivity(RootSettingsActivity::class.intent)
-                        SettingsDesign.Request.StartPermissionInfo ->
-                            startActivity(PermissionInfoActivity::class.intent)
                         SettingsDesign.Request.ShareApp -> {
                             val downloadUrl = "https://github.com/ojbkxc/ClashMetaForAndroid/releases/download/Prerelease-alpha/cmfa-2.11.29-alpha-arm64-v8a-release.apk"
                             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
