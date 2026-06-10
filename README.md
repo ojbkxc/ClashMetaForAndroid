@@ -79,11 +79,47 @@ By using this software, you acknowledge and agree that you are not located in ma
 
 ### 代理核心能力
 
-- 支持 Shadowsocks、VMess、VLESS、Trojan、Hysteria2、TUIC、WireGuard 等主流协议
+- 支持 Shadowsocks、VMess、VLESS、Trojan、**Hysteria2**、TUIC、WireGuard 等主流协议
 - 基于 mihomo 内核，兼容 Clash Meta 配置格式
 - TUN 模式全局代理（需 VPN 权限）
 - 规则路由、DNS 覆盖、Fake-IP 等高级功能
 - 支持 GeoIP / GeoSite 数据库进行地域分流
+
+### 高级优化特性
+
+| 优化类别 | 具体内容 | 预期收益 |
+|----------|----------|----------|
+| **UDP 缓冲区优化** | 增大到 1MB+ 级别 | 提升高带宽传输稳定性 |
+| **连接跟踪优化** | 优化超时时间为 10/60 秒 | 减少内存占用，提升并发 |
+| **队列优化** | 增大网络队列到 8192 | 减少高负载丢包 |
+| **BBR 算法** | 启用 TCP BBR 拥塞控制 | 提升 TCP 吞吐量 |
+| **Hysteria2/QUIC** | 专用内核参数优化 | 优化 QUIC 协议性能 |
+| **对象池优化** | 缓冲区复用机制 | 减少内存分配开销 |
+| **并发优化** | 批量命令并行执行 | 提升初始化速度 |
+| **连接池复用** | Shell 会话复用 | 减少 su 启动开销 |
+
+### 代码质量保障
+
+- ✅ **异常处理**：空 catch 块添加日志记录
+- ✅ **国际化**：硬编码字符串抽取到资源文件
+- ✅ **协程规范**：suspend 函数使用 `delay()` 而非 `Thread.sleep()`
+- ✅ **资源管理**：IO 资源使用 `use()` 模式自动关闭
+- ✅ **并发安全**：共享可变状态添加 `@Volatile` 注解
+
+### 功能权限对比
+
+| 功能 | VPN 模式（非 root） | 透明代理模式（root） | 说明 |
+|------|---------------------|----------------------|------|
+| 对象池优化 | ✅ | ✅ | 减少内存分配开销 |
+| 并发优化 | ✅ | ✅ | 提升初始化速度 |
+| Hysteria2/QUIC | ✅ | ✅ | 协议层面支持 |
+| UDP 缓冲区优化 | ❌ | ✅ | 需 `sysctl` 调整内核参数 |
+| 连接跟踪优化 | ❌ | ✅ | 需调整 `nf_conntrack` 参数 |
+| 队列优化 | ❌ | ✅ | 需调整 `netdev_max_backlog` |
+| BBR 算法 | ❌ | ✅ | 需调整 TCP 拥塞控制 |
+| DNS 劫持 | ❌ | ✅ | 需 iptables 规则 |
+| 透明代理 | ❌ | ✅ | 需 TPROXY/REDIRECT 规则 |
+| 锁定后台 | ❌ | ✅ | 需 iptables 标记 |
 
 ---
 
@@ -300,11 +336,13 @@ key.password=<password>
 | 组件 | 用途 |
 |------|------|
 | [mihomo](https://github.com/MetaCubeX/mihomo) | 代理核心引擎（Git 子模块） |
+| [libsu](https://github.com/topjohnwu/libsu) | Root 权限管理（6.0.0+） |
 | OkHttp | 网络请求（V2Board API、订阅同步） |
 | Room | 本地数据库（代理选择、导入记录） |
 | Kotlin Serialization | JSON 序列化 |
 | kaidl | AIDL 接口代码生成 |
 | AndroidX | 基础 UI 组件 |
+| Kotlin Coroutines | 异步任务处理 |
 
 ---
 

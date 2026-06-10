@@ -11,7 +11,7 @@ import com.github.kr328.clash.design.util.root
 class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context) {
     enum class Request {
         StartApp, StartNetwork, StartOverride, StartMetaFeature,
-        ViewSyncLog, StartRoot, ShareApp,
+        ViewSyncLog, StartRoot, ShareApp, StartPermissionInfo,
     }
 
     private val binding = DesignSettingsBinding
