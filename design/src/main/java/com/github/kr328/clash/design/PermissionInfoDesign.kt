@@ -2,20 +2,36 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.LayoutInflater
-import android.view.ViewGroup
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.databinding.ActivityPermissionInfoBinding
 import com.github.kr328.clash.design.model.PermissionFeature
+import com.github.kr328.clash.design.util.layoutInflater
 
 class PermissionInfoDesign(context: Context) : Design<Nothing>(context) {
-    private val binding = ActivityPermissionInfoBinding.inflate(LayoutInflater.from(context))
+    private val binding = ActivityPermissionInfoBinding
+        .inflate(context.layoutInflater, context.root, false)
     private val adapter = PermissionFeatureAdapter()
 
-    override val root: android.view.View
+    override val root: View
         get() = binding.root
 
     init {
+        binding.root.findViewById<ImageView>(R.id.activity_bar_close_view)?.apply {
+            setOnClickListener {
+                if (context is android.app.Activity) {
+                    context.onBackPressed()
+                }
+            }
+        }
+        binding.root.findViewById<TextView>(R.id.activity_bar_title_view)?.apply {
+            text = context.getString(R.string.permission_info)
+        }
+
         binding.recyclerView.layoutManager = LinearLayoutManager(context)
         binding.recyclerView.adapter = adapter
         adapter.submitList(getPermissionFeatures())
