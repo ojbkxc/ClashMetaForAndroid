@@ -317,26 +317,46 @@ object RootHelper {
             "sysctl -w net.ipv6.conf.default.forwarding=1 2>/dev/null",
             "sysctl -w net.ipv6.conf.all.accept_ra=2 2>/dev/null",
             
-            // === Advanced Optimizations ===
+            // === BBR Algorithm Optimizations ===
             // TCP congestion control (try to use bbr if available)
             "sysctl -w net.ipv4.tcp_congestion_control=bbr 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_bbr_min_rtt=100 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_bbr_fairness=1 2>/dev/null",
             // Disable TCP timestamps (may help with some networks)
             "sysctl -w net.ipv4.tcp_timestamps=0 2>/dev/null",
             // Reduce SYN retry attempts for faster failure recovery
             "sysctl -w net.ipv4.tcp_synack_retries=2 2>/dev/null",
+            // Enable TCP fast open
+            "sysctl -w net.ipv4.tcp_fastopen=3 2>/dev/null",
             
-            // === Hysteria2/QUIC Specific Optimizations ===
-            // Larger UDP buffer for QUIC-based protocols
-            "sysctl -w net.ipv4.udp_mem=\"262144 524288 1048576\" 2>/dev/null",
-            "sysctl -w net.ipv4.udp_rmem_min=16384 2>/dev/null",
-            "sysctl -w net.ipv4.udp_wmem_min=16384 2>/dev/null",
-            "sysctl -w net.ipv6.udp_rmem_min=16384 2>/dev/null",
-            "sysctl -w net.ipv6.udp_wmem_min=16384 2>/dev/null",
+            // === Enhanced UDP Buffer Optimizations (1MB+ Level) ===
+            // Larger UDP buffer for high-bandwidth applications
+            "sysctl -w net.ipv4.udp_mem=\"1048576 2097152 4194304\" 2>/dev/null",
+            "sysctl -w net.ipv4.udp_rmem_min=32768 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_min=32768 2>/dev/null",
+            "sysctl -w net.ipv6.udp_rmem_min=32768 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_min=32768 2>/dev/null",
             // Increase max UDP payload size (supports large QUIC packets)
             "sysctl -w net.core.max_udp_payload=65535 2>/dev/null",
-            // Optimized QUIC connection tracking timeout
+            
+            // === Enhanced Connection Tracking Optimizations ===
+            // Optimized UDP connection tracking timeout (reduces memory usage)
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout=10 2>/dev/null",
-            "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=60 2>/dev/null"
+            "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=60 2>/dev/null",
+            // Increase conntrack hash table size (reduces collisions)
+            "sysctl -w net.netfilter.nf_conntrack_buckets=131072 2>/dev/null",
+            // Enable conntrack fast path
+            "sysctl -w net.netfilter.nf_conntrack_tcp_loose=0 2>/dev/null",
+            
+            // === Enhanced Network Queue Optimizations ===
+            // Increase network device backlog (prevents packet drops under high load)
+            "sysctl -w net.core.netdev_max_backlog=8192 2>/dev/null",
+            // Increase socket listen backlog
+            "sysctl -w net.core.somaxconn=8192 2>/dev/null",
+            // Increase TCP SYN backlog
+            "sysctl -w net.ipv4.tcp_max_syn_backlog=4096 2>/dev/null",
+            // Increase maximum pending connections
+            "sysctl -w net.ipv4.tcp_max_tw_buckets=5000 2>/dev/null"
         )
         for (cmd in commands) {
             RootChecker.execute(cmd)
