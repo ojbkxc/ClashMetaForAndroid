@@ -16,6 +16,13 @@ object RootHelper {
     private const val CHAIN_DIVERT = "CLASH_DIVERT"
     private const val CHAIN_LOCAL_IP = "CLASH_LOCAL_IP"
     private const val CHAIN_LOCAL_IP_V6 = "CLASH_LOCAL_IP_V6"
+    
+    // IPv6 chain names
+    private const val CHAIN_EXTERNAL_V6 = "CLASH_EXTERNAL_V6"
+    private const val CHAIN_LOCAL_V6 = "CLASH_LOCAL_V6"
+    private const val CHAIN_DNS_EXTERNAL_V6 = "CLASH_DNS_EXTERNAL_V6"
+    private const val CHAIN_DNS_LOCAL_V6 = "CLASH_DNS_LOCAL_V6"
+    private const val CHAIN_DIVERT_V6 = "CLASH_DIVERT_V6"
 
     // Routing mark and table ID (reference Surfing)
     private const val MARK_ID = "0x1/0x1"
@@ -28,6 +35,10 @@ object RootHelper {
 
     // Cached dynamically obtained UID
     private var cachedProxyUid: Int = -1
+    
+    // Retry configuration
+    private const val MAX_RETRY_COUNT = 2
+    private const val RETRY_DELAY_MS = 1000L
 
     /**
      * Initialize app UID (called by Activity, passing applicationInfo.uid)
@@ -94,34 +105,20 @@ object RootHelper {
 
     /**
      * Get hotspot network interface list (using wildcard matching, refer to Surfing)
-     * Hotspot interface data also needs to go through TPROXY proxy
-     *
-     * Supported interface types:
-     * - wlan+ : wlan0, wlan1, wlan1-usb etc.
-     * - ap+   : ap0, ap1 etc.
-     * - rndis+: rndis0 etc. (USB tethering)
-     * - ncm+  : ncm0 etc. (USB tethering)
-     * - eth+  : eth0 etc. (Ethernet)
-     * - p2p+  : p2p0 etc. (WiFi Direct)
      */
     private fun getHotspotInterfaces(): List<String> {
         val hotspotIfaces = mutableSetOf<String>()
 
-        // Get all network interfaces
         val (code, output) = RootChecker.execute("ip link show | cut -d: -f2 | tr -d ' '")
         if (code != 0 || output.isEmpty()) return emptyList()
 
         val allInterfaces = output.lines().map { it.trim() }.filter { it.isNotEmpty() }
-
-        // Wildcard patterns (refer to Surfing's ap_list)
         val wildcardPatterns = listOf("wlan", "ap", "rndis", "ncm", "eth", "p2p")
 
         for (iface in allInterfaces) {
             for (pattern in wildcardPatterns) {
-                // Match: wlan0, ap1, rndis0, ncm0, eth0, p2p0 etc.
                 if (iface.startsWith(pattern) && iface.length > pattern.length) {
                     val suffix = iface.substring(pattern.length)
-                    // Ensure the following characters are digits or special characters (not letters forming a word)
                     if (suffix.matches(Regex("^[0-9].*") ) || suffix.matches(Regex("^[-_].*"))) {
                         hotspotIfaces.add(iface)
                         break
@@ -135,18 +132,16 @@ object RootHelper {
 
     /**
      * Get hotspot interface IP subnets
-     * Hotspot subnets should not be bypassed, need to be proxied
      */
     private fun getHotspotSubnets(): List<String> {
         val subnets = mutableListOf<String>()
         val hotspotIfaces = getHotspotInterfaces()
 
         for (iface in hotspotIfaces) {
-            // Get interface IPv4 address
             val (code, output) = RootChecker.execute("ip -4 addr show $iface | grep inet | awk '{print \$2}'")
             if (code == 0 && output.isNotEmpty()) {
                 output.lines().map { it.trim() }.filter { it.isNotEmpty() }.forEach { ip ->
-                    if (!ip.contains(":")) { // Exclude IPv6
+                    if (!ip.contains(":")) {
                         subnets.add(ip)
                     }
                 }
@@ -158,31 +153,25 @@ object RootHelper {
 
     /**
      * Check if a subnet is contained within a parent subnet
-     * e.g., 192.168.43.0/24 is contained in 192.168.0.0/16
      */
     private fun isSubnetContained(subnet: String, parentSubnet: String): Boolean {
         try {
-            // Parse subnet format "IP/prefix length"
             val (subnetIp, subnetMask) = subnet.split("/")
             val (parentIp, parentMask) = parentSubnet.split("/")
 
             val subnetPrefix = subnetMask.toIntOrNull() ?: return false
             val parentPrefix = parentMask.toIntOrNull() ?: return false
 
-            // If the parent prefix is shorter (larger), the parent subnet is wider
             if (parentPrefix >= subnetPrefix) {
                 return false
             }
 
-            // Convert IPs to integers
             val subnetIpInt = ipToInt(subnetIp)
             val parentIpInt = ipToInt(parentIp)
 
-            // Calculate subnet masks
             val subnetMaskInt = if (subnetPrefix == 0) 0 else (0xFFFFFFFF shl (32 - subnetPrefix))
             val parentMaskInt = if (parentPrefix == 0) 0 else (0xFFFFFFFF shl (32 - parentPrefix))
 
-            // Check if subnet is within parent network
             return (subnetIpInt and parentMaskInt) == (parentIpInt and parentMaskInt)
         } catch (e: Exception) {
             return false
@@ -214,6 +203,18 @@ object RootHelper {
     }
 
     /**
+     * Create ip6tables chain, clean first if exists
+     */
+    private fun ensureChainV6(table: String, chain: String): Boolean {
+        RootChecker.execute("ip6tables -t $table -D OUTPUT -j $chain 2>/dev/null")
+        RootChecker.execute("ip6tables -t $table -D PREROUTING -j $chain 2>/dev/null")
+        RootChecker.execute("ip6tables -t $table -F $chain 2>/dev/null")
+        RootChecker.execute("ip6tables -t $table -X $chain 2>/dev/null")
+        val (code, _) = RootChecker.execute("ip6tables -t $table -N $chain")
+        return code == 0
+    }
+
+    /**
      * Check if kernel supports TPROXY
      */
     private fun isTProxySupported(): Boolean {
@@ -229,6 +230,23 @@ object RootHelper {
     }
 
     /**
+     * Check if kernel supports IPv6 TPROXY
+     */
+    private fun isTProxyV6Supported(): Boolean {
+        if (!RootChecker.isIp6tablesAvailable()) return false
+        
+        RootChecker.execute("ip6tables -t mangle -F CLASH_TPROXY_TEST_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -X CLASH_TPROXY_TEST_V6 2>/dev/null")
+        val (c1, _) = RootChecker.execute("ip6tables -t mangle -N CLASH_TPROXY_TEST_V6")
+        if (c1 != 0) return false
+        val (c2, _) = RootChecker.execute("ip6tables -t mangle -A CLASH_TPROXY_TEST_V6 -p tcp -j TPROXY --tproxy-mark 0x1/0x1 --on-port 1")
+        val (c3, _) = RootChecker.execute("ip6tables -t mangle -A CLASH_TPROXY_TEST_V6 -p udp -j TPROXY --tproxy-mark 0x1/0x1 --on-port 1")
+        RootChecker.execute("ip6tables -t mangle -F CLASH_TPROXY_TEST_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -X CLASH_TPROXY_TEST_V6 2>/dev/null")
+        return c2 == 0 && c3 == 0
+    }
+
+    /**
      * Optimize kernel parameters (refer to Surfing)
      */
     private fun optimizeKernel(): Boolean {
@@ -236,14 +254,33 @@ object RootHelper {
             // UDP conntrack timeout optimization
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout=30 2>/dev/null",
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=15 2>/dev/null",
-            // Write directly to proc files (some devices have sysctl disabled)
             "echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout 2>/dev/null",
             "echo 15 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null",
             // TCP conntrack optimization
             "sysctl -w net.netfilter.nf_conntrack_tcp_timeout_established=3600 2>/dev/null",
             "sysctl -w net.ipv4.tcp_tw_reuse=1 2>/dev/null",
             // IP forward
-            "sysctl -w net.ipv4.ip_forward=1 2>/dev/null"
+            "sysctl -w net.ipv4.ip_forward=1 2>/dev/null",
+            // TCP buffer optimization
+            "sysctl -w net.ipv4.tcp_wmem=\"4096 16384 4194304\" 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_rmem=\"4096 87380 4194304\" 2>/dev/null",
+            "sysctl -w net.core.rmem_max=4194304 2>/dev/null",
+            "sysctl -w net.core.wmem_max=4194304 2>/dev/null",
+            "sysctl -w net.core.rmem_default=262144 2>/dev/null",
+            "sysctl -w net.core.wmem_default=262144 2>/dev/null",
+            // UDP buffer optimization
+            "sysctl -w net.core.optmem_max=4194304 2>/dev/null",
+            // IPv6 settings
+            "sysctl -w net.ipv6.conf.all.forwarding=1 2>/dev/null",
+            "sysctl -w net.ipv6.conf.default.forwarding=1 2>/dev/null",
+            "sysctl -w net.ipv6.conf.all.accept_ra=2 2>/dev/null",
+            // TCP congestion control (try to use bbr if available)
+            "sysctl -w net.ipv4.tcp_congestion_control=bbr 2>/dev/null",
+            // Increase conntrack limit
+            "sysctl -w net.netfilter.nf_conntrack_max=100000 2>/dev/null",
+            "echo 100000 > /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null",
+            // Disable TCP timestamps (may help with some networks)
+            "sysctl -w net.ipv4.tcp_timestamps=0 2>/dev/null"
         )
         for (cmd in commands) {
             RootChecker.execute(cmd)
@@ -252,32 +289,61 @@ object RootHelper {
     }
 
     /**
-     * Apply transparent proxy rules
-     * Complete TPROXY solution referenced from Surfing
+     * Apply transparent proxy rules with retry mechanism
      */
     suspend fun applyTransparentProxy(): Pair<Boolean, String> {
-        clearTransparentProxy()
-
-        val proxyUid = getAppUid()
-        if (proxyUid < 0) {
-            return Pair(false, "Cannot get app UID")
-        }
-
-        optimizeKernel()
-
-        if (isTProxySupported()) {
-            val result = applyTProxy(proxyUid)
-            if (result.first) {
-                return Pair(true, "TPROXY mode (TCP+UDP supported)")
-            }
+        // Try with retry
+        var lastError = ""
+        for (retry in 0..MAX_RETRY_COUNT) {
             clearTransparentProxy()
+
+            val proxyUid = getAppUid()
+            if (proxyUid < 0) {
+                lastError = "Cannot get app UID"
+                continue
+            }
+
+            optimizeKernel()
+
+            var success = false
+            var mode = ""
+
+            if (isTProxySupported()) {
+                val result = applyTProxy(proxyUid)
+                if (result.first) {
+                    success = true
+                    mode = "TPROXY mode (TCP+UDP supported)"
+                } else {
+                    lastError = "TPROXY failed: ${result.second}"
+                    clearTransparentProxy()
+                }
+            }
+
+            if (!success) {
+                val result = applyRedirect(proxyUid)
+                if (result.first) {
+                    success = true
+                    mode = "REDIRECT mode (TCP only)"
+                } else {
+                    lastError = "REDIRECT failed: ${result.second}"
+                }
+            }
+
+            if (success) {
+                // Apply IPv6 rules if supported
+                if (isTProxyV6Supported()) {
+                    applyTProxyV6(proxyUid)
+                }
+                return Pair(true, mode)
+            }
+
+            // Wait before retry
+            if (retry < MAX_RETRY_COUNT) {
+                Thread.sleep(RETRY_DELAY_MS)
+            }
         }
 
-        val result = applyRedirect(proxyUid)
-        if (result.first) {
-            return Pair(true, "REDIRECT mode (TCP only)")
-        }
-        return result
+        return Pair(false, lastError)
     }
 
     /**
@@ -286,7 +352,7 @@ object RootHelper {
     private fun applyTProxy(proxyUid: Int): Pair<Boolean, String> {
         val proxyUidStr = proxyUid.toString()
 
-        // ========== 1. Setup routing rules (IPv4) ==========
+        // Setup routing rules (IPv4)
         RootChecker.execute("ip rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
         RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")
         var (code, output) = RootChecker.execute("ip rule add fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF")
@@ -294,27 +360,26 @@ object RootHelper {
         val (code2, output2) = RootChecker.execute("ip route add local default dev lo table $TABLE_ID")
         if (code2 != 0) return Pair(false, "Setup local routing table failed: $output2")
 
-        // ========== 2. Create CLASH_EXTERNAL chain (PREROUTING) ==========
-        // Reference Surfing: handle socket transparent connection first, then bypass LAN
+        // Create CLASH_EXTERNAL chain (PREROUTING)
         if (!ensureChain("mangle", CHAIN_EXTERNAL)) {
             return Pair(false, "Create CLASH_EXTERNAL chain failed")
         }
 
-        // Socket transparent connection handling (reference Surfing --transparent flag)
+        // Socket transparent connection handling
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -m socket --transparent -j MARK --set-xmark $MARK_ID")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -m socket --transparent -j MARK --set-xmark $MARK_ID")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -m socket -j RETURN")
 
-        // DNS skip rules (only when use_nat_table=true, reference Surfing)
+        // DNS skip rules
         if (useNatTableForDns) {
             RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 1 -p udp --dport 53 -j RETURN")
             RootChecker.execute("iptables -t mangle -I $CHAIN_EXTERNAL 2 -p tcp --dport 53 -j RETURN")
         }
 
-        // Get hotspot subnets (these subnets should not be bypassed, need to be proxied)
+        // Get hotspot subnets
         val hotspotSubnets = getHotspotSubnets()
 
-        // Create LOCAL_IP chain (IPv4 local addresses)
+        // Create LOCAL_IP chain
         if (!ensureChain("mangle", CHAIN_LOCAL_IP)) {
             return Pair(false, "Create LOCAL_IP chain failed")
         }
@@ -323,19 +388,15 @@ object RootHelper {
             RootChecker.execute("iptables -t mangle -A $CHAIN_LOCAL_IP -d $ip -j RETURN")
         }
 
-        // Bypass LAN traffic (reference Surfing - before LOCAL_IP)
-        // But need to exclude hotspot subnets, otherwise hotspot client traffic will be bypassed
+        // Bypass LAN traffic (exclude hotspot subnets)
         val bypassSubnets = listOf(
             "0.0.0.0/8", "10.0.0.0/8", "100.0.0.0/8", "127.0.0.0/8",
             "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
             "224.0.0.0/4", "240.0.0.0/4", "255.255.255.255/32"
         )
         for (subnet in bypassSubnets) {
-            // Check if need to exclude hotspot subnet
-            // Hotspot subnet (e.g. 192.168.43.0/24) should not be bypassed
             var shouldSkip = false
             for (hotspotSubnet in hotspotSubnets) {
-                // If hotspot subnet is contained in this large subnet, skip
                 if (isSubnetContained(hotspotSubnet, subnet)) {
                     shouldSkip = true
                     break
@@ -350,12 +411,11 @@ object RootHelper {
         // Jump to LOCAL_IP chain
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -j $CHAIN_LOCAL_IP")
 
-        // TPROXY rules - set on lo interface (reference Surfing)
+        // TPROXY rules on lo interface
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
         RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p udp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
 
-        // Hotspot/network sharing interface TPROXY rules (reference Surfing ap_list)
-        // Hotspot interface traffic should be handled by TPROXY, not bypassed
+        // Hotspot interface TPROXY rules
         val hotspotIfaces = getHotspotInterfaces()
         for (iface in hotspotIfaces) {
             RootChecker.execute("iptables -t mangle -A $CHAIN_EXTERNAL -p tcp -i $iface -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
@@ -365,17 +425,9 @@ object RootHelper {
         // Add to PREROUTING chain
         RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_EXTERNAL")
 
-        // ========== 3. Create CLASH_LOCAL chain (OUTPUT) ==========
-        // Reference Surfing rule order:
-        // 1. Skip proxy itself
-        // 2. CONNMARK restore
-        // 3. Skip marked connections
-        // 4-5. DNS skip (only use_nat_table=true)
-        // 6+. LAN bypass + LOCAL_IP
-        // n. Set mark
-        // n+1. CONNMARK save
+        // Create CLASH_LOCAL chain (OUTPUT)
         if (!ensureChain("mangle", CHAIN_LOCAL)) {
-            return Pair(false, "Create BOX_LOCAL chain failed")
+            return Pair(false, "Create CLASH_LOCAL chain failed")
         }
 
         // Position 1: Skip proxy process itself
@@ -387,7 +439,7 @@ object RootHelper {
         // Position 3: Skip already marked connections
         RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 3 -m mark --mark $MARK_ID -j ACCEPT")
 
-        // Position 4-5: DNS skip rules (only when use_nat_table=true, reference Surfing)
+        // Position 4-5: DNS skip rules
         if (useNatTableForDns) {
             RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 4 -p udp --dport 53 -j RETURN")
             RootChecker.execute("iptables -t mangle -I $CHAIN_LOCAL 5 -p tcp --dport 53 -j RETURN")
@@ -411,7 +463,7 @@ object RootHelper {
         // Add to OUTPUT chain
         RootChecker.execute("iptables -t mangle -I OUTPUT -j $CHAIN_LOCAL")
 
-        // ========== 4. DNS hijack (reference Surfing) ==========
+        // DNS hijack
         if (useNatTableForDns) {
             if (!applyDnsHijackNatMode(proxyUidStr)) {
                 return Pair(false, "DNS hijack failed")
@@ -422,7 +474,7 @@ object RootHelper {
             }
         }
 
-        // ========== 5. Create DIVERT chain to accelerate established connections ==========
+        // Create DIVERT chain
         if (!ensureChain("mangle", CHAIN_DIVERT)) {
             // DIVERT is not essential, continue
         } else {
@@ -431,31 +483,164 @@ object RootHelper {
             RootChecker.execute("iptables -t mangle -I PREROUTING -p tcp -m socket -j $CHAIN_DIVERT")
         }
 
-        // ========== 6. Create CLASH_LOCAL_IP_V6 chain (IPv6 local addresses) ==========
-        if (!ensureChain("mangle", CHAIN_LOCAL_IP_V6)) {
-            // IPv6 may not be supported, continue
-        } else {
-            val localIpv6List = getLocalIpv6Addresses()
-            for (ip in localIpv6List) {
-                RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_IP_V6 -d $ip -j RETURN 2>/dev/null")
-            }
-        }
-
         return Pair(true, "")
     }
 
     /**
-     * DNS hijack - nat table REDIRECT mode (reference Surfing)
+     * IPv6 TPROXY mode
+     */
+    private fun applyTProxyV6(proxyUid: Int): Boolean {
+        val proxyUidStr = proxyUid.toString()
+
+        // Setup IPv6 routing rules
+        RootChecker.execute("ip -6 rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
+        RootChecker.execute("ip -6 route del local default dev lo table $TABLE_ID 2>/dev/null")
+        
+        val (routeCode, routeOutput) = RootChecker.execute("ip -6 rule add fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF")
+        if (routeCode != 0) {
+            return false
+        }
+        
+        val (routeCode2) = RootChecker.execute("ip -6 route add local default dev lo table $TABLE_ID")
+        if (routeCode2 != 0) {
+            return false
+        }
+
+        // Create CLASH_EXTERNAL_V6 chain (PREROUTING)
+        if (!ensureChainV6("mangle", CHAIN_EXTERNAL_V6)) {
+            return false
+        }
+
+        // Socket transparent connection handling
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -p tcp -m socket --transparent -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -p udp -m socket --transparent -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -m socket -j RETURN")
+
+        // DNS skip rules
+        if (useNatTableForDns) {
+            RootChecker.execute("ip6tables -t mangle -I $CHAIN_EXTERNAL_V6 1 -p udp --dport 53 -j RETURN")
+            RootChecker.execute("ip6tables -t mangle -I $CHAIN_EXTERNAL_V6 2 -p tcp --dport 53 -j RETURN")
+        }
+
+        // Create LOCAL_IP_V6 chain
+        if (!ensureChainV6("mangle", CHAIN_LOCAL_IP_V6)) {
+            return false
+        }
+        val localIpv6List = getLocalIpv6Addresses()
+        for (ip in localIpv6List) {
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_IP_V6 -d $ip -j RETURN")
+        }
+
+        // Bypass IPv6 local addresses
+        val bypassSubnetsV6 = listOf(
+            "::1/128", "fe80::/10", "fc00::/7", "ff00::/8"
+        )
+        for (subnet in bypassSubnetsV6) {
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -d $subnet -j RETURN")
+        }
+
+        // Jump to LOCAL_IP_V6 chain
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -j $CHAIN_LOCAL_IP_V6")
+
+        // TPROXY rules on lo interface
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -p tcp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -p udp -i lo -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+
+        // Hotspot interface TPROXY rules
+        val hotspotIfaces = getHotspotInterfaces()
+        for (iface in hotspotIfaces) {
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -p tcp -i $iface -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_EXTERNAL_V6 -p udp -i $iface -j TPROXY --tproxy-mark $MARK_ID --on-port $TPROXY_PORT")
+        }
+
+        // Add to PREROUTING chain
+        RootChecker.execute("ip6tables -t mangle -I PREROUTING -j $CHAIN_EXTERNAL_V6")
+
+        // Create CLASH_LOCAL_V6 chain (OUTPUT)
+        if (!ensureChainV6("mangle", CHAIN_LOCAL_V6)) {
+            return false
+        }
+
+        // Skip proxy process itself
+        RootChecker.execute("ip6tables -t mangle -I $CHAIN_LOCAL_V6 1 -m owner --uid-owner $proxyUidStr -j RETURN")
+
+        // CONNMARK restore mark
+        RootChecker.execute("ip6tables -t mangle -I $CHAIN_LOCAL_V6 2 -j CONNMARK --restore-mark")
+
+        // Skip already marked connections
+        RootChecker.execute("ip6tables -t mangle -I $CHAIN_LOCAL_V6 3 -m mark --mark $MARK_ID -j ACCEPT")
+
+        // DNS skip rules
+        if (useNatTableForDns) {
+            RootChecker.execute("ip6tables -t mangle -I $CHAIN_LOCAL_V6 4 -p udp --dport 53 -j RETURN")
+            RootChecker.execute("ip6tables -t mangle -I $CHAIN_LOCAL_V6 5 -p tcp --dport 53 -j RETURN")
+        }
+
+        // Skip LAN traffic
+        for (subnet in bypassSubnetsV6) {
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_V6 -d $subnet -j RETURN")
+        }
+
+        // Handle local IP addresses
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_V6 -j $CHAIN_LOCAL_IP_V6")
+
+        // Set mark (TCP and UDP)
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_V6 -p tcp -j MARK --set-xmark $MARK_ID")
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_V6 -p udp -j MARK --set-xmark $MARK_ID")
+
+        // CONNMARK save mark
+        RootChecker.execute("ip6tables -t mangle -A $CHAIN_LOCAL_V6 -j CONNMARK --save-mark")
+
+        // Add to OUTPUT chain
+        RootChecker.execute("ip6tables -t mangle -I OUTPUT -j $CHAIN_LOCAL_V6")
+
+        // IPv6 DNS hijack
+        applyDnsHijackV6(proxyUidStr)
+
+        // Create DIVERT_V6 chain
+        if (ensureChainV6("mangle", CHAIN_DIVERT_V6)) {
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_DIVERT_V6 -j MARK --set-xmark $MARK_ID")
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_DIVERT_V6 -j ACCEPT")
+            RootChecker.execute("ip6tables -t mangle -I PREROUTING -p tcp -m socket -j $CHAIN_DIVERT_V6")
+        }
+
+        return true
+    }
+
+    /**
+     * IPv6 DNS hijack
+     */
+    private fun applyDnsHijackV6(proxyUidStr: String) {
+        if (useNatTableForDns) {
+            // CLASH_DNS_EXTERNAL_V6 (PREROUTING)
+            RootChecker.execute("ip6tables -t nat -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t nat -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t nat -N $CHAIN_DNS_EXTERNAL_V6")
+            RootChecker.execute("ip6tables -t nat -A $CHAIN_DNS_EXTERNAL_V6 -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+            RootChecker.execute("ip6tables -t nat -I PREROUTING -j $CHAIN_DNS_EXTERNAL_V6")
+
+            // CLASH_DNS_LOCAL_V6 (OUTPUT)
+            RootChecker.execute("ip6tables -t nat -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t nat -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t nat -N $CHAIN_DNS_LOCAL_V6")
+            if (proxyUidStr.isNotEmpty()) {
+                RootChecker.execute("ip6tables -t nat -I $CHAIN_DNS_LOCAL_V6 1 -m owner --uid-owner $proxyUidStr -j RETURN")
+            }
+            RootChecker.execute("ip6tables -t nat -A $CHAIN_DNS_LOCAL_V6 -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+            RootChecker.execute("ip6tables -t nat -I OUTPUT -j $CHAIN_DNS_LOCAL_V6")
+        }
+    }
+
+    /**
+     * DNS hijack - nat table REDIRECT mode
      */
     private fun applyDnsHijackNatMode(proxyUidStr: String): Boolean {
-        // CLASH_DNS_EXTERNAL (PREROUTING)
         if (!ensureChain("nat", CHAIN_DNS_EXTERNAL)) {
             return false
         }
         RootChecker.execute("iptables -t nat -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
         RootChecker.execute("iptables -t nat -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
 
-        // CLASH_DNS_LOCAL (OUTPUT)
         if (!ensureChain("nat", CHAIN_DNS_LOCAL)) {
             return false
         }
@@ -469,18 +654,15 @@ object RootHelper {
     }
 
     /**
-     * DNS hijack - mangle table TPROXY mode (reference Surfing)
-     * Used when use_nat_table=false
+     * DNS hijack - mangle table TPROXY mode
      */
     private fun applyDnsHijackMangleMode(proxyUidStr: String, dnsPort: Int): Boolean {
-        // CLASH_DNS_EXTERNAL (PREROUTING)
         if (!ensureChain("mangle", CHAIN_DNS_EXTERNAL)) {
             return false
         }
         RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $dnsPort")
         RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
 
-        // CLASH_DNS_LOCAL (OUTPUT)
         if (!ensureChain("mangle", CHAIN_DNS_LOCAL)) {
             return false
         }
@@ -494,26 +676,21 @@ object RootHelper {
     }
 
     /**
-     * REDIRECT mode - TCP only (reference Surfing)
-     * Need to handle hotspot interfaces
+     * REDIRECT mode - TCP only
      */
     private fun applyRedirect(proxyUid: Int): Pair<Boolean, String> {
         if (!ensureChain("nat", CHAIN_EXTERNAL)) {
             return Pair(false, "Create chain failed")
         }
 
-        // Basic rules (refer to Surfing's intranet list)
-        // Note: REDIRECT mode also needs to exclude hotspot subnets
         val redirectBypassSubnets = listOf(
             "0.0.0.0/8", "10.0.0.0/8", "100.0.0.0/8", "127.0.0.0/8",
             "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
             "224.0.0.0/4", "240.0.0.0/4", "255.255.255.255/32"
         )
-        // Get hotspot subnets (these should not be bypassed)
         val hotspotSubnets = getHotspotSubnets()
 
         for (subnet in redirectBypassSubnets) {
-            // Check if need to exclude hotspot subnet
             var shouldSkip = false
             for (hotspotSubnet in hotspotSubnets) {
                 if (isSubnetContained(hotspotSubnet, subnet)) {
@@ -531,30 +708,23 @@ object RootHelper {
             }
         }
 
-        // Proxy self
         val (uidCode, uidOutput) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -m owner --uid-owner $proxyUid -j RETURN")
         if (uidCode != 0) {
             clearTransparentProxy()
             return Pair(false, "REDIRECT proxy self rule failed: $uidOutput")
         }
 
-        // Hotspot interface TCP redirect (refer to Surfing)
         val hotspotIfaces = getHotspotInterfaces()
         for (iface in hotspotIfaces) {
-            val (code, output) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -p tcp -i $iface -j REDIRECT --to-ports $TPROXY_PORT")
-            if (code != 0) {
-                // continue with other interfaces
-            }
+            RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -p tcp -i $iface -j REDIRECT --to-ports $TPROXY_PORT")
         }
 
-        // Main TCP redirect rule
         val (code, output) = RootChecker.execute("iptables -t nat -A $CHAIN_EXTERNAL -p tcp -j REDIRECT --to-ports $TPROXY_PORT")
         if (code != 0) {
             clearTransparentProxy()
             return Pair(false, "REDIRECT execution failed: $output")
         }
 
-        // Add to OUTPUT chain
         val (code2, output2) = RootChecker.execute("iptables -t nat -I OUTPUT -j $CHAIN_EXTERNAL")
         if (code2 != 0) {
             clearTransparentProxy()
@@ -565,17 +735,26 @@ object RootHelper {
     }
 
     /**
-     * Clear transparent proxy rules - complete cleanup (reference Surfing stop_tproxy)
+     * Clear transparent proxy rules - complete cleanup
      */
     private fun clearTransparentProxy() {
         // Clean IPv4 routing rules
         RootChecker.execute("ip rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
         RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")
 
+        // Clean IPv6 routing rules
+        RootChecker.execute("ip -6 rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
+        RootChecker.execute("ip -6 route del local default dev lo table $TABLE_ID 2>/dev/null")
+
         // Clean DIVERT chain
         RootChecker.execute("iptables -t mangle -D PREROUTING -p tcp -m socket -j $CHAIN_DIVERT 2>/dev/null")
         RootChecker.execute("iptables -t mangle -F $CHAIN_DIVERT 2>/dev/null")
         RootChecker.execute("iptables -t mangle -X $CHAIN_DIVERT 2>/dev/null")
+
+        // Clean DIVERT_V6 chain
+        RootChecker.execute("ip6tables -t mangle -D PREROUTING -p tcp -m socket -j $CHAIN_DIVERT_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -F $CHAIN_DIVERT_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -X $CHAIN_DIVERT_V6 2>/dev/null")
 
         // Clean DNS chains (mangle and nat tables)
         for (table in listOf("nat", "mangle")) {
@@ -585,6 +764,14 @@ object RootHelper {
             RootChecker.execute("iptables -t $table -X $CHAIN_DNS_EXTERNAL 2>/dev/null")
             RootChecker.execute("iptables -t $table -F $CHAIN_DNS_LOCAL 2>/dev/null")
             RootChecker.execute("iptables -t $table -X $CHAIN_DNS_LOCAL 2>/dev/null")
+
+            // IPv6 DNS chains
+            RootChecker.execute("ip6tables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
         }
 
         // Clean BOX_LOCAL and BOX_EXTERNAL
@@ -594,6 +781,14 @@ object RootHelper {
         RootChecker.execute("iptables -t mangle -X $CHAIN_EXTERNAL 2>/dev/null")
         RootChecker.execute("iptables -t mangle -F $CHAIN_LOCAL 2>/dev/null")
         RootChecker.execute("iptables -t mangle -X $CHAIN_LOCAL 2>/dev/null")
+
+        // Clean IPv6 chains
+        RootChecker.execute("ip6tables -t mangle -D PREROUTING -j $CHAIN_EXTERNAL_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -D OUTPUT -j $CHAIN_LOCAL_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -F $CHAIN_EXTERNAL_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -X $CHAIN_EXTERNAL_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -F $CHAIN_LOCAL_V6 2>/dev/null")
+        RootChecker.execute("ip6tables -t mangle -X $CHAIN_LOCAL_V6 2>/dev/null")
 
         // Clean nat table
         RootChecker.execute("iptables -t nat -D OUTPUT -j $CHAIN_EXTERNAL 2>/dev/null")
@@ -676,6 +871,14 @@ object RootHelper {
             RootChecker.execute("iptables -t $table -X $CHAIN_DNS_EXTERNAL 2>/dev/null")
             RootChecker.execute("iptables -t $table -F $CHAIN_DNS_LOCAL 2>/dev/null")
             RootChecker.execute("iptables -t $table -X $CHAIN_DNS_LOCAL 2>/dev/null")
+
+            // IPv6 DNS chains
+            RootChecker.execute("ip6tables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t $table -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
         }
     }
 

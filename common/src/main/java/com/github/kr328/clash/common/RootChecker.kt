@@ -14,6 +14,10 @@ import java.io.InputStreamReader
 object RootChecker {
     private const val TAG = "RootChecker"
 
+    // SELinux 状态缓存
+    private var selinuxEnforcing: Boolean? = null
+    private var useMagiskPolicy = false
+
     init {
         // 配置 libsu Shell，参考 Shizuku 项目方案
         Shell.enableVerboseLogging = false
@@ -22,6 +26,85 @@ object RootChecker {
                 .setFlags(Shell.FLAG_REDIRECT_STDERR)
                 .setTimeout(30)  // 增加超时时间，参考 Shizuku 的 30s
         )
+        
+        // 检测 SELinux 状态
+        checkSelinuxStatus()
+    }
+
+    /**
+     * 检测 SELinux 状态
+     */
+    private fun checkSelinuxStatus() {
+        try {
+            val (code, output) = executeCommand("getenforce")
+            if (code == 0) {
+                selinuxEnforcing = output.trim().equals("Enforcing", ignoreCase = true)
+                Log.d(TAG, "SELinux status: ${if (selinuxEnforcing == true) "Enforcing" else "Permissive"}")
+            }
+            
+            // 检查是否有 magiskpolicy 命令
+            val (magiskCode) = executeCommand("which magiskpolicy")
+            useMagiskPolicy = magiskCode == 0
+            Log.d(TAG, "Magisk policy available: $useMagiskPolicy")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to check SELinux status: ${e.message}")
+        }
+    }
+
+    /**
+     * 检查 SELinux 是否处于 Enforcing 模式
+     */
+    fun isSelinuxEnforcing(): Boolean {
+        return selinuxEnforcing ?: false
+    }
+
+    /**
+     * 临时放宽 SELinux 限制（用于执行 iptables 等操作）
+     * 在 Android 12+ 上，直接执行 iptables 可能被 SELinux 阻止
+     */
+    fun relaxSelinux(): Boolean {
+        if (!isSelinuxEnforcing()) {
+            return true
+        }
+
+        // 方法1：尝试使用 magiskpolicy 允许 net_raw 权限
+        if (useMagiskPolicy) {
+            val commands = listOf(
+                "magiskpolicy --live 'allow untrusted_app * * net_raw_socket'",
+                "magiskpolicy --live 'allow untrusted_app * * net_admin_socket'",
+                "magiskpolicy --live 'allow untrusted_app * * rawip_socket'"
+            )
+            for (cmd in commands) {
+                val (code, output) = executeCommand(cmd)
+                if (code != 0) {
+                    Log.w(TAG, "Failed to apply magiskpolicy: $cmd - $output")
+                }
+            }
+            return true
+        }
+
+        // 方法2：尝试使用 su -M 模式（magisk 提供的放宽权限模式）
+        // 通过检查 Shell.Builder 的 su 路径来使用 -M 参数
+        try {
+            val builder = Shell.Builder.create()
+                .setFlags(Shell.FLAG_REDIRECT_STDERR)
+                .setTimeout(30)
+                .setSuPath("su -M")
+            
+            // 测试执行简单命令
+            val result = builder.open().use { shell ->
+                shell.newJob().add("id").exec()
+            }
+            if (result.isSuccess) {
+                Log.d(TAG, "Successfully using su -M mode")
+                return true
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to use su -M mode: ${e.message}")
+        }
+
+        Log.w(TAG, "SELinux is enforcing and no magiskpolicy available")
+        return false
     }
 
     /**
@@ -53,6 +136,12 @@ object RootChecker {
             val shell = Shell.getShell()
             val isRoot = shell.isRoot
             Log.d(TAG, "Root shell obtained, isRoot=$isRoot")
+            
+            // 如果获取到 root，尝试放宽 SELinux 限制
+            if (isRoot) {
+                relaxSelinux()
+            }
+            
             isRoot
         } catch (e: Exception) {
             Log.w(TAG, "Root request failed: ${e.message}")
@@ -78,19 +167,48 @@ object RootChecker {
     }
 
     /**
+     * 执行命令（内部方法，不处理 SELinux）
+     */
+    private fun executeCommand(command: String): Pair<Int, String> {
+        return try {
+            val result = Shell.cmd(command).exec()
+            val output = result.out.joinToString("\n").trim()
+            val error = result.err.joinToString("\n").trim()
+            val exitCode = result.code
+            val combined = output + if (error.isNotBlank()) "\n$error" else ""
+            Pair(exitCode, combined)
+        } catch (e: Exception) {
+            Pair(-1, e.message ?: "Unknown error")
+        }
+    }
+
+    /**
      * 以 root 权限执行命令
      * 使用 libsu Shell.cmd() 替代 Runtime.exec("su")
+     * 自动处理 SELinux 限制
      * @return Pair<exitCode, output>
      */
     fun execute(command: String): Pair<Int, String> {
         return try {
             Log.d(TAG, "Executing root command: $command")
+            
+            // 对于 iptables/netfilter 相关命令，尝试放宽 SELinux
+            if (command.contains("iptables") || command.contains("ip ") || command.contains("sysctl")) {
+                relaxSelinux()
+            }
+            
             val result = Shell.cmd(command).exec()
             val output = result.out.joinToString("\n").trim()
             val error = result.err.joinToString("\n").trim()
             val exitCode = result.code
             val combined = output + if (error.isNotBlank()) "\n$error" else ""
             Log.d(TAG, "Root command exit code: $exitCode")
+            
+            // 如果命令失败且 SELinux 是 enforcing，记录警告
+            if (exitCode != 0 && isSelinuxEnforcing()) {
+                Log.w(TAG, "Command failed with SELinux enforcing: $command")
+            }
+            
             Pair(exitCode, combined)
         } catch (e: Exception) {
             Log.w(TAG, "Root command failed: $command - ${e.message}")
@@ -104,6 +222,9 @@ object RootChecker {
      */
     fun executeBatch(commands: List<String>): Pair<Int, String> {
         return try {
+            // 尝试放宽 SELinux
+            relaxSelinux()
+            
             val fullCommand = commands.joinToString(" && ")
             execute(fullCommand)
         } catch (e: Exception) {
@@ -116,6 +237,22 @@ object RootChecker {
      */
     fun isIptablesAvailable(): Boolean {
         val (code, _) = execute("iptables -L -n")
+        return code == 0
+    }
+
+    /**
+     * 检查 ip6tables 是否可用
+     */
+    fun isIp6tablesAvailable(): Boolean {
+        val (code, _) = execute("ip6tables -L -n")
+        return code == 0
+    }
+
+    /**
+     * 检查 ip 命令是否可用
+     */
+    fun isIpCommandAvailable(): Boolean {
+        val (code, _) = execute("ip -V")
         return code == 0
     }
 }
