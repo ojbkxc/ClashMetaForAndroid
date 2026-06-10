@@ -56,10 +56,6 @@ object RootChecker {
     // SELinux status cache
     private var selinuxEnforcing: Boolean? = null
     private var useMagiskPolicy = false
-    
-    // Shell connection pool for reusing sessions
-    private var cachedShell: Shell? = null
-    private val shellLock = ReentrantLock()
 
     init {
         // Configure libsu Shell, reference Shizuku project approach
@@ -314,36 +310,12 @@ object RootChecker {
     }
     
     /**
-     * Acquire a cached shell session
-     * Creates new shell if no cached session exists
-     */
-    private fun acquireCachedShell(): Shell? {
-        return shellLock.withLock {
-            if (cachedShell?.isClosed == false) {
-                return@withLock cachedShell
-            }
-            
-            // Create new shell
-            try {
-                val shell = Shell.getShell()
-                cachedShell = shell
-                shell
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to create cached shell: ${e.message}")
-                null
-            }
-        }
-    }
-    
-    /**
      * Invalidate cached shell session
      * Call this when shell becomes invalid or root permission is revoked
+     * libsu 6.x manages shell lifecycle automatically
      */
     fun invalidateCachedShell() {
-        shellLock.withLock {
-            // libsu 6.x manages shell lifecycle automatically, no need to close explicitly
-            cachedShell = null
-        }
+        // libsu 6.x manages shell lifecycle automatically
     }
 
     /**
