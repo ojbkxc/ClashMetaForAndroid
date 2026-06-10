@@ -43,7 +43,7 @@ class ProxyPageAdapter(
         withContext(Dispatchers.Main) {
             adapters[position].apply {
                 this.selectable = selectable
-                this.swapDataSet(this::states, states, false)
+                this.updateStates(states)
             }
 
             requestRedrawVisible()

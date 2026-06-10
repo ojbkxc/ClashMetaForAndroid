@@ -38,18 +38,20 @@ class AccessControlDesign(
     }
 
     val apps: List<AppInfo>
-        get() = adapter.apps
+        get() = List(adapter.itemCount) { adapter.getItem(it) }
 
     override val root: View
         get() = binding.root
 
     suspend fun patchApps(apps: List<AppInfo>) {
-        adapter.swapDataSet(adapter::apps, apps, false)
+        withContext(Dispatchers.Main) {
+            adapter.updateApps(apps)
+        }
     }
 
     suspend fun rebindAll() {
         withContext(Dispatchers.Main) {
-            adapter.rebindAll()
+            adapter.notifyItemRangeChanged(0, adapter.itemCount)
         }
     }
 

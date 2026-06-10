@@ -54,7 +54,7 @@ class AppAdapter(
         }
 
         override fun areContentsTheSame(oldItem: AppInfo, newItem: AppInfo): Boolean {
-            return oldItem.name == newItem.name &&
+            return oldItem.label == newItem.label &&
                    oldItem.packageName == newItem.packageName
         }
     }
