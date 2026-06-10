@@ -255,13 +255,52 @@ object RootHelper {
      */
     private fun optimizeKernel(): Boolean {
         val commands = listOf(
+            // === UDP Performance Optimizations ===
             // UDP conntrack timeout optimization
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout=30 2>/dev/null",
             "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=15 2>/dev/null",
             "echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout 2>/dev/null",
             "echo 15 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null",
+            
+            // UDP buffer optimization - comprehensive settings
+            "sysctl -w net.core.optmem_max=4194304 2>/dev/null",
+            "sysctl -w net.ipv4.udp_mem=\"65536 131072 262144\" 2>/dev/null",
+            "sysctl -w net.ipv4.udp_rmem_min=8192 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_min=8192 2>/dev/null",
+            // UDP buffer max limits (increased for better throughput)
+            "sysctl -w net.ipv4.udp_rmem_max=4194304 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_max=4194304 2>/dev/null",
+            
+            // IPv6 UDP buffer optimization
+            "sysctl -w net.ipv6.udp_mem=\"65536 131072 262144\" 2>/dev/null",
+            "sysctl -w net.ipv6.udp_rmem_min=8192 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_min=8192 2>/dev/null",
+            // IPv6 UDP buffer max limits
+            "sysctl -w net.ipv6.udp_rmem_max=4194304 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_max=4194304 2>/dev/null",
+            
+            // IP fragmentation optimization (for large UDP packets)
+            "sysctl -w net.ipv4.ipfrag_high_thresh=4194304 2>/dev/null",
+            "sysctl -w net.ipv4.ipfrag_low_thresh=2097152 2>/dev/null",
+            
+            // === Network Queue Optimizations ===
+            // Increase network device backlog (prevents packet drops under high load)
+            "sysctl -w net.core.netdev_max_backlog=4096 2>/dev/null",
+            // Increase socket listen backlog
+            "sysctl -w net.core.somaxconn=4096 2>/dev/null",
+            // Increase TCP SYN backlog
+            "sysctl -w net.ipv4.tcp_max_syn_backlog=2048 2>/dev/null",
+            
+            // === Connection Tracking Optimizations ===
+            // Increase conntrack max connections
+            "sysctl -w net.netfilter.nf_conntrack_max=200000 2>/dev/null",
+            "echo 200000 > /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null",
+            // Increase conntrack hash table size (reduces collisions)
+            "sysctl -w net.netfilter.nf_conntrack_buckets=65536 2>/dev/null",
             // TCP conntrack optimization
             "sysctl -w net.netfilter.nf_conntrack_tcp_timeout_established=3600 2>/dev/null",
+            
+            // === TCP Optimizations ===
             "sysctl -w net.ipv4.tcp_tw_reuse=1 2>/dev/null",
             // IP forward
             "sysctl -w net.ipv4.ip_forward=1 2>/dev/null",
@@ -272,26 +311,19 @@ object RootHelper {
             "sysctl -w net.core.wmem_max=4194304 2>/dev/null",
             "sysctl -w net.core.rmem_default=262144 2>/dev/null",
             "sysctl -w net.core.wmem_default=262144 2>/dev/null",
-            // UDP buffer optimization - comprehensive settings
-            "sysctl -w net.core.optmem_max=4194304 2>/dev/null",
-            "sysctl -w net.ipv4.udp_mem=\"65536 131072 262144\" 2>/dev/null",
-            "sysctl -w net.ipv4.udp_rmem_min=8192 2>/dev/null",
-            "sysctl -w net.ipv4.udp_wmem_min=8192 2>/dev/null",
-            // IPv6 settings
+            
+            // === IPv6 Settings ===
             "sysctl -w net.ipv6.conf.all.forwarding=1 2>/dev/null",
             "sysctl -w net.ipv6.conf.default.forwarding=1 2>/dev/null",
             "sysctl -w net.ipv6.conf.all.accept_ra=2 2>/dev/null",
-            // IPv6 UDP buffer optimization
-            "sysctl -w net.ipv6.udp_mem=\"65536 131072 262144\" 2>/dev/null",
-            "sysctl -w net.ipv6.udp_rmem_min=8192 2>/dev/null",
-            "sysctl -w net.ipv6.udp_wmem_min=8192 2>/dev/null",
+            
+            // === Advanced Optimizations ===
             // TCP congestion control (try to use bbr if available)
             "sysctl -w net.ipv4.tcp_congestion_control=bbr 2>/dev/null",
-            // Increase conntrack limit
-            "sysctl -w net.netfilter.nf_conntrack_max=100000 2>/dev/null",
-            "echo 100000 > /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null",
             // Disable TCP timestamps (may help with some networks)
-            "sysctl -w net.ipv4.tcp_timestamps=0 2>/dev/null"
+            "sysctl -w net.ipv4.tcp_timestamps=0 2>/dev/null",
+            // Reduce SYN retry attempts for faster failure recovery
+            "sysctl -w net.ipv4.tcp_synack_retries=2 2>/dev/null"
         )
         for (cmd in commands) {
             RootChecker.execute(cmd)

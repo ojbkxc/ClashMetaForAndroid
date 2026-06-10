@@ -125,13 +125,12 @@ object RootChecker {
     fun requestRoot(): Boolean {
         return try {
             Log.d(TAG, "Requesting root access via libsu...")
-            // libsu 6.x: Shell.getShell() returns Result<Shell>
-            val result = Shell.getShell()
-            if (!result.isSuccess) {
-                Log.w(TAG, "Root request failed: Shell.getShell() returned failure")
+            // libsu 6.x: Shell.getShell() returns Shell directly
+            val shell = Shell.getShell()
+            if (shell == null) {
+                Log.w(TAG, "Root request failed: Shell.getShell() returned null")
                 return false
             }
-            val shell = result.getOrThrow()
             val isRoot = shell.isRoot
             Log.d(TAG, "Root shell obtained, isRoot=$isRoot")
             
@@ -154,8 +153,8 @@ object RootChecker {
      */
     fun requestRootWithRetry(): Boolean {
         return try {
-            // libsu 6.x: Use Shell.close() to release cached shell
-            Shell.close()
+            // libsu 6.x: Use Shell.reset() to release cached shell
+            Shell.reset()
             // Re-request
             requestRoot()
         } catch (e: Exception) {
