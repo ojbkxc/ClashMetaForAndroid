@@ -15,7 +15,7 @@ import com.github.kr328.clash.design.util.layoutInflater
 
 class PermissionInfoDesign(context: Context) : Design<Nothing>(context) {
     private val binding = ActivityPermissionInfoBinding
-        .inflate(context.layoutInflater, context.root, false)
+        .inflate(context.layoutInflater, null, false)
     private val adapter = PermissionFeatureAdapter()
 
     override val root: View

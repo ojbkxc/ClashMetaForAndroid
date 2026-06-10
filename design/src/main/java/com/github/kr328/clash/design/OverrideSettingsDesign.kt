@@ -320,7 +320,7 @@ class OverrideSettingsDesign(
                 adapter = NullableTextAdapter.String,
                 title = R.string.fakeip_range,
                 placeholder = R.string.dont_modify,
-                empty = "198.18.0.0/16",
+                empty = R.string.default_fakeip_range,
                 configure = dnsDependencies::add,
             )
 
@@ -329,7 +329,7 @@ class OverrideSettingsDesign(
                 adapter = NullableTextAdapter.String,
                 title = R.string.fakeip_range6,
                 placeholder = R.string.dont_modify,
-                empty = "fdfe:dcba:9876::/64",
+                empty = R.string.default_fakeip_range6,
                 configure = dnsDependencies::add,
             )
 
