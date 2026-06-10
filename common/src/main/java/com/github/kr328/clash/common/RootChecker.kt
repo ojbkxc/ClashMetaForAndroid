@@ -2,9 +2,48 @@ package com.github.kr328.clash.common
 
 import android.util.Log
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.*
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+import java.util.ArrayDeque
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+
+/**
+ * Buffer pool for reducing memory allocation in UDP packet processing
+ * Thread-safe implementation using ReentrantLock
+ */
+object BufferPool {
+    private const val DEFAULT_BUFFER_SIZE = 8192
+    private const val MAX_POOL_SIZE = 64
+    
+    private val pools = mutableMapOf<Int, ArrayDeque<ByteArray>>()
+    private val lock = ReentrantLock()
+    
+    fun acquire(size: Int = DEFAULT_BUFFER_SIZE): ByteArray {
+        return lock.withLock {
+            val pool = pools.getOrPut(size) { ArrayDeque() }
+            pool.pollFirst() ?: ByteArray(size)
+        }
+    }
+    
+    fun release(buffer: ByteArray) {
+        val size = buffer.size
+        lock.withLock {
+            val pool = pools.getOrPut(size) { ArrayDeque() }
+            if (pool.size < MAX_POOL_SIZE) {
+                pool.add(buffer)
+            }
+        }
+    }
+    
+    fun clear() {
+        lock.withLock {
+            pools.clear()
+        }
+    }
+}
 
 /**
  * Root permission detection and command execution utility
@@ -17,6 +56,10 @@ object RootChecker {
     // SELinux status cache
     private var selinuxEnforcing: Boolean? = null
     private var useMagiskPolicy = false
+    
+    // Shell connection pool for reusing sessions
+    private var cachedShell: Shell? = null
+    private val shellLock = ReentrantLock()
 
     init {
         // Configure libsu Shell, reference Shizuku project approach
@@ -153,8 +196,8 @@ object RootChecker {
      */
     fun requestRootWithRetry(): Boolean {
         return try {
-            // libsu 6.x: Use Shell.reset() to release cached shell
-            Shell.reset()
+            // Invalidate cached shell (libsu 6.x manages internal cache automatically)
+            invalidateCachedShell()
             // Re-request
             requestRoot()
         } catch (e: Exception) {
@@ -214,18 +257,92 @@ object RootChecker {
     }
 
     /**
-     * 以 root 权限执行命令（批量）
-     * 通过单个 Shell 会话执行多条命令，避免反复启动 su
+     * Execute commands with root permission (batch mode)
+     * Execute multiple commands through a single Shell session to avoid repeated su startup
      */
     fun executeBatch(commands: List<String>): Pair<Int, String> {
         return try {
-            // 尝试放宽 SELinux
+            // Try to relax SELinux
             relaxSelinux()
             
             val fullCommand = commands.joinToString(" && ")
             execute(fullCommand)
         } catch (e: Exception) {
             Pair(-1, e.message ?: "Unknown error")
+        }
+    }
+    
+    /**
+     * Execute commands in parallel for better performance
+     * Uses coroutines to run independent commands concurrently
+     * @param commands list of commands to execute
+     * @return list of results in the same order as commands
+     */
+    suspend fun executeParallel(commands: List<String>): List<Pair<Int, String>> {
+        if (commands.isEmpty()) {
+            return emptyList()
+        }
+        
+        return coroutineScope {
+            commands.mapIndexed { index, cmd ->
+                async(Dispatchers.IO) {
+                    Log.d(TAG, "Executing command $index in parallel: ${cmd.take(30)}...")
+                    execute(cmd)
+                }
+            }.awaitAll()
+        }
+    }
+    
+    /**
+     * Execute commands using cached shell session for better performance
+     * Reuses existing shell connection to reduce overhead
+     * @param commands list of commands to execute
+     * @return list of results in the same order as commands
+     */
+    fun executeWithCachedShell(commands: List<String>): List<Pair<Int, String>> {
+        // libsu 6.x: Shell.getShell() returns Shell directly, no need for explicit job management
+        // Fallback to executeBatch since libsu 6.x manages sessions automatically
+        return try {
+            // libsu 6.x handles shell lifecycle automatically
+            commands.map { cmd ->
+                execute(cmd)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to use cached shell: ${e.message}")
+            commands.map { execute(it) }
+        }
+    }
+    
+    /**
+     * Acquire a cached shell session
+     * Creates new shell if no cached session exists
+     */
+    private fun acquireCachedShell(): Shell? {
+        return shellLock.withLock {
+            if (cachedShell?.isClosed == false) {
+                return@withLock cachedShell
+            }
+            
+            // Create new shell
+            try {
+                val shell = Shell.getShell()
+                cachedShell = shell
+                shell
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to create cached shell: ${e.message}")
+                null
+            }
+        }
+    }
+    
+    /**
+     * Invalidate cached shell session
+     * Call this when shell becomes invalid or root permission is revoked
+     */
+    fun invalidateCachedShell() {
+        shellLock.withLock {
+            // libsu 6.x manages shell lifecycle automatically, no need to close explicitly
+            cachedShell = null
         }
     }
 

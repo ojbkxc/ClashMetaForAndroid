@@ -323,7 +323,20 @@ object RootHelper {
             // Disable TCP timestamps (may help with some networks)
             "sysctl -w net.ipv4.tcp_timestamps=0 2>/dev/null",
             // Reduce SYN retry attempts for faster failure recovery
-            "sysctl -w net.ipv4.tcp_synack_retries=2 2>/dev/null"
+            "sysctl -w net.ipv4.tcp_synack_retries=2 2>/dev/null",
+            
+            // === Hysteria2/QUIC Specific Optimizations ===
+            // Larger UDP buffer for QUIC-based protocols
+            "sysctl -w net.ipv4.udp_mem=\"262144 524288 1048576\" 2>/dev/null",
+            "sysctl -w net.ipv4.udp_rmem_min=16384 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_min=16384 2>/dev/null",
+            "sysctl -w net.ipv6.udp_rmem_min=16384 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_min=16384 2>/dev/null",
+            // Increase max UDP payload size (supports large QUIC packets)
+            "sysctl -w net.core.max_udp_payload=65535 2>/dev/null",
+            // Optimized QUIC connection tracking timeout
+            "sysctl -w net.netfilter.nf_conntrack_udp_timeout=10 2>/dev/null",
+            "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=60 2>/dev/null"
         )
         for (cmd in commands) {
             RootChecker.execute(cmd)
