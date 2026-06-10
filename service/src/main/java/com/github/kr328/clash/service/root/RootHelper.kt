@@ -250,6 +250,86 @@ object RootHelper {
     }
 
     /**
+     * Restore kernel parameters to default values
+     */
+    private fun restoreKernel(): Boolean {
+        val commands = listOf(
+            // === Restore UDP Parameters to Default ===
+            // Restore UDP conntrack timeout to default values
+            "sysctl -w net.netfilter.nf_conntrack_udp_timeout=30 2>/dev/null",
+            "sysctl -w net.netfilter.nf_conntrack_udp_timeout_stream=120 2>/dev/null",
+            "echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout 2>/dev/null",
+            "echo 120 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null",
+            
+            // Restore UDP buffer to default values
+            "sysctl -w net.core.optmem_max=10240 2>/dev/null",
+            "sysctl -w net.ipv4.udp_mem=\"181780 242373 363560\" 2>/dev/null",
+            "sysctl -w net.ipv4.udp_rmem_min=4096 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_min=4096 2>/dev/null",
+            "sysctl -w net.ipv4.udp_rmem_max=212992 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_max=212992 2>/dev/null",
+            
+            // Restore IPv6 UDP buffer to default
+            "sysctl -w net.ipv6.udp_mem=\"181780 242373 363560\" 2>/dev/null",
+            "sysctl -w net.ipv6.udp_rmem_min=4096 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_min=4096 2>/dev/null",
+            "sysctl -w net.ipv6.udp_rmem_max=212992 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_max=212992 2>/dev/null",
+            
+            // Restore IP fragmentation to default
+            "sysctl -w net.ipv4.ipfrag_high_thresh=262144 2>/dev/null",
+            "sysctl -w net.ipv4.ipfrag_low_thresh=196608 2>/dev/null",
+            
+            // === Restore Network Queue to Default ===
+            "sysctl -w net.core.netdev_max_backlog=1000 2>/dev/null",
+            "sysctl -w net.core.somaxconn=128 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_max_syn_backlog=512 2>/dev/null",
+            
+            // === Restore Connection Tracking to Default ===
+            "sysctl -w net.netfilter.nf_conntrack_max=65536 2>/dev/null",
+            "echo 65536 > /proc/sys/net/netfilter/nf_conntrack_max 2>/dev/null",
+            "sysctl -w net.netfilter.nf_conntrack_buckets=16384 2>/dev/null",
+            "sysctl -w net.netfilter.nf_conntrack_tcp_timeout_established=432000 2>/dev/null",
+            
+            // === Restore TCP to Default ===
+            "sysctl -w net.ipv4.tcp_tw_reuse=0 2>/dev/null",
+            "sysctl -w net.ipv4.ip_forward=0 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_wmem=\"4096 16384 4194304\" 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_rmem=\"4096 87380 6291456\" 2>/dev/null",
+            "sysctl -w net.core.rmem_max=212992 2>/dev/null",
+            "sysctl -w net.core.wmem_max=212992 2>/dev/null",
+            "sysctl -w net.core.rmem_default=212992 2>/dev/null",
+            "sysctl -w net.core.wmem_default=212992 2>/dev/null",
+            
+            // === Restore IPv6 to Default ===
+            "sysctl -w net.ipv6.conf.all.forwarding=0 2>/dev/null",
+            "sysctl -w net.ipv6.conf.default.forwarding=0 2>/dev/null",
+            "sysctl -w net.ipv6.conf.all.accept_ra=1 2>/dev/null",
+            
+            // === Restore TCP Congestion Control to Default ===
+            "sysctl -w net.ipv4.tcp_congestion_control=cubic 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_bbr_min_rtt=0 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_bbr_fairness=0 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_timestamps=1 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_synack_retries=5 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_fastopen=0 2>/dev/null",
+            
+            // === Restore UDP Payload to Default ===
+            "sysctl -w net.core.max_udp_payload=65507 2>/dev/null",
+            
+            // === Restore Connection Tracking Loose Mode ===
+            "sysctl -w net.netfilter.nf_conntrack_tcp_loose=1 2>/dev/null",
+            
+            // === Restore TCP TIME_WAIT Buckets to Default ===
+            "sysctl -w net.ipv4.tcp_max_tw_buckets=4000 2>/dev/null"
+        )
+        for (cmd in commands) {
+            RootChecker.execute(cmd)
+        }
+        return true
+    }
+
+    /**
      * Optimize kernel parameters (refer to Surfing)
      * Includes comprehensive UDP buffer and performance optimizations
      */
@@ -864,6 +944,9 @@ object RootHelper {
      * Clear transparent proxy rules - complete cleanup
      */
     private fun clearTransparentProxy() {
+        // Restore kernel parameters to default values
+        restoreKernel()
+        
         // Clean IPv4 routing rules
         RootChecker.execute("ip rule del fwmark $MARK_VALUE table $TABLE_ID pref $TABLE_PREF 2>/dev/null")
         RootChecker.execute("ip route del local default dev lo table $TABLE_ID 2>/dev/null")

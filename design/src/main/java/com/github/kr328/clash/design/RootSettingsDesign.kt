@@ -68,6 +68,15 @@ class RootSettingsDesign(
                 enabled = rootAvailable
                 listener = OnChangedListener {
                     if (srvStore.rootTransparentProxy) {
+                        // 智能提示：检查是否同时启用了DNS劫持
+                        if (!srvStore.rootDnsHijack) {
+                            launch {
+                                surface.showToast(
+                                    context.getString(R.string.root_transparent_proxy_dns_hint),
+                                    ToastDuration.LONG
+                                )
+                            }
+                        }
                         requests.trySend(Request.ApplyTransparentProxy)
                     } else {
                         requests.trySend(Request.ClearTransparentProxy)
@@ -102,6 +111,15 @@ class RootSettingsDesign(
                 enabled = rootAvailable
                 listener = OnChangedListener {
                     if (srvStore.rootDnsHijack) {
+                        // 智能提示：检查是否同时启用了透明代理
+                        if (!srvStore.rootTransparentProxy) {
+                            launch {
+                                surface.showToast(
+                                    context.getString(R.string.root_dns_hijack_warning),
+                                    ToastDuration.LONG
+                                )
+                            }
+                        }
                         requests.trySend(Request.ApplyDnsHijack)
                     } else {
                         requests.trySend(Request.ClearDnsHijack)

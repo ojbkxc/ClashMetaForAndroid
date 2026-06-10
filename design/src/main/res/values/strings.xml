@@ -165,8 +165,12 @@
     <string name="use_hosts">Use Hosts</string>
     <string name="enhanced_mode">Enhanced Mode</string>
     <string name="name_server">Name Server</string>
+    <string name="proxy_server_nameserver">Proxy Server Nameserver</string>
+    <string name="direct_nameserver">Direct Nameserver</string>
     <string name="fallback">Fallback Name Server</string>
     <string name="default_name_server">Default Name Server</string>
+    <string name="fakeip_range">Fake-IP Range</string>
+    <string name="fakeip_range6">Fake-IP Range (IPv6)</string>
     <string name="fakeip_filter">Fake-IP Filter</string>
     <string name="fakeip_filter_mode">Fake-IP Filter Mode</string>
     <string name="geoip_fallback">GeoIP Fallback</string>
@@ -414,10 +418,12 @@
     <string name="rootDnsHijack">DNS Hijack</string>
     <string name="root_transparent_proxy">Transparent Proxy</string>
     <string name="root_transparent_proxy_summary">Redirect all traffic through VPN (requires root)</string>
+    <string name="root_transparent_proxy_dns_hint">建议同时启用DNS劫持以防止DNS泄漏</string>
     <string name="root_lock_background">Lock Background</string>
     <string name="root_lock_background_summary">Prevent system from killing Clash in background</string>
     <string name="root_dns_hijack">DNS Hijack</string>
     <string name="root_dns_hijack_summary">Intercept DNS queries and route through Clash (requires root)</string>
+    <string name="root_dns_hijack_warning">建议同时启用透明代理以获得最佳效果</string>
     <string name="root_apply_success">Applied successfully</string>
     <string name="root_rules_cleared">Rules cleared</string>
     <string name="root_warning_title">Warning</string>

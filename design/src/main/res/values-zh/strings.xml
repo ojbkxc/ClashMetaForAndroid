@@ -127,8 +127,12 @@
     <string name="strategy">策略</string>
     <string name="enhanced_mode">增强模式</string>
     <string name="name_server">Name Server</string>
+    <string name="proxy_server_nameserver">代理服务器 DNS</string>
+    <string name="direct_nameserver">直连 DNS</string>
     <string name="fallback">Fallback Name Server</string>
     <string name="default_name_server">Default Name Server</string>
+    <string name="fakeip_range">Fake-IP 范围</string>
+    <string name="fakeip_range6">Fake-IP 范围 (IPv6)</string>
     <string name="fakeip_filter">FakeIP 过滤器</string>
     <string name="fakeip_filter_mode">FakeIP 过滤器模式</string>
     <string name="geoip_fallback">GeoIP Fallback</string>
@@ -324,10 +328,12 @@
     <string name="root_settings">Root 设置</string>
     <string name="root_transparent_proxy">透明代理</string>
     <string name="root_transparent_proxy_summary">通过 VPN 重定向所有流量（需要 root）</string>
+    <string name="root_transparent_proxy_dns_hint">建议同时启用DNS劫持以防止DNS泄漏</string>
     <string name="root_lock_background">锁定后台</string>
     <string name="root_lock_background_summary">防止系统在后台杀死 Clash</string>
     <string name="root_dns_hijack">DNS 劫持</string>
     <string name="root_dns_hijack_summary">拦截 DNS 查询并通过 Clash 路由（需要 root）</string>
+    <string name="root_dns_hijack_warning">建议同时启用透明代理以获得最佳效果</string>
     <string name="root_apply_success">应用成功</string>
     <string name="root_rules_cleared">规则已清除</string>
     <string name="root_warning_title">警告</string>
