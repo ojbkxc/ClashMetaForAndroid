@@ -12,6 +12,9 @@ class PermissionInfoDesign(context: Context) : Design<Nothing>(context) {
     private val binding = ActivityPermissionInfoBinding.inflate(LayoutInflater.from(context))
     private val adapter = PermissionFeatureAdapter()
 
+    override val root: android.view.View
+        get() = binding.root
+
     init {
         binding.recyclerView.layoutManager = LinearLayoutManager(context)
         binding.recyclerView.adapter = adapter
