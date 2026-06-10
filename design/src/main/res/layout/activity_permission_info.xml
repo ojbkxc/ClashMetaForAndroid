@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:background="?attr/colorSurface">
 
-    <include layout="@layout/layout_top_bar" />
+    <include layout="@layout/common_activity_bar" />
 
     <LinearLayout
         android:layout_width="match_parent"
