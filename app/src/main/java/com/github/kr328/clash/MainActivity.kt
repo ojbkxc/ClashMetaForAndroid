@@ -26,6 +26,7 @@ import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.SyncLog
 import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -52,8 +53,9 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
-        // Auto detect root permission on startup (detect only, non-blocking)
+        // Delayed root detection (non-critical, deferred to avoid blocking startup)
         launch {
+            delay(DELAY_BEFORE_NON_CRITICAL_TASKS)
             try {
                 val isRooted = withContext(Dispatchers.IO) {
                     com.github.kr328.clash.common.RootChecker.isRooted()
@@ -69,8 +71,9 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
         }
 
-        // Auto check for updates on startup (background, non-blocking)
+        // Delayed update check (non-critical, deferred to avoid blocking startup)
         launch {
+            delay(DELAY_BEFORE_UPDATE_CHECK)
             try {
                 val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
                 val release = withContext(Dispatchers.IO) {
@@ -397,5 +400,10 @@ class MainActivity : BaseActivity<MainDesign>() {
             .build()
 
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+    }
+
+    companion object {
+        private const val DELAY_BEFORE_NON_CRITICAL_TASKS = 3000L
+        private const val DELAY_BEFORE_UPDATE_CHECK = 10000L
     }
 }

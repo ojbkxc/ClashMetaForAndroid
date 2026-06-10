@@ -79,7 +79,7 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.De
         }
     }
 
-    suspend fun snapshot(full: Boolean): LogcatCache.Snapshot? {
+    fun snapshot(full: Boolean): LogcatCache.Snapshot? {
         return cache.snapshot(full)
     }
 

@@ -60,9 +60,6 @@ class ProxyView(
     override fun draw(canvas: Canvas) {
         val state = state ?: return super.draw(canvas)
 
-        if (state.update(false))
-            postInvalidate()
-
         val width = width.toFloat()
         val height = height.toFloat()
 
@@ -75,7 +72,7 @@ class ProxyView(
 
         // draw background
         canvas.apply {
-            if (state.config.proxyLine==1) {
+            if (state.config.proxyLine == 1) {
                 drawRect(0f, 0f, width, height, paint)
             } else {
                 val path = state.path
@@ -106,6 +103,10 @@ class ProxyView(
         }
 
         super.draw(canvas)
+    }
+
+    fun updateState(snap: Boolean): Boolean {
+        return state?.update(snap) ?: false
     }
 
     override fun onDraw(canvas: Canvas) {

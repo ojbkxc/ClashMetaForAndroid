@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.content.SharedPreferences
 import com.github.kr328.clash.util.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,6 +20,9 @@ object UpdateChecker {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
+    private var cachedResult: ReleaseInfo? = null
+    private var lastCheckTime: Long = 0
+
     data class ReleaseInfo(
         val tagName: String,
         val apkDownloadUrl: String,
@@ -26,6 +30,12 @@ object UpdateChecker {
     )
 
     suspend fun checkForUpdate(context: Context): ReleaseInfo? = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        
+        if (cachedResult != null && now - lastCheckTime < CACHE_DURATION_MS) {
+            return@withContext cachedResult
+        }
+
         try {
             val request = Request.Builder().url(GITHUB_API).build()
             val response = client.newCall(request).execute()
@@ -47,7 +57,10 @@ object UpdateChecker {
             }
             if (tagName.isBlank() || apkUrl.isBlank()) return@withContext null
 
-            ReleaseInfo(tagName, apkUrl, body)
+            ReleaseInfo(tagName, apkUrl, body).also {
+                cachedResult = it
+                lastCheckTime = now
+            }
         } catch (e: Exception) {
             AppLog.w("UpdateChecker", "Error: ${e.message}")
             null
@@ -89,4 +102,6 @@ object UpdateChecker {
         }
         return 0
     }
+
+    private const val CACHE_DURATION_MS = 24 * 60 * 60 * 1000L
 }
