@@ -21,10 +21,6 @@ class PermissionInfoDesign(context: Context) : Design<Nothing>(context) {
         adapter.submitList(getPermissionFeatures())
     }
 
-    override fun onCreateView(parent: ViewGroup): androidx.viewbinding.ViewBinding {
-        return binding
-    }
-
     private fun getPermissionFeatures(): List<PermissionFeature> {
         return listOf(
             PermissionFeature("对象池优化", true, true, "减少内存分配开销"),
