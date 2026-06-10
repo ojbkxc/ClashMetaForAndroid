@@ -427,6 +427,7 @@
     <string name="root_request_permission_summary">Click to request root access from superuser</string>
     <string name="root_requesting">Requesting root access…</string>
     <string name="root_request_failed">Root access request failed</string>
+    <string name="qr_scanner_unavailable">QR scanner is temporarily unavailable</string>
 
     <!-- Regional Restrictions / 地区限制 -->
     <string name="regional_restriction_title">Regional Restriction</string>

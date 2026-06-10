@@ -52,7 +52,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
-        // 启动时自动检测 root 权限（仅检测，不阻塞 UI）
+        // Auto detect root permission on startup (detect only, non-blocking)
         launch {
             try {
                 val isRooted = withContext(Dispatchers.IO) {
@@ -64,12 +64,12 @@ class MainActivity : BaseActivity<MainDesign>() {
                         com.github.kr328.clash.common.RootChecker.requestRoot()
                     }
                 }
-            } catch (_: Exception) {
-                // 静默失败，不影响用户体验
+            } catch (e: Exception) {
+                AppLog.e("MainActivity", "Root detection failed", e)
             }
         }
 
-        // 启动时自动检测更新（后台执行，不阻塞UI）
+        // Auto check for updates on startup (background, non-blocking)
         launch {
             try {
                 val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
@@ -81,8 +81,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                         UpdateChecker.showUpdateDialog(this@MainActivity, currentVersion, release)
                     }
                 }
-            } catch (_: Exception) {
-                // 静默失败，不影响用户体验
+            } catch (e: Exception) {
+                AppLog.e("MainActivity", "Update check failed", e)
             }
         }
 

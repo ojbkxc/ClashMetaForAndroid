@@ -1,6 +1,7 @@
 package com.github.kr328.clash.service.root
 
 import com.github.kr328.clash.common.RootChecker
+import kotlinx.coroutines.delay
 
 object RootHelper {
     private const val TPROXY_PORT = 7892
@@ -31,9 +32,11 @@ object RootHelper {
     private const val TABLE_PREF = "100"
 
     // DNS hijack mode: true = use nat table REDIRECT, false = use mangle table TPROXY
+    @Volatile
     private var useNatTableForDns = true
 
     // Cached dynamically obtained UID
+    @Volatile
     private var cachedProxyUid: Int = -1
     
     // Retry configuration
@@ -248,6 +251,7 @@ object RootHelper {
 
     /**
      * Optimize kernel parameters (refer to Surfing)
+     * Includes comprehensive UDP buffer and performance optimizations
      */
     private fun optimizeKernel(): Boolean {
         val commands = listOf(
@@ -268,12 +272,19 @@ object RootHelper {
             "sysctl -w net.core.wmem_max=4194304 2>/dev/null",
             "sysctl -w net.core.rmem_default=262144 2>/dev/null",
             "sysctl -w net.core.wmem_default=262144 2>/dev/null",
-            // UDP buffer optimization
+            // UDP buffer optimization - comprehensive settings
             "sysctl -w net.core.optmem_max=4194304 2>/dev/null",
+            "sysctl -w net.ipv4.udp_mem=\"65536 131072 262144\" 2>/dev/null",
+            "sysctl -w net.ipv4.udp_rmem_min=8192 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_min=8192 2>/dev/null",
             // IPv6 settings
             "sysctl -w net.ipv6.conf.all.forwarding=1 2>/dev/null",
             "sysctl -w net.ipv6.conf.default.forwarding=1 2>/dev/null",
             "sysctl -w net.ipv6.conf.all.accept_ra=2 2>/dev/null",
+            // IPv6 UDP buffer optimization
+            "sysctl -w net.ipv6.udp_mem=\"65536 131072 262144\" 2>/dev/null",
+            "sysctl -w net.ipv6.udp_rmem_min=8192 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_min=8192 2>/dev/null",
             // TCP congestion control (try to use bbr if available)
             "sysctl -w net.ipv4.tcp_congestion_control=bbr 2>/dev/null",
             // Increase conntrack limit
@@ -337,9 +348,9 @@ object RootHelper {
                 return Pair(true, mode)
             }
 
-            // Wait before retry
+            // Wait before retry using coroutine delay (non-blocking)
             if (retry < MAX_RETRY_COUNT) {
-                Thread.sleep(RETRY_DELAY_MS)
+                delay(RETRY_DELAY_MS)
             }
         }
 
@@ -474,13 +485,16 @@ object RootHelper {
             }
         }
 
-        // Create DIVERT chain
+        // Create DIVERT chain - handle transparent socket connections
         if (!ensureChain("mangle", CHAIN_DIVERT)) {
             // DIVERT is not essential, continue
         } else {
             RootChecker.execute("iptables -t mangle -A $CHAIN_DIVERT -j MARK --set-xmark $MARK_ID")
             RootChecker.execute("iptables -t mangle -A $CHAIN_DIVERT -j ACCEPT")
+            // Handle TCP transparent socket
             RootChecker.execute("iptables -t mangle -I PREROUTING -p tcp -m socket -j $CHAIN_DIVERT")
+            // Handle UDP transparent socket
+            RootChecker.execute("iptables -t mangle -I PREROUTING -p udp -m socket -j $CHAIN_DIVERT")
         }
 
         return Pair(true, "")
@@ -597,11 +611,14 @@ object RootHelper {
         // IPv6 DNS hijack
         applyDnsHijackV6(proxyUidStr)
 
-        // Create DIVERT_V6 chain
+        // Create DIVERT_V6 chain - handle transparent socket connections
         if (ensureChainV6("mangle", CHAIN_DIVERT_V6)) {
             RootChecker.execute("ip6tables -t mangle -A $CHAIN_DIVERT_V6 -j MARK --set-xmark $MARK_ID")
             RootChecker.execute("ip6tables -t mangle -A $CHAIN_DIVERT_V6 -j ACCEPT")
+            // Handle TCP transparent socket
             RootChecker.execute("ip6tables -t mangle -I PREROUTING -p tcp -m socket -j $CHAIN_DIVERT_V6")
+            // Handle UDP transparent socket
+            RootChecker.execute("ip6tables -t mangle -I PREROUTING -p udp -m socket -j $CHAIN_DIVERT_V6")
         }
 
         return true
@@ -609,36 +626,70 @@ object RootHelper {
 
     /**
      * IPv6 DNS hijack
+     * Support both UDP and TCP DNS queries
      */
     private fun applyDnsHijackV6(proxyUidStr: String) {
         if (useNatTableForDns) {
-            // CLASH_DNS_EXTERNAL_V6 (PREROUTING)
+            // CLASH_DNS_EXTERNAL_V6 (PREROUTING) - nat mode
             RootChecker.execute("ip6tables -t nat -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
             RootChecker.execute("ip6tables -t nat -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
             RootChecker.execute("ip6tables -t nat -N $CHAIN_DNS_EXTERNAL_V6")
+            // UDP DNS hijack
             RootChecker.execute("ip6tables -t nat -A $CHAIN_DNS_EXTERNAL_V6 -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+            // TCP DNS hijack (for large DNS responses)
+            RootChecker.execute("ip6tables -t nat -A $CHAIN_DNS_EXTERNAL_V6 -p tcp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
             RootChecker.execute("ip6tables -t nat -I PREROUTING -j $CHAIN_DNS_EXTERNAL_V6")
 
-            // CLASH_DNS_LOCAL_V6 (OUTPUT)
+            // CLASH_DNS_LOCAL_V6 (OUTPUT) - nat mode
             RootChecker.execute("ip6tables -t nat -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
             RootChecker.execute("ip6tables -t nat -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
             RootChecker.execute("ip6tables -t nat -N $CHAIN_DNS_LOCAL_V6")
             if (proxyUidStr.isNotEmpty()) {
                 RootChecker.execute("ip6tables -t nat -I $CHAIN_DNS_LOCAL_V6 1 -m owner --uid-owner $proxyUidStr -j RETURN")
             }
+            // UDP DNS hijack
             RootChecker.execute("ip6tables -t nat -A $CHAIN_DNS_LOCAL_V6 -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+            // TCP DNS hijack (for large DNS responses)
+            RootChecker.execute("ip6tables -t nat -A $CHAIN_DNS_LOCAL_V6 -p tcp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
             RootChecker.execute("ip6tables -t nat -I OUTPUT -j $CHAIN_DNS_LOCAL_V6")
+        } else {
+            // CLASH_DNS_EXTERNAL_V6 (PREROUTING) - mangle mode
+            RootChecker.execute("ip6tables -t mangle -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t mangle -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t mangle -N $CHAIN_DNS_EXTERNAL_V6")
+            // UDP DNS hijack
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_DNS_EXTERNAL_V6 -p udp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $DNS_HIJACK_PORT")
+            // TCP DNS hijack (for large DNS responses)
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_DNS_EXTERNAL_V6 -p tcp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $DNS_HIJACK_PORT")
+            RootChecker.execute("ip6tables -t mangle -I PREROUTING -j $CHAIN_DNS_EXTERNAL_V6")
+
+            // CLASH_DNS_LOCAL_V6 (OUTPUT) - mangle mode
+            RootChecker.execute("ip6tables -t mangle -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t mangle -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+            RootChecker.execute("ip6tables -t mangle -N $CHAIN_DNS_LOCAL_V6")
+            if (proxyUidStr.isNotEmpty()) {
+                RootChecker.execute("ip6tables -t mangle -I $CHAIN_DNS_LOCAL_V6 1 -m owner --uid-owner $proxyUidStr -j RETURN")
+            }
+            // UDP DNS hijack
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_DNS_LOCAL_V6 -p udp --dport 53 -j MARK --set-xmark $MARK_ID")
+            // TCP DNS hijack (for large DNS responses)
+            RootChecker.execute("ip6tables -t mangle -A $CHAIN_DNS_LOCAL_V6 -p tcp --dport 53 -j MARK --set-xmark $MARK_ID")
+            RootChecker.execute("ip6tables -t mangle -I OUTPUT -j $CHAIN_DNS_LOCAL_V6")
         }
     }
 
     /**
      * DNS hijack - nat table REDIRECT mode
+     * Support both UDP and TCP DNS queries
      */
     private fun applyDnsHijackNatMode(proxyUidStr: String): Boolean {
         if (!ensureChain("nat", CHAIN_DNS_EXTERNAL)) {
             return false
         }
+        // UDP DNS hijack
         RootChecker.execute("iptables -t nat -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+        // TCP DNS hijack (for large DNS responses)
+        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_EXTERNAL -p tcp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
         RootChecker.execute("iptables -t nat -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
 
         if (!ensureChain("nat", CHAIN_DNS_LOCAL)) {
@@ -647,7 +698,10 @@ object RootHelper {
         if (proxyUidStr.isNotEmpty()) {
             RootChecker.execute("iptables -t nat -I $CHAIN_DNS_LOCAL 1 -m owner --uid-owner $proxyUidStr -j RETURN")
         }
+        // UDP DNS hijack
         RootChecker.execute("iptables -t nat -A $CHAIN_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
+        // TCP DNS hijack (for large DNS responses)
+        RootChecker.execute("iptables -t nat -A $CHAIN_DNS_LOCAL -p tcp --dport 53 -j REDIRECT --to-ports $DNS_HIJACK_PORT")
         RootChecker.execute("iptables -t nat -I OUTPUT -j $CHAIN_DNS_LOCAL")
 
         return true
@@ -655,12 +709,16 @@ object RootHelper {
 
     /**
      * DNS hijack - mangle table TPROXY mode
+     * Support both UDP and TCP DNS queries
      */
     private fun applyDnsHijackMangleMode(proxyUidStr: String, dnsPort: Int): Boolean {
         if (!ensureChain("mangle", CHAIN_DNS_EXTERNAL)) {
             return false
         }
+        // UDP DNS hijack
         RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_EXTERNAL -p udp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $dnsPort")
+        // TCP DNS hijack (for large DNS responses)
+        RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_EXTERNAL -p tcp --dport 53 -j TPROXY --tproxy-mark $MARK_ID --on-port $dnsPort")
         RootChecker.execute("iptables -t mangle -I PREROUTING -j $CHAIN_DNS_EXTERNAL")
 
         if (!ensureChain("mangle", CHAIN_DNS_LOCAL)) {
@@ -669,7 +727,10 @@ object RootHelper {
         if (proxyUidStr.isNotEmpty()) {
             RootChecker.execute("iptables -t mangle -I $CHAIN_DNS_LOCAL 1 -m owner --uid-owner $proxyUidStr -j RETURN")
         }
+        // UDP DNS hijack
         RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_LOCAL -p udp --dport 53 -j MARK --set-xmark $MARK_ID")
+        // TCP DNS hijack (for large DNS responses)
+        RootChecker.execute("iptables -t mangle -A $CHAIN_DNS_LOCAL -p tcp --dport 53 -j MARK --set-xmark $MARK_ID")
         RootChecker.execute("iptables -t mangle -I OUTPUT -j $CHAIN_DNS_LOCAL")
 
         return true

@@ -83,19 +83,11 @@ object RootChecker {
             return true
         }
 
-        // 方法2：尝试使用 su -M 模式（magisk 提供的放宽权限模式）
-        // 通过检查 Shell.Builder 的 su 路径来使用 -M 参数
+        // Method 2: Try using su -M mode (magisk relaxed permission mode)
+        // Execute command directly with su -M prefix
         try {
-            val builder = Shell.Builder.create()
-                .setFlags(Shell.FLAG_REDIRECT_STDERR)
-                .setTimeout(30)
-                .setSuPath("su -M")
-            
-            // 测试执行简单命令
-            val result = builder.open().use { shell ->
-                shell.newJob().add("id").exec()
-            }
-            if (result.isSuccess) {
+            val result = Shell.cmd("su -M", "id").exec()
+            if (result.code == 0) {
                 Log.d(TAG, "Successfully using su -M mode")
                 return true
             }
