@@ -1,0 +1,159 @@
+package optimize
+
+import (
+	"context"
+	"errors"
+	"sync"
+	"time"
+)
+
+type Conn interface {
+	Close() error
+}
+
+type ConnPool interface {
+	Get(ctx context.Context) (Conn, error)
+	Put(conn Conn)
+	Close()
+	Len() int
+}
+
+type BasePool struct {
+	mu          sync.Mutex
+	conns       []Conn
+	maxSize     int
+	idleTimeout time.Duration
+	closed      bool
+}
+
+func NewBasePool(maxSize int, idleTimeout time.Duration) *BasePool {
+	return &BasePool{
+		conns:       make([]Conn, 0),
+		maxSize:     maxSize,
+		idleTimeout: idleTimeout,
+		closed:      false,
+	}
+}
+
+func (p *BasePool) Get(ctx context.Context) (Conn, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return nil, errors.New("pool is closed")
+	}
+
+	for len(p.conns) > 0 {
+		conn := p.conns[len(p.conns)-1]
+		p.conns = p.conns[:len(p.conns)-1]
+		return conn, nil
+	}
+
+	return nil, errors.New("no available connection")
+}
+
+func (p *BasePool) Put(conn Conn) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		conn.Close()
+		return
+	}
+
+	if len(p.conns) < p.maxSize {
+		p.conns = append(p.conns, conn)
+	} else {
+		conn.Close()
+	}
+}
+
+func (p *BasePool) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return
+	}
+
+	p.closed = true
+	for _, conn := range p.conns {
+		conn.Close()
+	}
+	p.conns = nil
+}
+
+func (p *BasePool) Len() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.conns)
+}
+
+type PoolManager struct {
+	mu       sync.Mutex
+	pools    map[string]ConnPool
+	defaultMaxSize int
+	defaultTimeout time.Duration
+}
+
+func NewPoolManager() *PoolManager {
+	return &PoolManager{
+		pools: make(map[string]ConnPool),
+		defaultMaxSize: 10,
+		defaultTimeout: 30 * time.Second,
+	}
+}
+
+func (m *PoolManager) GetPool(protocol string) (ConnPool, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	pool, ok := m.pools[protocol]
+	return pool, ok
+}
+
+func (m *PoolManager) CreatePool(protocol string, maxSize int, idleTimeout time.Duration) ConnPool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if pool, ok := m.pools[protocol]; ok {
+		return pool
+	}
+
+	if maxSize <= 0 {
+		maxSize = m.defaultMaxSize
+	}
+	if idleTimeout <= 0 {
+		idleTimeout = m.defaultTimeout
+	}
+
+	pool := NewBasePool(maxSize, idleTimeout)
+	m.pools[protocol] = pool
+	return pool
+}
+
+func (m *PoolManager) RemovePool(protocol string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if pool, ok := m.pools[protocol]; ok {
+		pool.Close()
+		delete(m.pools, protocol)
+	}
+}
+
+func (m *PoolManager) Close() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, pool := range m.pools {
+		pool.Close()
+	}
+	m.pools = nil
+}
+
+func (m *PoolManager) GetPoolCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.pools)
+}
