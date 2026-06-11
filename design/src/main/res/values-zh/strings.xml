@@ -69,6 +69,10 @@
     <string name="show_traffic">显示流量</string>
     <string name="show_traffic_summary">在通知中自动刷新流量</string>
     <string name="allow_clash_auto_restart">允许 Clash 自动重启</string>
+    <string name="battery_optimization">电池优化</string>
+    <string name="battery_optimization_off">电池优化已关闭（推荐）</string>
+    <string name="battery_optimization_on_warning">电池优化已开启 - 点击关闭以防止后台被杀</string>
+    <string name="battery_optimization_warning">电池优化已开启，后台服务可能被杀。请在"应用设置"中关闭电池优化。</string>
     <string name="auto_restart">自动重启</string>
     <string name="stopped">已停止</string>
     <string name="help">帮助</string>

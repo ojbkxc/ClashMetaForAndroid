@@ -113,6 +113,10 @@
 
     <string name="auto_restart">Auto Restart</string>
     <string name="allow_clash_auto_restart">Allow clash auto restart</string>
+    <string name="battery_optimization">Battery Optimization</string>
+    <string name="battery_optimization_off">Battery optimization is disabled (recommended)</string>
+    <string name="battery_optimization_on_warning">Battery optimization is enabled - tap to disable to prevent background kills</string>
+    <string name="battery_optimization_warning">Battery optimization is enabled, service may be killed in background. Go to App Settings to disable it.</string>
 
     <string name="route_system_traffic">Route System Traffic</string>
     <string name="routing_via_vpn_service">Auto routing all system traffic via VpnService</string>

@@ -19,6 +19,7 @@ import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.util.BatteryOptimization
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
@@ -253,6 +254,14 @@ class MainActivity : BaseActivity<MainDesign>() {
 
                 if (result.resultCode == RESULT_OK)
                     startClashService()
+            }
+
+            // Warn about battery optimization
+            if (!BatteryOptimization.isIgnoringBatteryOptimizations(this@MainActivity)) {
+                design?.showToast(
+                    DesignR.string.battery_optimization_warning,
+                    ToastDuration.Long
+                )
             }
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
