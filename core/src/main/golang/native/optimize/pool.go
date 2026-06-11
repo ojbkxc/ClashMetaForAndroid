@@ -18,9 +18,14 @@ type ConnPool interface {
 	Len() int
 }
 
+type pooledConn struct {
+	conn    Conn
+	addedAt time.Time
+}
+
 type BasePool struct {
 	mu          sync.Mutex
-	conns       []Conn
+	conns       []pooledConn
 	maxSize     int
 	idleTimeout time.Duration
 	closed      bool
@@ -28,7 +33,7 @@ type BasePool struct {
 
 func NewBasePool(maxSize int, idleTimeout time.Duration) *BasePool {
 	return &BasePool{
-		conns:       make([]Conn, 0),
+		conns:       make([]pooledConn, 0),
 		maxSize:     maxSize,
 		idleTimeout: idleTimeout,
 		closed:      false,
@@ -51,10 +56,15 @@ func (p *BasePool) Get(ctx context.Context) (Conn, error) {
 		}
 	}
 
+	now := time.Now()
 	for len(p.conns) > 0 {
-		conn := p.conns[len(p.conns)-1]
+		pc := p.conns[len(p.conns)-1]
 		p.conns = p.conns[:len(p.conns)-1]
-		return conn, nil
+
+		if now.Sub(pc.addedAt) <= p.idleTimeout {
+			return pc.conn, nil
+		}
+		pc.conn.Close()
 	}
 
 	return nil, errors.New("no available connection")
@@ -70,7 +80,7 @@ func (p *BasePool) Put(conn Conn) {
 	}
 
 	if len(p.conns) < p.maxSize {
-		p.conns = append(p.conns, conn)
+		p.conns = append(p.conns, pooledConn{conn: conn, addedAt: time.Now()})
 	} else {
 		conn.Close()
 	}
@@ -85,8 +95,8 @@ func (p *BasePool) Close() {
 	}
 
 	p.closed = true
-	for _, conn := range p.conns {
-		conn.Close()
+	for _, pc := range p.conns {
+		pc.conn.Close()
 	}
 	p.conns = nil
 }

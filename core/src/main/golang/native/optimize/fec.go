@@ -93,12 +93,16 @@ func (f *AdaptiveFEC) adjustRedundancy() {
 }
 
 func (f *AdaptiveFEC) Encode(data []byte) ([][]byte, error) {
-	shards, err := f.encoder.Split(data)
+	f.mu.Lock()
+	enc := f.encoder
+	f.mu.Unlock()
+
+	shards, err := enc.Split(data)
 	if err != nil {
 		return nil, err
 	}
 
-	err = f.encoder.Encode(shards)
+	err = enc.Encode(shards)
 	if err != nil {
 		return nil, err
 	}
@@ -107,18 +111,23 @@ func (f *AdaptiveFEC) Encode(data []byte) ([][]byte, error) {
 }
 
 func (f *AdaptiveFEC) Decode(shards [][]byte) ([]byte, error) {
-	err := f.encoder.Reconstruct(shards)
+	f.mu.Lock()
+	enc := f.encoder
+	ds := f.dataShards
+	f.mu.Unlock()
+
+	err := enc.Reconstruct(shards)
 	if err != nil {
 		return nil, err
 	}
 
 	outSize := 0
-	for i := 0; i < f.dataShards && i < len(shards); i++ {
+	for i := 0; i < ds && i < len(shards); i++ {
 		outSize += len(shards[i])
 	}
 
 	var buf bytes.Buffer
-	err = f.encoder.Join(&buf, shards, outSize)
+	err = enc.Join(&buf, shards, outSize)
 	if err != nil {
 		return nil, err
 	}

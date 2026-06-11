@@ -38,6 +38,8 @@ func requestOptimizerGC() {
 		return
 	}
 
+	// Close releases all managed resources (connection pools, etc.).
+	// The optimizer cannot be re-enabled after this call.
 	opt.Close()
-	log.Infoln("[Optimizer] GC complete")
+	log.Infoln("[Optimizer] shutdown complete")
 }

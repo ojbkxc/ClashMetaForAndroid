@@ -85,5 +85,16 @@
                 <data android:scheme="uuid" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".UninstallReceiver"
+            android:enabled="true"
+            android:exported="false"
+            android:process=":background">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_REMOVED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

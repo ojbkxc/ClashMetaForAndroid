@@ -110,6 +110,7 @@ func (o *Optimizer) Close() {
 
 	o.enabled = false
 	o.poolManager.Close()
+	// Note: The optimizer is a singleton; after Close() it cannot be re-enabled.
 }
 
 var globalOptimizer *Optimizer
