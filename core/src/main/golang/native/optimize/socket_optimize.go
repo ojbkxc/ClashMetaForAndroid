@@ -1,34 +1,13 @@
 package optimize
 
 import (
-	"net"
 	"syscall"
 )
 
-// socketBufferSizes defines optimal UDP socket buffer sizes for QUIC performance.
+// udpBufSize is the optimal UDP socket buffer size for QUIC performance.
 // QUIC over UDP benefits from large buffers to handle flow control windows
 // and reduce packet loss under load.
-const (
-	udpBufSize = 1048576 // 1MB for QUIC (Hysteria2, TUIC, VLESS H3)
-)
-
-// SetupSocketHook chains our socket optimizations after the existing
-// DefaultSocketHook (typically CMFA socket protection). This is called
-// synchronously in coreInit() before any connections are created.
-func SetupSocketHook() {
-	importDialer()
-	original := dialerRef.DefaultSocketHook
-	dialerRef.DefaultSocketHook = func(network, address string, c syscall.RawConn) error {
-		// Call original hook first (CMFA socket protection)
-		if original != nil {
-			if err := original(network, address, c); err != nil {
-				return err
-			}
-		}
-		// Apply our socket-level optimizations
-		return applySocketOpts(network, c)
-	}
-}
+const udpBufSize = 1048576 // 1MB for QUIC (Hysteria2, TUIC, VLESS H3)
 
 // applySocketOpts configures per-connection socket options:
 //   - UDP: large RCVBUF/SNDBUF for QUIC throughput, IP_MTU_DISCOVER for PMTUD

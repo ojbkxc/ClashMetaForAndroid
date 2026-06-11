@@ -8,9 +8,9 @@ import (
 // dnsCache caches DNS resolution results to reduce per-connection lookup latency.
 // Proxy server domains rarely change; caching avoids 50-200ms DNS round-trips.
 type dnsCache struct {
-	mu    sync.RWMutex
-	ttl   time.Duration
-	store map[string]*dnsCacheEntry
+	mu       sync.RWMutex
+	ttl      time.Duration
+	storeMap map[string]*dnsCacheEntry
 }
 
 type dnsCacheEntry struct {
@@ -20,20 +20,20 @@ type dnsCacheEntry struct {
 
 func newDNSCache(ttlSeconds int) *dnsCache {
 	return &dnsCache{
-		ttl:   time.Duration(ttlSeconds) * time.Second,
-		store: make(map[string]*dnsCacheEntry, 64),
+		ttl:      time.Duration(ttlSeconds) * time.Second,
+		storeMap: make(map[string]*dnsCacheEntry, 64),
 	}
 }
 
 func (c *dnsCache) lookup(host string) (string, bool) {
 	c.mu.RLock()
-	entry, ok := c.store[host]
+	entry, ok := c.storeMap[host]
 	c.mu.RUnlock()
 
 	if !ok || time.Now().After(entry.expiresAt) {
 		if ok {
 			c.mu.Lock()
-			delete(c.store, host)
+			delete(c.storeMap, host)
 			c.mu.Unlock()
 		}
 		return "", false
@@ -43,7 +43,7 @@ func (c *dnsCache) lookup(host string) (string, bool) {
 
 func (c *dnsCache) store(host, ip string) {
 	c.mu.Lock()
-	c.store[host] = &dnsCacheEntry{
+	c.storeMap[host] = &dnsCacheEntry{
 		expiresAt: time.Now().Add(c.ttl),
 		ip:        ip,
 	}
@@ -52,12 +52,12 @@ func (c *dnsCache) store(host, ip string) {
 
 func (c *dnsCache) clear() {
 	c.mu.Lock()
-	c.store = make(map[string]*dnsCacheEntry, 64)
+	c.storeMap = make(map[string]*dnsCacheEntry, 64)
 	c.mu.Unlock()
 }
 
 func (c *dnsCache) size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return len(c.store)
+	return len(c.storeMap)
 }
