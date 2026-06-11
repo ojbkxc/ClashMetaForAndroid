@@ -17,7 +17,10 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Checkout submodules
-        run: git submodule update --init --recursive --force
+        run: |
+          git submodule update --init --recursive --force
+          cd core/src/foss/golang/clash
+          git checkout Alpha
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -48,13 +51,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Update CA
-        run: |
-          sudo apt-get update && sudo apt-get install ca-certificates
-          sudo update-ca-certificates
-          mkdir -p core/src/foss/golang/clash/component/ca
-          cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
       - name: Signing properties
         env:
