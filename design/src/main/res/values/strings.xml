@@ -415,6 +415,15 @@
     <string name="update_already_latest">Already Latest</string>
     <string name="update_current_version" formatted="false">Current version: %s\nLatest version: %s\n\nChangelog:\n%s</string>
     <string name="update_is_latest">Already the latest version (%s)</string>
+    <string name="btn_background_download">Background Download</string>
+    <string name="downloading_update">Downloading update...</string>
+    <string name="download_preparing">Preparing download...</string>
+    <string name="download_complete">Download Complete</string>
+    <string name="download_complete_installing">Ready to install, tap to install...</string>
+    <string name="download_failed">Download Failed</string>
+    <string name="download_failed_network">Network error, please try again later</string>
+    <string name="download_channel_name">Update Download</string>
+    <string name="download_channel_desc">Notification channel for update APK downloads</string>
     <string name="logged_out">Logged out</string>
     <string name="auto_syncing_subscription">Auto syncing subscription…</string>
     <string name="login_success_syncing">Login successful, syncing subscription in 3s…</string>

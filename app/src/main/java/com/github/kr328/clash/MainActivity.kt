@@ -62,10 +62,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                     com.github.kr328.clash.common.RootChecker.isRooted()
                 }
                 if (isRooted) {
-                    AppLog.d("MainActivity", "Device is rooted, requesting root access...")
-                    withContext(Dispatchers.IO) {
-                        com.github.kr328.clash.common.RootChecker.requestRoot()
-                    }
+                    AppLog.d("MainActivity", "Device is rooted.")
+                    // Do NOT call requestRoot() here - it would trigger the superuser
+                    // dialog at startup. Root is requested only when the user explicitly
+                    // clicks "Request Root Permission" in Root Settings.
                 }
             } catch (e: Exception) {
                 AppLog.e("MainActivity", "Root detection failed", e)

@@ -65,9 +65,9 @@ object RootChecker {
                 .setFlags(Shell.FLAG_REDIRECT_STDERR)
                 .setTimeout(30000)  // Timeout in milliseconds (libsu 6.x uses ms)
         )
-        
-        // Detect SELinux status
-        checkSelinuxStatus()
+        // NOTE: Do NOT call checkSelinuxStatus() here - it would trigger
+        // the superuser dialog at app startup, before the user can interact.
+        // SELinux status is checked when root is first requested.
     }
 
     /**
@@ -164,17 +164,17 @@ object RootChecker {
     fun requestRoot(): Boolean {
         return try {
             Log.d(TAG, "Requesting root access via libsu...")
-            // libsu 6.x: Shell.getShell() returns Shell directly
-            val shell = Shell.getShell()
-            if (shell == null) {
-                Log.w(TAG, "Root request failed: Shell.getShell() returned null")
-                return false
-            }
-            val isRoot = shell.isRoot
-            Log.d(TAG, "Root shell obtained, isRoot=$isRoot")
             
-            // If root obtained, try to relax SELinux restrictions
-            if (isRoot) {
+            // Execute a simple root command to trigger the superuser dialog.
+            // Shell.cmd().exec() is more reliable than Shell.getShell().isRoot
+            // because it actually invokes su and triggers the authorization prompt.
+            val result = Shell.cmd("id").exec()
+            val isRoot = result.code == 0
+            Log.d(TAG, "Root request result: code=${result.code}, isRoot=$isRoot")
+            
+            // If root obtained, check SELinux status (deferred from init)
+            if (isRoot && selinuxEnforcing == null) {
+                checkSelinuxStatus()
                 relaxSelinux()
             }
             
@@ -312,10 +312,31 @@ object RootChecker {
     /**
      * Invalidate cached shell session
      * Call this when shell becomes invalid or root permission is revoked
-     * libsu 6.x manages shell lifecycle automatically
+     * Forces libsu to create a new shell on next request
      */
     fun invalidateCachedShell() {
-        // libsu 6.x manages shell lifecycle automatically
+        try {
+            // Close the existing shell to force a new root authorization
+            val shell = Shell.getShell()
+            // The Shell class may not have public close(), use exec to verify
+            // If shell is already cached with denied state, we need to force
+            // a new shell creation by closing the session
+            try {
+                shell.close()
+                Log.d(TAG, "Cached shell closed successfully")
+            } catch (_: NoSuchMethodError) {
+                // Some libsu versions don't expose close() publicly
+                // Fallback: force exit the su process
+                Log.d(TAG, "Shell.close() not available, using fallback")
+                try {
+                    Runtime.getRuntime().exec(arrayOf("su", "-c", "exit")).waitFor()
+                } catch (_: Exception) {
+                    Log.w(TAG, "Fallback shell close also failed")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to invalidate shell: ${e.message}")
+        }
     }
 
     /**
