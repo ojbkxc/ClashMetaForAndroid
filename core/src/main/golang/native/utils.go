@@ -5,12 +5,15 @@ import "C"
 import (
 	"encoding/json"
 	"reflect"
+
+	"github.com/metacubex/mihomo/log"
 )
 
 func marshalJson(obj any) *C.char {
 	res, err := json.Marshal(obj)
 	if err != nil {
-		panic(err.Error())
+		log.Warnln("[Utils] marshalJson failed: %v", err)
+		return C.CString("null")
 	}
 
 	return C.CString(string(res))
@@ -28,5 +31,6 @@ func marshalString(obj any) *C.char {
 		return C.CString(o)
 	}
 
-	panic("invalid marshal type " + reflect.TypeOf(obj).Name())
+	log.Warnln("[Utils] marshalString: invalid type %s", reflect.TypeOf(obj).Name())
+	return C.CString("unknown")
 }

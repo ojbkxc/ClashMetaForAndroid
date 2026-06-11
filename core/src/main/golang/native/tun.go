@@ -47,7 +47,12 @@ func (t *remoteTun) querySocketUid(protocol int, source, target string) int {
 		return -1
 	}
 
-	return int(C.query_socket_uid(t.callback, C.int(protocol), C.CString(source), C.CString(target)))
+	cSource := C.CString(source)
+	cTarget := C.CString(target)
+	defer C.free(unsafe.Pointer(cSource))
+	defer C.free(unsafe.Pointer(cTarget))
+
+	return int(C.query_socket_uid(t.callback, C.int(protocol), cSource, cTarget))
 }
 
 func (t *remoteTun) close() {

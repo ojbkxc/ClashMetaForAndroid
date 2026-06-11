@@ -14,11 +14,12 @@ import (
 
 func openRemoteContent(url string) (int, error) {
 	u := C.CString(url)
+	defer C.free(unsafe.Pointer(u))
+
 	e := (*C.char)(C.malloc(1024))
+	defer C.free(unsafe.Pointer(e))
 
 	log.Debugln("Open remote url: %s", url)
-
-	defer C.free(unsafe.Pointer(e))
 
 	fd := C.open_content(u, e, 1024)
 

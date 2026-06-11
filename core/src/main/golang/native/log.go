@@ -43,6 +43,8 @@ func init() {
 			case log.SILENT:
 				C.log_verbose(cPayload)
 			}
+
+			C.free(unsafe.Pointer(cPayload))
 		}
 	}()
 }
