@@ -30,13 +30,22 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
 
                         Clash.reset()
                         Clash.clearOverride(Clash.OverrideSlot.Session)
-                        Clash.enableOptimizer()
+
+                        try {
+                            Clash.enableOptimizer()
+                        } catch (e: Exception) {
+                            Log.w("ClashRuntime: enableOptimizer failed: ${e.message}")
+                        }
 
                         // Periodic TCP pool cleanup every 60 seconds
                         val cleanupJob = launch {
                             while (isActive) {
                                 delay(60_000)
-                                Clash.periodicOptimizerCleanup()
+                                try {
+                                    Clash.periodicOptimizerCleanup()
+                                } catch (e: Exception) {
+                                    Log.w("ClashRuntime: periodicOptimizerCleanup failed: ${e.message}")
+                                }
                             }
                         }
 
@@ -57,7 +66,6 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         cancel()
                     } finally {
                         withContext(NonCancellable) {
-                            Clash.requestOptimizerGC()
                             Clash.reset()
                             Clash.clearOverride(Clash.OverrideSlot.Session)
 

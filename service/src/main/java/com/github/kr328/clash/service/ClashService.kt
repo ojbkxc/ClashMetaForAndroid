@@ -3,7 +3,7 @@ package com.github.kr328.clash.service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import com.github.kr328.clash.common.RootChecker
+import com.github.kr328.clash.common.compat.startForegroundServiceCompat
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
@@ -12,7 +12,9 @@ import com.github.kr328.clash.service.util.cancelAndJoinBlocking
 import com.github.kr328.clash.service.util.sendClashStarted
 import com.github.kr328.clash.service.util.sendClashStopped
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 
@@ -21,6 +23,7 @@ class ClashService : BaseService() {
         get() = this
 
     private var reason: String? = null
+    private var watchdogJob: kotlinx.coroutines.Job? = null
 
     private val runtime = clashRuntime {
         val store = ServiceStore(self)
@@ -75,10 +78,6 @@ class ClashService : BaseService() {
 
         StatusProvider.serviceRunning = true
 
-        // Cleanup any leftover rules from previous installations on startup
-        // This ensures no stale iptables rules remain if app was killed unexpectedly
-        com.github.kr328.clash.service.root.RootHelper.cleanupLeftoverRules()
-
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
 
@@ -88,6 +87,10 @@ class ClashService : BaseService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         sendClashStarted()
 
+        // 启动看门狗：每 60 秒 AlarmManager 触发检查，如果服务被杀了会自动重启
+        ProfileReceiver.scheduleWatchdog(this)
+        startWatchdogKeepAlive()
+
         return START_STICKY
     }
 
@@ -96,83 +99,50 @@ class ClashService : BaseService() {
     }
 
     override fun onDestroy() {
+        stopWatchdogKeepAlive()
+        ProfileReceiver.cancelWatchdog(this)
+
         StatusProvider.serviceRunning = false
 
         sendClashStopped(reason)
 
         cancelAndJoinBlocking()
 
-        clearDnsHijackRulesOnDestroy()
-
         Log.i("ClashService destroyed: ${reason ?: "successfully"}")
 
         super.onDestroy()
-    }
-
-    private fun clearDnsHijackRulesOnDestroy() {
-        try {
-            // Batch all cleanup commands into a single shell script for performance
-            val commands = mutableListOf<String>()
-
-            for (table in listOf("nat", "mangle")) {
-                // IPv4 rules - delete jumps then flush/delete chains
-                commands.add("iptables -t $table -D PREROUTING -j $CHAIN_EXTERNAL 2>/dev/null")
-                commands.add("iptables -t $table -D OUTPUT -j $CHAIN_LOCAL 2>/dev/null")
-                commands.add("iptables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL 2>/dev/null")
-                commands.add("iptables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL 2>/dev/null")
-                commands.add("iptables -t $table -D OUTPUT -j $CHAIN_LOCK_BG 2>/dev/null")
-                commands.add("iptables -t $table -F $CHAIN_EXTERNAL 2>/dev/null")
-                commands.add("iptables -t $table -X $CHAIN_EXTERNAL 2>/dev/null")
-                commands.add("iptables -t $table -F $CHAIN_LOCAL 2>/dev/null")
-                commands.add("iptables -t $table -X $CHAIN_LOCAL 2>/dev/null")
-                commands.add("iptables -t $table -F $CHAIN_DNS_EXTERNAL 2>/dev/null")
-                commands.add("iptables -t $table -X $CHAIN_DNS_EXTERNAL 2>/dev/null")
-                commands.add("iptables -t $table -F $CHAIN_DNS_LOCAL 2>/dev/null")
-                commands.add("iptables -t $table -X $CHAIN_DNS_LOCAL 2>/dev/null")
-                commands.add("iptables -t $table -F $CHAIN_LOCK_BG 2>/dev/null")
-                commands.add("iptables -t $table -X $CHAIN_LOCK_BG 2>/dev/null")
-
-                // IPv6 rules
-                commands.add("ip6tables -t $table -D PREROUTING -j $CHAIN_EXTERNAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -D OUTPUT -j $CHAIN_LOCAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -F $CHAIN_EXTERNAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -X $CHAIN_EXTERNAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -F $CHAIN_LOCAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -X $CHAIN_LOCAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
-                commands.add("ip6tables -t $table -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
-            }
-
-            // Execute as a single shell script (using ; not && to continue on errors)
-            val script = commands.joinToString(";")
-            RootChecker.execute(script)
-
-            Log.d("All clash rules cleared on destroy")
-        } catch (e: Exception) {
-            Log.e("Failed to clear clash rules", e)
-        }
-    }
-
-    companion object {
-        // Chain name constants matching RootHelper
-        private const val CHAIN_EXTERNAL = "CLASH_EXTERNAL"
-        private const val CHAIN_LOCAL = "CLASH_LOCAL"
-        private const val CHAIN_LOCK_BG = "CLASH_LOCK_BG"
-        private const val CHAIN_DNS_EXTERNAL = "CLASH_DNS_EXTERNAL"
-        private const val CHAIN_DNS_LOCAL = "CLASH_DNS_LOCAL"
-        private const val CHAIN_EXTERNAL_V6 = "CLASH_EXTERNAL_V6"
-        private const val CHAIN_LOCAL_V6 = "CLASH_LOCAL_V6"
-        private const val CHAIN_DNS_EXTERNAL_V6 = "CLASH_DNS_EXTERNAL_V6"
-        private const val CHAIN_DNS_LOCAL_V6 = "CLASH_DNS_LOCAL_V6"
     }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
 
         runtime.requestGc()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+
+        // 当用户从最近任务中划掉应用时，重新启动服务以确保代理继续运行
+        Log.w("ClashService task removed, restarting service")
+        val restartIntent = Intent(this, ClashService::class.java)
+        startForegroundServiceCompat(restartIntent)
+    }
+
+    /**
+     * 每 50 秒重新安排看门狗闹钟，防止服务存活时闹钟误触发。
+     * 如果服务进程被杀死，闹钟会在 60 秒后触发并重启服务。
+     */
+    private fun startWatchdogKeepAlive() {
+        watchdogJob = kotlinx.coroutines.launch {
+            while (isActive) {
+                delay(50_000L) // 50 seconds, less than the 60s watchdog interval
+                ProfileReceiver.scheduleWatchdog(this@ClashService)
+            }
+        }
+    }
+
+    private fun stopWatchdogKeepAlive() {
+        watchdogJob?.cancel()
+        watchdogJob = null
     }
 }
