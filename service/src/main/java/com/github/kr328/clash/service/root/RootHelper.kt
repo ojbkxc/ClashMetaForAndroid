@@ -1120,4 +1120,54 @@ object RootHelper {
         clearLockBackground()
         clearDnsHijack()
     }
+
+    /**
+     * Check and cleanup any leftover rules from previous installations
+     * This is called on app startup to ensure no stale rules remain
+     * 
+     * This method is lightweight and only executes on startup,
+     * so it doesn't affect runtime performance.
+     */
+    fun cleanupLeftoverRules() {
+        try {
+            // Check if root is available
+            if (!RootChecker.isRooted()) {
+                return
+            }
+            
+            // Cleanup DNS hijack chains if they exist
+            for (table in listOf("nat", "mangle")) {
+                // IPv4 cleanup
+                cleanupChainIfExists(table, CHAIN_DNS_EXTERNAL)
+                cleanupChainIfExists(table, CHAIN_DNS_LOCAL)
+                
+                // IPv6 cleanup
+                cleanupChainIfExists(table, CHAIN_DNS_EXTERNAL_V6, true)
+                cleanupChainIfExists(table, CHAIN_DNS_LOCAL_V6, true)
+            }
+            
+            // Also cleanup transparent proxy chains
+            for (table in listOf("nat", "mangle")) {
+                cleanupChainIfExists(table, CHAIN_EXTERNAL)
+                cleanupChainIfExists(table, CHAIN_LOCAL)
+                cleanupChainIfExists(table, CHAIN_EXTERNAL_V6, true)
+                cleanupChainIfExists(table, CHAIN_LOCAL_V6, true)
+            }
+        } catch (e: Exception) {
+            // Ignore any errors - this is a best-effort cleanup
+        }
+    }
+
+    private fun cleanupChainIfExists(table: String, chain: String, ipv6: Boolean = false) {
+        val cmd = if (ipv6) "ip6tables" else "iptables"
+        
+        // Remove chain from PREROUTING and OUTPUT
+        RootChecker.execute("$cmd -t $table -D PREROUTING -j $chain 2>/dev/null")
+        RootChecker.execute("$cmd -t $table -D OUTPUT -j $chain 2>/dev/null")
+        RootChecker.execute("$cmd -t $table -D FORWARD -j $chain 2>/dev/null")
+        
+        // Flush and remove the chain
+        RootChecker.execute("$cmd -t $table -F $chain 2>/dev/null")
+        RootChecker.execute("$cmd -t $table -X $chain 2>/dev/null")
+    }
 }

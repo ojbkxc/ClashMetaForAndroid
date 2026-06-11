@@ -402,6 +402,10 @@ class MainActivity : BaseActivity<MainDesign>() {
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
     }
 
+    // Note: We don't stop clash service when MainActivity is destroyed
+    // because user may want the app to run in background with VPN/DNS hijack
+    // Rules cleanup happens in ClashService.onDestroy when service is actually stopped
+
     companion object {
         private const val DELAY_BEFORE_NON_CRITICAL_TASKS = 3000L
         private const val DELAY_BEFORE_UPDATE_CHECK = 10000L
