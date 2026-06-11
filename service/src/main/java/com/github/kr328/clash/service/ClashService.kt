@@ -3,6 +3,7 @@ package com.github.kr328.clash.service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import com.github.kr328.clash.common.RootChecker
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
@@ -148,7 +149,7 @@ class ClashService : BaseService() {
 
             // Execute as a single shell script (using ; not && to continue on errors)
             val script = commands.joinToString(";")
-            com.github.kr328.clash.service.root.RootChecker.execute(script)
+            RootChecker.execute(script)
 
             Log.d("ClashService", "All clash rules cleared on destroy")
         } catch (e: Exception) {

@@ -90,7 +90,14 @@ func (r *SmartRetransmit) CheckAndRetransmit() {
 	defer r.mu.Unlock()
 
 	now := time.Now()
-	timeout := r.GetTimeout()
+	// Compute timeout inline to avoid re-acquiring the lock (GetTimeout also locks)
+	timeout := r.rtt + 4*r.rttVariance
+	if timeout < r.baseTimeout {
+		timeout = r.baseTimeout
+	}
+	if timeout > r.maxTimeout {
+		timeout = r.maxTimeout
+	}
 
 	for seqNum, item := range r.items {
 		if now.Sub(item.sendTime) >= timeout {
