@@ -19,6 +19,12 @@ type message struct {
 
 func init() {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorln("[Log] panic in log forwarding goroutine: %v", r)
+			}
+		}()
+
 		sub := log.Subscribe()
 		defer log.UnSubscribe(sub)
 
@@ -43,7 +49,19 @@ func init() {
 
 //export subscribeLogcat
 func subscribeLogcat(remote unsafe.Pointer) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Log] panic in subscribeLogcat: %v", r)
+		}
+	}()
+
 	go func(remote unsafe.Pointer) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorln("[Log] panic in logcat goroutine: %v", r)
+			}
+		}()
+
 		sub := log.Subscribe()
 		defer log.UnSubscribe(sub)
 

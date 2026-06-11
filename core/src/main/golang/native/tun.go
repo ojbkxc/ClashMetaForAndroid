@@ -13,6 +13,8 @@ import (
 
 	"cfa/native/app"
 	"cfa/native/tun"
+
+	"github.com/metacubex/mihomo/log"
 )
 
 var rTunLock sync.Mutex
@@ -65,6 +67,12 @@ func (t *remoteTun) close() {
 
 //export startTun
 func startTun(fd C.int, stack, gateway, portal, dns C.c_string, callback unsafe.Pointer) C.int {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Tun] panic in startTun: %v", r)
+		}
+	}()
+
 	rTunLock.Lock()
 	defer rTunLock.Unlock()
 
@@ -99,6 +107,12 @@ func startTun(fd C.int, stack, gateway, portal, dns C.c_string, callback unsafe.
 
 //export stopTun
 func stopTun() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Tun] panic in stopTun: %v", r)
+		}
+	}()
+
 	rTunLock.Lock()
 	defer rTunLock.Unlock()
 
