@@ -23,6 +23,9 @@ func Init() {
 		// Set DNS timeout to 3s for faster fallback
 		resolver.DefaultDNSTimeout = 3 * time.Second
 
+		// Install DNS cache (5 minute TTL)
+		SetupDNSCache(300)
+
 		runtime.GC()
 	})
 }

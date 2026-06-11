@@ -13,6 +13,7 @@ type Optimizer struct {
 	quicMultipath   *QUICMultipath
 	poolManager     *PoolManager
 	tcpPool         *TCPConnPool
+	dnsCache        *dnsCache
 	dnsTimeout      time.Duration
 	enabled         bool
 }
@@ -99,6 +100,18 @@ func (o *Optimizer) GetDNSTimeout() time.Duration {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	return o.dnsTimeout
+}
+
+func (o *Optimizer) SetDNSCache(cache *dnsCache) {
+	o.mu.Lock()
+	o.dnsCache = cache
+	o.mu.Unlock()
+}
+
+func (o *Optimizer) GetDNSCache() *dnsCache {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.dnsCache
 }
 
 func (o *Optimizer) PeriodicCleanup() {

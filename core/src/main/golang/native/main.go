@@ -37,6 +37,10 @@ func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
 	// Reduce GC target to lower memory peak on mobile devices
 	debug.SetGCPercent(50)
 
+	// Socket optimizations must be applied before any network activity
+	// (UDP buffers, TCP_NODELAY, IP_MTU_DISCOVER for PMTUD)
+	optimize.SetupSocketHook()
+
 	// Lazy init optimizer in background - does not block startup
 	go optimize.Init()
 }
