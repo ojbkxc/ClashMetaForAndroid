@@ -43,6 +43,14 @@ func (p *BasePool) Get(ctx context.Context) (Conn, error) {
 		return nil, errors.New("pool is closed")
 	}
 
+	if ctx != nil {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+	}
+
 	for len(p.conns) > 0 {
 		conn := p.conns[len(p.conns)-1]
 		p.conns = p.conns[:len(p.conns)-1]

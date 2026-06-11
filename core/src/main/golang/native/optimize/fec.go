@@ -1,12 +1,14 @@
 package optimize
 
 import (
+	"sync"
 	"time"
 
 	"github.com/klauspost/reedsolomon"
 )
 
 type AdaptiveFEC struct {
+	mu             sync.Mutex
 	encoder        reedsolomon.Encoder
 	redundancy     int
 	minRedundancy  int
@@ -44,16 +46,24 @@ func NewAdaptiveFEC(minRedundancy, maxRedundancy int) (*AdaptiveFEC, error) {
 }
 
 func (f *AdaptiveFEC) UpdateLossRate(lossRate float64) {
+	f.mu.Lock()
 	f.lossRate = lossRate
+	lastAdjust := f.lastAdjustTime
+	f.mu.Unlock()
 
 	now := time.Now()
-	if now.Sub(f.lastAdjustTime) >= f.adjustInterval {
+	if now.Sub(lastAdjust) >= f.adjustInterval {
 		f.adjustRedundancy()
+		f.mu.Lock()
 		f.lastAdjustTime = now
+		f.mu.Unlock()
 	}
 }
 
 func (f *AdaptiveFEC) adjustRedundancy() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	var targetRedundancy int
 
 	switch {

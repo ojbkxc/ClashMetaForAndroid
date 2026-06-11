@@ -80,9 +80,10 @@ func (o *Optimizer) GetPoolManager() *PoolManager {
 
 func (o *Optimizer) UpdateLossRate(protocol string, lossRate float64) {
 	o.mu.Lock()
-	defer o.mu.Unlock()
+	enabled := o.enabled
+	o.mu.Unlock()
 
-	if !o.enabled {
+	if !enabled {
 		return
 	}
 
@@ -92,9 +93,10 @@ func (o *Optimizer) UpdateLossRate(protocol string, lossRate float64) {
 
 func (o *Optimizer) UpdateRTT(protocol string, rtt time.Duration) {
 	o.mu.Lock()
-	defer o.mu.Unlock()
+	enabled := o.enabled
+	o.mu.Unlock()
 
-	if !o.enabled {
+	if !enabled {
 		return
 	}
 

@@ -33,12 +33,15 @@ func NewQUICDynamicConfig() *QUICDynamicConfig {
 func (q *QUICDynamicConfig) UpdateLossRate(lossRate float64) {
 	q.mu.Lock()
 	q.lossRate = lossRate
+	lastAdjust := q.lastAdjustTime
 	q.mu.Unlock()
 
 	now := time.Now()
-	if now.Sub(q.lastAdjustTime) >= q.adjustInterval {
+	if now.Sub(lastAdjust) >= q.adjustInterval {
 		q.adjustWindowSize()
+		q.mu.Lock()
 		q.lastAdjustTime = now
+		q.mu.Unlock()
 	}
 }
 
