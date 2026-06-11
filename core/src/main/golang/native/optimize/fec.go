@@ -11,6 +11,7 @@ import (
 type AdaptiveFEC struct {
 	mu             sync.Mutex
 	encoder        reedsolomon.Encoder
+	dataShards     int
 	redundancy     int
 	minRedundancy  int
 	maxRedundancy  int
@@ -37,6 +38,7 @@ func NewAdaptiveFEC(minRedundancy, maxRedundancy int) (*AdaptiveFEC, error) {
 
 	return &AdaptiveFEC{
 		encoder:        encoder,
+		dataShards:     8,
 		redundancy:     minRedundancy,
 		minRedundancy:  minRedundancy,
 		maxRedundancy:  maxRedundancy,
@@ -110,9 +112,8 @@ func (f *AdaptiveFEC) Decode(shards [][]byte) ([]byte, error) {
 		return nil, err
 	}
 
-	dataShards := f.encoder.DataShards()
 	outSize := 0
-	for i := 0; i < dataShards && i < len(shards); i++ {
+	for i := 0; i < f.dataShards && i < len(shards); i++ {
 		outSize += len(shards[i])
 	}
 
