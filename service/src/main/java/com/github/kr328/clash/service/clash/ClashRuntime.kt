@@ -68,6 +68,9 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         scope.block()
                     } finally {
                         withContext(NonCancellable) {
+                            try {
+                                Clash.requestOptimizerGC()
+                            } catch (_: Exception) {}
                             Clash.reset()
                             Clash.clearOverride(Clash.OverrideSlot.Session)
 

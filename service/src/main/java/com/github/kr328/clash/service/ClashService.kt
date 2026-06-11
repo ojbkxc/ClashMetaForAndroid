@@ -3,6 +3,7 @@ package com.github.kr328.clash.service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import com.github.kr328.clash.common.RootChecker
 import com.github.kr328.clash.common.compat.startForegroundServiceCompat
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.clash.clashRuntime
@@ -18,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 
 class ClashService : BaseService() {
     private val self: ClashService
@@ -79,6 +81,16 @@ class ClashService : BaseService() {
 
         StatusProvider.serviceRunning = true
 
+        // Cleanup any leftover DNS hijacking rules from previous installations on a background thread.
+        // This ensures no stale iptables rules remain if app was killed unexpectedly.
+        thread(isDaemon = true) {
+            try {
+                com.github.kr328.clash.service.root.RootHelper.cleanupLeftoverRules()
+            } catch (e: Exception) {
+                Log.w("cleanupLeftoverRules failed: ${e.message}")
+            }
+        }
+
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
 
@@ -108,6 +120,11 @@ class ClashService : BaseService() {
         sendClashStopped(reason)
 
         cancelAndJoinBlocking()
+
+        // Clear DNS hijacking rules on a background thread to avoid blocking main thread
+        thread(isDaemon = true) {
+            clearDnsHijackRulesOnDestroy()
+        }
 
         Log.i("ClashService destroyed: ${reason ?: "successfully"}")
 
@@ -145,5 +162,60 @@ class ClashService : BaseService() {
     private fun stopWatchdogKeepAlive() {
         watchdogJob?.cancel()
         watchdogJob = null
+    }
+
+    /**
+     * Clear DNS hijacking iptables rules on service destroy.
+     * Runs synchronously (called from a daemon background thread) to ensure
+     * cleanup is complete before the process exits.
+     */
+    private fun clearDnsHijackRulesOnDestroy() {
+        try {
+            if (!RootChecker.isRooted()) return
+
+            // Batch all cleanup commands into a single shell script for performance
+            val commands = mutableListOf<String>()
+
+            for (table in listOf("nat", "mangle")) {
+                // IPv4 rules - delete jumps then flush/delete chains
+                commands.add("iptables -t $table -D PREROUTING -j CLASH_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -D OUTPUT -j CLASH_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -D PREROUTING -j CLASH_DNS_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -D OUTPUT -j CLASH_DNS_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -D OUTPUT -j CLASH_LOCK_BG 2>/dev/null")
+                commands.add("iptables -t $table -F CLASH_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -X CLASH_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -F CLASH_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -X CLASH_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -F CLASH_DNS_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -X CLASH_DNS_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -F CLASH_DNS_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -X CLASH_DNS_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -F CLASH_LOCK_BG 2>/dev/null")
+                commands.add("iptables -t $table -X CLASH_LOCK_BG 2>/dev/null")
+
+                // IPv6 rules
+                commands.add("ip6tables -t $table -D PREROUTING -j CLASH_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D OUTPUT -j CLASH_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D PREROUTING -j CLASH_DNS_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D OUTPUT -j CLASH_DNS_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F CLASH_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X CLASH_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F CLASH_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X CLASH_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F CLASH_DNS_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X CLASH_DNS_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F CLASH_DNS_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X CLASH_DNS_LOCAL_V6 2>/dev/null")
+            }
+
+            // Execute as a single shell script (using ; not && to continue on errors)
+            val script = commands.joinToString(";")
+            RootChecker.execute(script)
+
+            Log.d("All clash rules cleared on destroy")
+        } catch (e: Exception) {
+            Log.e("Failed to clear clash rules", e)
+        }
     }
 }
