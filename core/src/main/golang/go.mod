@@ -4,7 +4,9 @@ go 1.20
 
 require (
 	github.com/dlclark/regexp2 v1.12.0
+	github.com/klauspost/reedsolomon v1.12.3
 	github.com/metacubex/mihomo v1.7.0
+	github.com/metacubex/quic-go v0.59.1-0.20260520020949-fcd18c7b6ace
 	golang.org/x/sync v0.11.0
 )
 
@@ -46,7 +48,6 @@ require (
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
-	github.com/klauspost/reedsolomon v1.12.3 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/metacubex/amneziawg-go v0.0.0-20251104174305-5a0e9f7e361d // indirect
@@ -71,7 +72,6 @@ require (
 	github.com/metacubex/mlkem v0.1.0 // indirect
 	github.com/metacubex/nftables v0.0.0-20260426003805-208c2c1ba2cb // indirect
 	github.com/metacubex/qpack v0.6.0 // indirect
-	github.com/metacubex/quic-go v0.59.1-0.20260520020949-fcd18c7b6ace // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
 	github.com/metacubex/restls-client-go v0.1.7 // indirect
 	github.com/metacubex/sing v0.5.7 // indirect
