@@ -11,6 +11,7 @@ import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.cancelAndJoinBlocking
 import com.github.kr328.clash.service.util.sendClashStarted
 import com.github.kr328.clash.service.util.sendClashStopped
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -23,7 +24,7 @@ class ClashService : BaseService() {
         get() = this
 
     private var reason: String? = null
-    private var watchdogJob: kotlinx.coroutines.Job? = null
+    private var watchdogJob: Job? = null
 
     private val runtime = clashRuntime {
         val store = ServiceStore(self)
@@ -133,7 +134,7 @@ class ClashService : BaseService() {
      * 如果服务进程被杀死，闹钟会在 60 秒后触发并重启服务。
      */
     private fun startWatchdogKeepAlive() {
-        watchdogJob = kotlinx.coroutines.launch {
+        watchdogJob = launch {
             while (isActive) {
                 delay(50_000L) // 50 seconds, less than the 60s watchdog interval
                 ProfileReceiver.scheduleWatchdog(this@ClashService)
