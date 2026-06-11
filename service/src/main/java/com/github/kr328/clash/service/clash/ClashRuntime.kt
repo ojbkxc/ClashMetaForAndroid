@@ -21,7 +21,11 @@ interface ClashRuntime {
 fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): ClashRuntime {
     return object : ClashRuntime {
         override fun launch() {
-            launch(Dispatchers.IO) {
+            val handler = CoroutineExceptionHandler { _, e ->
+                Log.e("ClashRuntime unhandled exception: ${e.message}", e)
+            }
+
+            launch(Dispatchers.IO + handler) {
                 globalLock.withLock {
                     Log.d("ClashRuntime: initialize")
 
@@ -38,7 +42,7 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         }
 
                         // Periodic TCP pool cleanup every 60 seconds
-                        val cleanupJob = launch {
+                        launch {
                             while (isActive) {
                                 delay(60_000)
                                 try {
@@ -62,8 +66,6 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         }
 
                         scope.block()
-
-                        cancel()
                     } finally {
                         withContext(NonCancellable) {
                             Clash.reset()

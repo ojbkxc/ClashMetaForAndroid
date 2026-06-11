@@ -120,7 +120,7 @@ func (o *Optimizer) PeriodicCleanup() {
 	tcpPool := o.tcpPool
 	o.mu.Unlock()
 
-	if !enabled {
+	if !enabled || tcpPool == nil {
 		return
 	}
 
@@ -136,8 +136,12 @@ func (o *Optimizer) UpdateLossRate(protocol string, lossRate float64) {
 		return
 	}
 
-	o.fec.UpdateLossRate(lossRate)
-	o.quicConfig.UpdateLossRate(lossRate)
+	if o.fec != nil {
+		o.fec.UpdateLossRate(lossRate)
+	}
+	if o.quicConfig != nil {
+		o.quicConfig.UpdateLossRate(lossRate)
+	}
 }
 
 func (o *Optimizer) UpdateRTT(protocol string, rtt time.Duration) {
@@ -149,7 +153,9 @@ func (o *Optimizer) UpdateRTT(protocol string, rtt time.Duration) {
 		return
 	}
 
-	o.retransmit.UpdateRTT(rtt)
+	if o.retransmit != nil {
+		o.retransmit.UpdateRTT(rtt)
+	}
 }
 
 func (o *Optimizer) Close() {
