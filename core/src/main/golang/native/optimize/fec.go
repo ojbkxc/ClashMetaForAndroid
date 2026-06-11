@@ -1,6 +1,7 @@
 package optimize
 
 import (
+	"bytes"
 	"sync"
 	"time"
 
@@ -109,7 +110,18 @@ func (f *AdaptiveFEC) Decode(shards [][]byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return f.encoder.Join(shards)
+	dataShards := f.encoder.DataShards()
+	outSize := 0
+	for i := 0; i < dataShards && i < len(shards); i++ {
+		outSize += len(shards[i])
+	}
+
+	var buf bytes.Buffer
+	err = f.encoder.Join(&buf, shards, outSize)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (f *AdaptiveFEC) GetRedundancy() int {

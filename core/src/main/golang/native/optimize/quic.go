@@ -3,8 +3,6 @@ package optimize
 import (
 	"sync"
 	"time"
-
-	"github.com/metacubex/quic-go"
 )
 
 type QUICDynamicConfig struct {
@@ -76,7 +74,7 @@ func (q *QUICDynamicConfig) GetWindowSize() uint32 {
 type QUICMultipath struct {
 	mu             sync.Mutex
 	enabled        bool
-	paths          []quic.Connection
+	paths          []any
 	activePath     int
 	pathScores     []float64
 	lastSwitchTime time.Time
@@ -86,7 +84,7 @@ type QUICMultipath struct {
 func NewQUICMultipath() *QUICMultipath {
 	return &QUICMultipath{
 		enabled:        false,
-		paths:          make([]quic.Connection, 0),
+		paths:          make([]any, 0),
 		activePath:     0,
 		pathScores:     make([]float64, 0),
 		lastSwitchTime: time.Now(),
@@ -106,7 +104,7 @@ func (m *QUICMultipath) Disable() {
 	m.mu.Unlock()
 }
 
-func (m *QUICMultipath) AddPath(conn quic.Connection) {
+func (m *QUICMultipath) AddPath(conn any) {
 	m.mu.Lock()
 	m.paths = append(m.paths, conn)
 	m.pathScores = append(m.pathScores, 1.0)
@@ -164,7 +162,7 @@ func (m *QUICMultipath) trySwitchPath() {
 	}
 }
 
-func (m *QUICMultipath) GetActivePath() quic.Connection {
+func (m *QUICMultipath) GetActivePath() any {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
