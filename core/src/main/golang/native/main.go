@@ -25,6 +25,12 @@ func main() {
 
 //export coreInit
 func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[APP] panic in coreInit: %v", r)
+		}
+	}()
+
 	h := C.GoString(home)
 	v := C.GoString(versionName)
 	g := C.GoString(gitVersion)
@@ -42,11 +48,24 @@ func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
 	optimize.SetupSocketHook()
 
 	// Lazy init optimizer in background - does not block startup
-	go optimize.Init()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorln("[APP] panic in optimize.Init: %v", r)
+			}
+		}()
+		optimize.Init()
+	}()
 }
 
 //export reset
 func reset() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[APP] panic in reset: %v", r)
+		}
+	}()
+
 	config.LoadDefault()
 	tunnel.ResetStatistic()
 	tunnel.CloseAllConnections()
@@ -57,6 +76,12 @@ func reset() {
 
 //export forceGc
 func forceGc() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[APP] panic in forceGc: %v", r)
+		}
+	}()
+
 	go func() {
 		log.Infoln("[APP] request force GC")
 
