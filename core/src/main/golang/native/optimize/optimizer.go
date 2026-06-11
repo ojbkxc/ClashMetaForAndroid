@@ -2,6 +2,7 @@ package optimize
 
 import (
 	"sync"
+	"time"
 )
 
 type Optimizer struct {

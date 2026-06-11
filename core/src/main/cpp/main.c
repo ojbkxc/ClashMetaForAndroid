@@ -527,3 +527,24 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeCoreVersion(JNIEnv *env, jo
 
     return new_string(Version);
 }
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeEnableOptimizer(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    enableOptimizer();
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeDisableOptimizer(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    disableOptimizer();
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeRequestOptimizerGC(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    requestOptimizerGC();
+}

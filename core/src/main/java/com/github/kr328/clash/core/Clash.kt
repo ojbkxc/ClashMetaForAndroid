@@ -225,4 +225,16 @@ object Clash {
             })
         }
     }
+
+    fun enableOptimizer() {
+        Bridge.nativeEnableOptimizer()
+    }
+
+    fun disableOptimizer() {
+        Bridge.nativeDisableOptimizer()
+    }
+
+    fun requestOptimizerGC() {
+        Bridge.nativeRequestOptimizerGC()
+    }
 }

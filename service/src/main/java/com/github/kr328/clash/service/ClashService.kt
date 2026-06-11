@@ -110,48 +110,63 @@ class ClashService : BaseService() {
 
     private fun clearDnsHijackRulesOnDestroy() {
         try {
-            // Clear all clash-related iptables rules to ensure network works after uninstall
+            // Batch all cleanup commands into a single shell script for performance
+            val commands = mutableListOf<String>()
+
             for (table in listOf("nat", "mangle")) {
-                // IPv4 rules
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -D PREROUTING -j CLASH_EXTERNAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -D OUTPUT -j CLASH_LOCAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -D PREROUTING -j CLASH_DNS_EXTERNAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -D OUTPUT -j CLASH_DNS_LOCAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -D OUTPUT -j CLASH_LOCK_BG 2>/dev/null")
-                
-                // Flush and remove chains
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -F CLASH_EXTERNAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -X CLASH_EXTERNAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -F CLASH_LOCAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -X CLASH_LOCAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -F CLASH_DNS_EXTERNAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -X CLASH_DNS_EXTERNAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -F CLASH_DNS_LOCAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -X CLASH_DNS_LOCAL 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -F CLASH_LOCK_BG 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("iptables -t $table -X CLASH_LOCK_BG 2>/dev/null")
-                
+                // IPv4 rules - delete jumps then flush/delete chains
+                commands.add("iptables -t $table -D PREROUTING -j $CHAIN_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -D OUTPUT -j $CHAIN_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -D OUTPUT -j $CHAIN_LOCK_BG 2>/dev/null")
+                commands.add("iptables -t $table -F $CHAIN_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -X $CHAIN_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -F $CHAIN_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -X $CHAIN_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -F $CHAIN_DNS_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -X $CHAIN_DNS_EXTERNAL 2>/dev/null")
+                commands.add("iptables -t $table -F $CHAIN_DNS_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -X $CHAIN_DNS_LOCAL 2>/dev/null")
+                commands.add("iptables -t $table -F $CHAIN_LOCK_BG 2>/dev/null")
+                commands.add("iptables -t $table -X $CHAIN_LOCK_BG 2>/dev/null")
+
                 // IPv6 rules
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -D PREROUTING -j CLASH_EXTERNAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -D OUTPUT -j CLASH_LOCAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -D PREROUTING -j CLASH_DNS_EXTERNAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -D OUTPUT -j CLASH_DNS_LOCAL_V6 2>/dev/null")
-                
-                // Flush and remove IPv6 chains
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -F CLASH_EXTERNAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -X CLASH_EXTERNAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -F CLASH_LOCAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -X CLASH_LOCAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -F CLASH_DNS_EXTERNAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -X CLASH_DNS_EXTERNAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -F CLASH_DNS_LOCAL_V6 2>/dev/null")
-                com.github.kr328.clash.service.root.RootChecker.execute("ip6tables -t $table -X CLASH_DNS_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D PREROUTING -j $CHAIN_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D OUTPUT -j $CHAIN_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D PREROUTING -j $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -D OUTPUT -j $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F $CHAIN_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X $CHAIN_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F $CHAIN_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X $CHAIN_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X $CHAIN_DNS_EXTERNAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -F $CHAIN_DNS_LOCAL_V6 2>/dev/null")
+                commands.add("ip6tables -t $table -X $CHAIN_DNS_LOCAL_V6 2>/dev/null")
             }
-            
+
+            // Execute as a single shell script (using ; not && to continue on errors)
+            val script = commands.joinToString(";")
+            com.github.kr328.clash.service.root.RootChecker.execute(script)
+
             Log.d("ClashService", "All clash rules cleared on destroy")
         } catch (e: Exception) {
             Log.e("ClashService", "Failed to clear clash rules", e)
         }
+    }
+
+    companion object {
+        // Chain name constants matching RootHelper
+        private const val CHAIN_EXTERNAL = "CLASH_EXTERNAL"
+        private const val CHAIN_LOCAL = "CLASH_LOCAL"
+        private const val CHAIN_LOCK_BG = "CLASH_LOCK_BG"
+        private const val CHAIN_DNS_EXTERNAL = "CLASH_DNS_EXTERNAL"
+        private const val CHAIN_DNS_LOCAL = "CLASH_DNS_LOCAL"
+        private const val CHAIN_EXTERNAL_V6 = "CLASH_EXTERNAL_V6"
+        private const val CHAIN_LOCAL_V6 = "CLASH_LOCAL_V6"
+        private const val CHAIN_DNS_EXTERNAL_V6 = "CLASH_DNS_EXTERNAL_V6"
+        private const val CHAIN_DNS_LOCAL_V6 = "CLASH_DNS_LOCAL_V6"
     }
 
     override fun onTrimMemory(level: Int) {

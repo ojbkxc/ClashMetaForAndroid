@@ -30,6 +30,7 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
 
                         Clash.reset()
                         Clash.clearOverride(Clash.OverrideSlot.Session)
+                        Clash.enableOptimizer()
 
                         val scope = object : ClashRuntimeScope {
                             override fun <E, T : Module<E>> install(module: T): T {
@@ -48,6 +49,7 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         cancel()
                     } finally {
                         withContext(NonCancellable) {
+                            Clash.requestOptimizerGC()
                             Clash.reset()
                             Clash.clearOverride(Clash.OverrideSlot.Session)
 

@@ -49,6 +49,9 @@ object Bridge {
     external fun nativeQueryConfiguration(): String
     external fun nativeSubscribeLogcat(callback: LogcatInterface)
     external fun nativeCoreVersion(): String
+    external fun nativeEnableOptimizer()
+    external fun nativeDisableOptimizer()
+    external fun nativeRequestOptimizerGC()
 
     private external fun nativeInit(home: String, versionName: String, sdkVersion: Int)
 
