@@ -548,3 +548,17 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeRequestOptimizerGC(JNIEnv *
 
     requestOptimizerGC();
 }
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativePeriodicOptimizerCleanup(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    periodicOptimizerCleanup();
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeSetOptimizerDNSTimeout(JNIEnv *env, jint seconds) {
+    TRACE_METHOD();
+
+    setOptimizerDNSTimeout(seconds);
+}

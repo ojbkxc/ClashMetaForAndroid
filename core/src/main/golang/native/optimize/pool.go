@@ -107,6 +107,26 @@ func (p *BasePool) Len() int {
 	return len(p.conns)
 }
 
+func (p *BasePool) Cleanup() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return
+	}
+
+	now := time.Now()
+	valid := make([]pooledConn, 0, len(p.conns))
+	for _, pc := range p.conns {
+		if now.Sub(pc.addedAt) <= p.idleTimeout {
+			valid = append(valid, pc)
+		} else {
+			pc.conn.Close()
+		}
+	}
+	p.conns = valid
+}
+
 type PoolManager struct {
 	mu       sync.Mutex
 	pools    map[string]ConnPool
@@ -168,6 +188,21 @@ func (m *PoolManager) Close() {
 		pool.Close()
 	}
 	m.pools = nil
+}
+
+func (m *PoolManager) Cleanup() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for protocol, pool := range m.pools {
+		if bp, ok := pool.(*BasePool); ok {
+			bp.Cleanup()
+			if bp.Len() == 0 {
+				pool.Close()
+				delete(m.pools, protocol)
+			}
+		}
+	}
 }
 
 func (m *PoolManager) GetPoolCount() int {

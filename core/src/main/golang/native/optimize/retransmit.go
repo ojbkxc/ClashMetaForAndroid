@@ -117,3 +117,17 @@ func (r *SmartRetransmit) GetRTT() time.Duration {
 	defer r.mu.Unlock()
 	return r.rtt
 }
+
+// Cleanup removes items that have been pending for too long (e.g., 30s+ without resolution).
+// Prevents stale entries from accumulating if callbacks are never triggered.
+func (r *SmartRetransmit) Cleanup() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now()
+	for seqNum, item := range r.items {
+		if now.Sub(item.sendTime) > 30*time.Second {
+			delete(r.items, seqNum)
+		}
+	}
+}

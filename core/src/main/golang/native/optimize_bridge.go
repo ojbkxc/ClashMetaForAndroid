@@ -48,6 +48,8 @@ func disableOptimizer() {
 }
 
 //export requestOptimizerGC
+// Shuts down the entire optimizer (TCP pools, DNS cache, retransmit state, protocol pools).
+// Called when the Clash runtime is shutting down to release all managed resources.
 func requestOptimizerGC() {
 	defer func() {
 		if r := recover(); r != nil {
