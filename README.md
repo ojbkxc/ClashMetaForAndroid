@@ -87,6 +87,8 @@ By using this software, you acknowledge and agree that you are not located in ma
 
 ### 高级优化特性
 
+项目集成了完整的性能优化模块，位于 `core/src/main/golang/native/optimize/`：
+
 | 优化类别 | 具体内容 | 预期收益 |
 |----------|----------|----------|
 | **UDP 缓冲区优化** | 增大到 1MB+ 级别 | 提升高带宽传输稳定性 |
@@ -97,6 +99,10 @@ By using this software, you acknowledge and agree that you are not located in ma
 | **对象池优化** | 缓冲区复用机制 | 减少内存分配开销 |
 | **并发优化** | 批量命令并行执行 | 提升初始化速度 |
 | **连接池复用** | Shell 会话复用 | 减少 su 启动开销 |
+| **自适应 FEC** | 根据丢包率动态调整冗余度 | 提升高丢包环境稳定性 |
+| **智能重传** | 基于 RTT 判断重传时机 | 减少不必要的重传 |
+| **QUIC 动态配置** | 根据丢包率调整窗口大小 | 优化 QUIC 协议性能 |
+| **QUIC 多路径** | 支持多路径传输 | 提升连接可靠性 |
 
 ### 代码质量保障
 
@@ -136,6 +142,8 @@ ClashMetaForAndroid/
 │   └── src/
 │       ├── foss/golang/    # Go 原生代码（mihomo 内核）
 │       ├── main/golang/    # Go JNI 桥接层
+│       │   └── native/
+│       │       └── optimize/  # 性能优化模块
 │       └── main/cpp/       # C JNI 桥接层
 ├── service/                # 后台服务模块
 │   └── src/main/java/      # ClashService、TunService、ProfileManager
