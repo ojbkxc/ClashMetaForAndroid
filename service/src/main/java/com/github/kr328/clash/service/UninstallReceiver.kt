@@ -10,7 +10,7 @@ class UninstallReceiver : BroadcastReceiver() {
         if (intent.action == Intent.ACTION_PACKAGE_REMOVED) {
             val packageName = intent.data?.schemeSpecificPart
             if (packageName == context.packageName) {
-                Log.d("UninstallReceiver", "Package $packageName removed, cleaning up DNS hijack rules")
+                Log.d("Package $packageName removed, cleaning up DNS hijack rules")
                 cleanupDnsHijack()
             }
         }
@@ -35,9 +35,9 @@ class UninstallReceiver : BroadcastReceiver() {
                 execute("ip6tables -t $table -F CLASH_DNS_LOCAL_V6 2>/dev/null")
                 execute("ip6tables -t $table -X CLASH_DNS_LOCAL_V6 2>/dev/null")
             }
-            Log.d("UninstallReceiver", "DNS hijack rules cleaned up successfully")
+            Log.d("DNS hijack rules cleaned up successfully")
         } catch (e: Exception) {
-            Log.e("UninstallReceiver", "Failed to cleanup DNS hijack rules", e)
+            Log.e("Failed to cleanup DNS hijack rules", e)
         }
     }
 

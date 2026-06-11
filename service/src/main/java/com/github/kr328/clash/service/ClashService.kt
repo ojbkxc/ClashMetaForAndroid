@@ -151,9 +151,9 @@ class ClashService : BaseService() {
             val script = commands.joinToString(";")
             RootChecker.execute(script)
 
-            Log.d("ClashService", "All clash rules cleared on destroy")
+            Log.d("All clash rules cleared on destroy")
         } catch (e: Exception) {
-            Log.e("ClashService", "Failed to clear clash rules", e)
+            Log.e("Failed to clear clash rules", e)
         }
     }
 
