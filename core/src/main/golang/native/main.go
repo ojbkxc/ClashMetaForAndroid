@@ -100,6 +100,12 @@ func forceGc() {
 	}()
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorln("[APP] panic in forceGc goroutine: %v", r)
+			}
+		}()
+
 		log.Infoln("[APP] request force GC")
 
 		runtime.GC()
