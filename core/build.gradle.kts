@@ -24,6 +24,7 @@ golang {
         all {
             fileName.set("libclash.so")
             packageName.set("cfa/native")
+            ldflags.set("-s -w")
         }
     }
 }

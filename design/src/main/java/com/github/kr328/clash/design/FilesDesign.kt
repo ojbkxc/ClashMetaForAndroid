@@ -40,7 +40,7 @@ class FilesDesign(context: Context) : Design<FilesDesign.Request>(context) {
 
     suspend fun swapFiles(files: List<File>, currentInBaseDir: Boolean) {
         withContext(Dispatchers.Main) {
-            adapter.swapDataSet(adapter::files, files)
+            adapter.submitList(files)
             binding.currentInBaseDir = currentInBaseDir
         }
     }

@@ -168,13 +168,20 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
                     withContext(Dispatchers.IO) {
                         it.writeHeader(file.date)
 
+                        var lastProgress = 0
                         messages.forEachIndexed { idx, msg ->
-                            configure {
-                                isIndeterminate = false
-                                progress = idx
-                            }
-
                             it.writeMessage(msg)
+                            // Update progress bar every 50 messages to reduce context switches
+                            val current = idx + 1
+                            if (current - lastProgress >= 50 || current == messages.size) {
+                                lastProgress = current
+                                withContext(Dispatchers.Main) {
+                                    configure {
+                                        isIndeterminate = false
+                                        progress = idx
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -34,6 +34,9 @@ func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
 
 	reset()
 
+	// Reduce GC target to lower memory peak on mobile devices
+	debug.SetGCPercent(50)
+
 	// Lazy init optimizer in background - does not block startup
 	go optimize.Init()
 }

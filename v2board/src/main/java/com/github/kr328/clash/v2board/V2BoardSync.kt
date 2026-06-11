@@ -5,8 +5,10 @@ import android.os.Build
 import com.github.kr328.clash.common.log.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import org.json.JSONObject
+import java.io.File
 import java.net.Proxy
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -34,6 +36,8 @@ class V2BoardSync(private val context: Context) {
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
+            .connectionPool(ConnectionPool(5, 1, TimeUnit.MINUTES))
+            .cache(okhttp3.Cache(File(context.cacheDir, "okhttp"), 2 * 1024 * 1024))
             // 禁用代理，防止 Charles/Fiddler 等抓包工具拦截
             .proxy(Proxy.NO_PROXY)
 
