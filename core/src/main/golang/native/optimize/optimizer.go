@@ -12,6 +12,8 @@ type Optimizer struct {
 	quicConfig      *QUICDynamicConfig
 	quicMultipath   *QUICMultipath
 	poolManager     *PoolManager
+	tcpPool         *TCPConnPool
+	dnsTimeout      time.Duration
 	enabled         bool
 }
 
@@ -27,6 +29,8 @@ func NewOptimizer() (*Optimizer, error) {
 		quicConfig:     NewQUICDynamicConfig(),
 		quicMultipath:  NewQUICMultipath(),
 		poolManager:    NewPoolManager(),
+		tcpPool:        NewTCPConnPool(200, 30*time.Second, 10),
+		dnsTimeout:     5 * time.Second,
 		enabled:        true,
 	}, nil
 }
@@ -79,6 +83,37 @@ func (o *Optimizer) GetPoolManager() *PoolManager {
 	return o.poolManager
 }
 
+func (o *Optimizer) GetTCPPool() *TCPConnPool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.tcpPool
+}
+
+func (o *Optimizer) SetDNSTimeout(d time.Duration) {
+	o.mu.Lock()
+	o.dnsTimeout = d
+	o.mu.Unlock()
+}
+
+func (o *Optimizer) GetDNSTimeout() time.Duration {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.dnsTimeout
+}
+
+func (o *Optimizer) PeriodicCleanup() {
+	o.mu.Lock()
+	enabled := o.enabled
+	tcpPool := o.tcpPool
+	o.mu.Unlock()
+
+	if !enabled {
+		return
+	}
+
+	tcpPool.Cleanup()
+}
+
 func (o *Optimizer) UpdateLossRate(protocol string, lossRate float64) {
 	o.mu.Lock()
 	enabled := o.enabled
@@ -110,6 +145,9 @@ func (o *Optimizer) Close() {
 
 	o.enabled = false
 	o.poolManager.Close()
+	if o.tcpPool != nil {
+		o.tcpPool.Close()
+	}
 	// Note: The optimizer is a singleton; after Close() it cannot be re-enabled.
 }
 

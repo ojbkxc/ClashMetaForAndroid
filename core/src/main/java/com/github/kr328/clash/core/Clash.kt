@@ -237,4 +237,12 @@ object Clash {
     fun requestOptimizerGC() {
         Bridge.nativeRequestOptimizerGC()
     }
+
+    fun periodicOptimizerCleanup() {
+        Bridge.nativePeriodicOptimizerCleanup()
+    }
+
+    fun setOptimizerDNSTimeout(seconds: Int) {
+        Bridge.nativeSetOptimizerDNSTimeout(seconds)
+    }
 }

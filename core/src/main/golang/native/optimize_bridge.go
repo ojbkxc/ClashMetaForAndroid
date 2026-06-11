@@ -5,6 +5,7 @@ import "C"
 
 import (
 	"cfa/native/optimize"
+	"time"
 
 	"github.com/metacubex/mihomo/log"
 )
@@ -18,7 +19,7 @@ func enableOptimizer() {
 		return
 	}
 	opt.Enable()
-	log.Infoln("[Optimizer] enabled")
+	log.Infoln("[Optimizer] enabled (tcpConcurrent=true, dnsTimeout=3s)")
 }
 
 //export disableOptimizer
@@ -42,4 +43,23 @@ func requestOptimizerGC() {
 	// The optimizer cannot be re-enabled after this call.
 	opt.Close()
 	log.Infoln("[Optimizer] shutdown complete")
+}
+
+//export periodicOptimizerCleanup
+func periodicOptimizerCleanup() {
+	opt, err := optimize.GetGlobalOptimizer()
+	if err != nil {
+		return
+	}
+	opt.PeriodicCleanup()
+}
+
+//export setOptimizerDNSTimeout
+func setOptimizerDNSTimeout(seconds C.int) {
+	opt, err := optimize.GetGlobalOptimizer()
+	if err != nil {
+		return
+	}
+	opt.SetDNSTimeout(time.Duration(seconds) * time.Second)
+	log.Infoln("[Optimizer] DNS timeout set to %d seconds", int(seconds))
 }

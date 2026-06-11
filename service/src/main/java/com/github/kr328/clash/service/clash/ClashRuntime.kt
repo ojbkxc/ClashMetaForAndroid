@@ -32,6 +32,14 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         Clash.clearOverride(Clash.OverrideSlot.Session)
                         Clash.enableOptimizer()
 
+                        // Periodic TCP pool cleanup every 60 seconds
+                        val cleanupJob = launch {
+                            while (isActive) {
+                                delay(60_000)
+                                Clash.periodicOptimizerCleanup()
+                            }
+                        }
+
                         val scope = object : ClashRuntimeScope {
                             override fun <E, T : Module<E>> install(module: T): T {
                                 launch {

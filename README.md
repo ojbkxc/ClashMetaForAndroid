@@ -91,6 +91,9 @@ By using this software, you acknowledge and agree that you are not located in ma
 
 | 优化类别 | 具体内容 | 预期收益 |
 |----------|----------|----------|
+| **TCP 连接池** | 复用 TCP/TLS 连接，支持 VMess/VLESS/Trojan/SS | 减少握手开销，降低延迟 50-100ms |
+| **TCP 并发拨号** | 默认启用多 IP 并发连接 | 多 IP 场景下连接建立更快 |
+| **DNS 超时优化** | 默认超时从 5s 降至 3s | 加快 DNS 失败时的 fallback |
 | **UDP 缓冲区优化** | 增大到 1MB+ 级别 | 提升高带宽传输稳定性 |
 | **连接跟踪优化** | 优化超时时间为 10/60 秒 | 减少内存占用，提升并发 |
 | **队列优化** | 增大网络队列到 8192 | 减少高负载丢包 |
@@ -103,6 +106,7 @@ By using this software, you acknowledge and agree that you are not located in ma
 | **智能重传** | 基于 RTT 判断重传时机 | 减少不必要的重传 |
 | **QUIC 动态配置** | 根据丢包率调整窗口大小 | 优化 QUIC 协议性能 |
 | **QUIC 多路径** | 支持多路径传输 | 提升连接可靠性 |
+| **定时清理** | 每 60s 清理过期连接，释放资源 | 防止连接泄漏，稳定内存占用 |
 
 ### 代码质量保障
 
@@ -116,6 +120,9 @@ By using this software, you acknowledge and agree that you are not located in ma
 
 | 功能 | VPN 模式（非 root） | 透明代理模式（root） | 说明 |
 |------|---------------------|----------------------|------|
+| TCP 连接池 | ✅ | ✅ | 协议层连接复用 |
+| TCP 并发拨号 | ✅ | ✅ | 多 IP 并发连接 |
+| DNS 超时优化 | ✅ | ✅ | 默认 3s 超时 |
 | 对象池优化 | ✅ | ✅ | 减少内存分配开销 |
 | 并发优化 | ✅ | ✅ | 提升初始化速度 |
 | Hysteria2/QUIC | ✅ | ✅ | 协议层面支持 |
@@ -140,10 +147,11 @@ ClashMetaForAndroid/
 │       └── assets/         # 内置资源（about.html、geo 数据）
 ├── core/                   # 核心代理模块
 │   └── src/
-│       ├── foss/golang/    # Go 原生代码（mihomo 内核）
+│       ├── foss/golang/    # Go 原生代码（mihomo 内核，Git 子模块）
 │       ├── main/golang/    # Go JNI 桥接层
 │       │   └── native/
-│       │       └── optimize/  # 性能优化模块
+│       │       ├── optimize/        # 性能优化模块（TCP 连接池、FEC、QUIC 等）
+│       │       └── optimize_bridge.go  # JNI 导出桥接
 │       └── main/cpp/       # C JNI 桥接层
 ├── service/                # 后台服务模块
 │   └── src/main/java/      # ClashService、TunService、ProfileManager
@@ -351,6 +359,9 @@ key.password=<password>
 | kaidl | AIDL 接口代码生成 |
 | AndroidX | 基础 UI 组件 |
 | Kotlin Coroutines | 异步任务处理 |
+| reedsolomon | Go 端 FEC 纠删码 |
+
+> **Go 模块注意**：每次修改 `core/src/main/golang/` 下的 Go 代码后，需在 CI 中执行 `go mod tidy` 同步依赖。GitHub Actions 工作流已包含此步骤。
 
 ---
 
