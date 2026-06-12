@@ -180,7 +180,6 @@ func (m *PoolManager) Cleanup() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	now := time.Now()
 	for key, pool := range m.pools {
 		// Remove pools that have been idle for too long
 		if pool.Len() == 0 {

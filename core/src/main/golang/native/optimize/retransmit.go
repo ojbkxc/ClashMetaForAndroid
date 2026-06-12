@@ -123,7 +123,6 @@ func (r *SmartRetransmit) Cleanup() {
 	defer r.mu.Unlock()
 
 	// Remove expired items that have exceeded max retries
-	now := time.Now()
 	for seqNum, item := range r.items {
 		if item.retryCount >= item.maxRetries {
 			delete(r.items, seqNum)
