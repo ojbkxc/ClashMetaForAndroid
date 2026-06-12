@@ -95,14 +95,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setProfilePlanName(name: String?) {
         withContext(Dispatchers.Main) {
             binding.cardStatus.trailingText = name
-            binding.cardStatus.setTrailingTextSize(14f)
+            binding.cardStatus.setTrailingTextSize(15f)
         }
     }
 
     suspend fun setProfileExpiryInfo(text: String?, color: Int? = null) {
         withContext(Dispatchers.Main) {
             binding.cardStatus.trailingText2 = text
-            binding.cardStatus.setTrailingText2Size(8f)
+            binding.cardStatus.setTrailingText2Size(12f)
             if (color != null) {
                 binding.cardStatus.setTrailingText2Color(color)
             }

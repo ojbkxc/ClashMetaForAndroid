@@ -61,3 +61,15 @@ func (c *dnsCache) size() int {
 	defer c.mu.RUnlock()
 	return len(c.storeMap)
 }
+
+func (c *dnsCache) cleanup() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	for host, entry := range c.storeMap {
+		if now.After(entry.expiresAt) {
+			delete(c.storeMap, host)
+		}
+	}
+}

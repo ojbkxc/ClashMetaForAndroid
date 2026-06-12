@@ -117,3 +117,16 @@ func (r *SmartRetransmit) GetRTT() time.Duration {
 	defer r.mu.Unlock()
 	return r.rtt
 }
+
+func (r *SmartRetransmit) Cleanup() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Remove expired items that have exceeded max retries
+	now := time.Now()
+	for seqNum, item := range r.items {
+		if item.retryCount >= item.maxRetries {
+			delete(r.items, seqNum)
+		}
+	}
+}
