@@ -10,8 +10,17 @@ import (
 	"github.com/metacubex/mihomo/log"
 )
 
+// A CGo-exported function that panics will terminate the entire Android process.
+// All exported functions use defer/recover to prevent panics from crashing the app.
+
 //export enableOptimizer
 func enableOptimizer() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Optimizer] panic in enableOptimizer: %v", r)
+		}
+	}()
+
 	optimize.Init()
 	opt, err := optimize.GetGlobalOptimizer()
 	if err != nil {
@@ -24,6 +33,12 @@ func enableOptimizer() {
 
 //export disableOptimizer
 func disableOptimizer() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Optimizer] panic in disableOptimizer: %v", r)
+		}
+	}()
+
 	opt, err := optimize.GetGlobalOptimizer()
 	if err != nil {
 		return
@@ -33,7 +48,15 @@ func disableOptimizer() {
 }
 
 //export requestOptimizerGC
+// Shuts down the entire optimizer (TCP pools, DNS cache, retransmit state, protocol pools).
+// Called when the Clash runtime is shutting down to release all managed resources.
 func requestOptimizerGC() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Optimizer] panic in requestOptimizerGC: %v", r)
+		}
+	}()
+
 	opt, err := optimize.GetGlobalOptimizer()
 	if err != nil {
 		return
@@ -47,6 +70,12 @@ func requestOptimizerGC() {
 
 //export periodicOptimizerCleanup
 func periodicOptimizerCleanup() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Optimizer] panic in periodicOptimizerCleanup: %v", r)
+		}
+	}()
+
 	opt, err := optimize.GetGlobalOptimizer()
 	if err != nil {
 		return
@@ -56,6 +85,12 @@ func periodicOptimizerCleanup() {
 
 //export setOptimizerDNSTimeout
 func setOptimizerDNSTimeout(seconds C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Optimizer] panic in setOptimizerDNSTimeout: %v", r)
+		}
+	}()
+
 	opt, err := optimize.GetGlobalOptimizer()
 	if err != nil {
 		return

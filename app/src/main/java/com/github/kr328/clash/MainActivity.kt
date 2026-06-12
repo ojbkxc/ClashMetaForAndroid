@@ -19,6 +19,7 @@ import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.util.BatteryOptimization
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
@@ -61,10 +62,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                     com.github.kr328.clash.common.RootChecker.isRooted()
                 }
                 if (isRooted) {
-                    AppLog.d("MainActivity", "Device is rooted, requesting root access...")
-                    withContext(Dispatchers.IO) {
-                        com.github.kr328.clash.common.RootChecker.requestRoot()
-                    }
+                    AppLog.d("MainActivity", "Device is rooted.")
+                    // Do NOT call requestRoot() here - it would trigger the superuser
+                    // dialog at startup. Root is requested only when the user explicitly
+                    // clicks "Request Root Permission" in Root Settings.
                 }
             } catch (e: Exception) {
                 AppLog.e("MainActivity", "Root detection failed", e)
@@ -253,6 +254,14 @@ class MainActivity : BaseActivity<MainDesign>() {
 
                 if (result.resultCode == RESULT_OK)
                     startClashService()
+            }
+
+            // Warn about battery optimization
+            if (!BatteryOptimization.isIgnoringBatteryOptimizations(this@MainActivity)) {
+                design?.showToast(
+                    DesignR.string.battery_optimization_warning,
+                    ToastDuration.Long
+                )
             }
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)

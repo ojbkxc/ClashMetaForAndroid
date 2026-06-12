@@ -12,6 +12,7 @@ import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendProfileLoaded
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.selects.select
 import java.util.*
 
@@ -28,6 +29,7 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
         }
 
         var loaded: UUID? = null
+        var consecutiveFailures = 0
 
         reload.trySend(Unit)
 
@@ -71,9 +73,28 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
 
                 service.sendProfileLoaded(current)
 
+                consecutiveFailures = 0
+
                 Log.d("Profile ${active.name} loaded")
             } catch (e: Exception) {
-                return enqueueEvent(LoadException(e.message ?: "Unknown"))
+                Log.e("Profile load failed: ${e.message}", e)
+
+                consecutiveFailures++
+
+                // If initial load fails, retry with backoff instead of crashing
+                if (loaded == null) {
+                    val backoff = minOf(consecutiveFailures * 5_000L, 60_000L)
+                    Log.w("ConfigurationModule: retrying initial load in ${backoff}ms (attempt $consecutiveFailures)")
+                    delay(backoff)
+                    reload.trySend(Unit)
+                    continue
+                }
+
+                // Re-load of already running profile failed: keep old config and retry after delay
+                val backoff = minOf(consecutiveFailures * 10_000L, 120_000L)
+                Log.w("ConfigurationModule: profile reload failed, retrying in ${backoff}ms (attempt $consecutiveFailures)")
+                delay(backoff)
+                reload.trySend(Unit)
             }
         }
     }

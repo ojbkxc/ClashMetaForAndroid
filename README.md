@@ -50,7 +50,7 @@ By using this software, you acknowledge and agree that you are not located in ma
 | **状态栏图标** | 显示 VPN 图标 | 无额外图标 |
 | **代理范围** | 应用层流量 | 全部流量（含系统服务） |
 | **DNS 处理** | 应用内 DNS | 支持 DNS 劫持 |
-| **后台保活** | 系统管理 | 支持锁定后台 |
+| **后台保活** | WakeLock + Watchdog | 支持锁定后台 |
 | **兼容性** | 通用兼容 | 部分设备可能冲突 |
 | **安全性** | 系统级保护 | 需信任应用 |
 
@@ -107,6 +107,20 @@ By using this software, you acknowledge and agree that you are not located in ma
 | **QUIC 动态配置** | 根据丢包率调整窗口大小 | 优化 QUIC 协议性能 |
 | **QUIC 多路径** | 支持多路径传输 | 提升连接可靠性 |
 | **定时清理** | 每 60s 清理过期连接，释放资源 | 防止连接泄漏，稳定内存占用 |
+| **异常保护** | try-catch 包裹所有优化器调用 | 优化器异常不影响主服务运行 |
+| **YAML 配置注入** | 自动优化 Hysteria2/TUIC 协议参数 | 开箱即用的高性能配置 |
+
+### 后台保活机制
+
+应用实现了多层级的后台保活策略，确保服务在息屏、内存压力、被系统回收等场景下持续运行：
+
+| 机制 | 说明 | 适用模式 |
+|------|------|---------|
+| **WakeLock** | PARTIAL_WAKE_LOCK 持续持有，防止 CPU 休眠 | VPN / Root |
+| **AlarmManager Watchdog** | 每 60s 一次精准闹钟，服务被系统杀死后自动拉活 | VPN / Root |
+| **Watchdog KeepAlive** | 每 50s 续期闹钟，避免闹钟在服务存活时误触发 | VPN / Root |
+| **onTaskRemoved 重启** | 用户从最近任务划掉后自动重启服务 | VPN / Root |
+| **模式感知重启** | 看门狗根据 VPN 开关只重启正确的服务，避免资源浪费 | VPN / Root |
 
 ### 代码质量保障
 
@@ -115,6 +129,8 @@ By using this software, you acknowledge and agree that you are not located in ma
 - ✅ **协程规范**：suspend 函数使用 `delay()` 而非 `Thread.sleep()`
 - ✅ **资源管理**：IO 资源使用 `use()` 模式自动关闭
 - ✅ **并发安全**：共享可变状态添加 `@Volatile` 注解
+- ✅ **容错设计**：优化器、DNS 清理、网络请求等关键路径 try-catch 保护
+- ✅ **服务保活**：WakeLock + AlarmManager Watchdog + onTaskRemoved 多层守护
 
 ### 功能权限对比
 
@@ -133,6 +149,8 @@ By using this software, you acknowledge and agree that you are not located in ma
 | DNS 劫持 | ❌ | ✅ | 需 iptables 规则 |
 | 透明代理 | ❌ | ✅ | 需 TPROXY/REDIRECT 规则 |
 | 锁定后台 | ❌ | ✅ | 需 iptables 标记 |
+| WakeLock 保活 | ✅ | ✅ | PARTIAL_WAKE_LOCK 防止 CPU 休眠 |
+| Watchdog 守护 | ✅ | ✅ | AlarmManager 精准闹钟拉活 |
 
 ---
 

@@ -86,6 +86,10 @@
     <string name="override">재정의</string>
     <string name="auto_restart">자동 재시작</string>
     <string name="allow_clash_auto_restart">Clash 앱이 자동으로 재시작하도록 합니다.</string>
+    <string name="battery_optimization">Battery Optimization</string>
+    <string name="battery_optimization_off">Battery optimization is disabled (recommended)</string>
+    <string name="battery_optimization_on_warning">Battery optimization is enabled - tap to disable to prevent background kills</string>
+    <string name="battery_optimization_warning">Battery optimization is enabled, service may be killed in background. Go to App Settings to disable it.</string>
     <string name="route_system_traffic">시스템 트래픽 우회</string>
     <string name="routing_via_vpn_service">모든 시스템 트래픽이 자동으로 VPN 우회 서비스를 이용합니다.</string>
     <string name="vpn_service_options">VPN 서비스 옵션</string>

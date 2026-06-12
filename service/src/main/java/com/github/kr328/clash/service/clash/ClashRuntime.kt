@@ -21,7 +21,11 @@ interface ClashRuntime {
 fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): ClashRuntime {
     return object : ClashRuntime {
         override fun launch() {
-            launch(Dispatchers.IO) {
+            val handler = CoroutineExceptionHandler { _, e ->
+                Log.e("ClashRuntime unhandled exception: ${e.message}", e)
+            }
+
+            launch(Dispatchers.IO + handler) {
                 globalLock.withLock {
                     Log.d("ClashRuntime: initialize")
 
@@ -30,13 +34,22 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
 
                         Clash.reset()
                         Clash.clearOverride(Clash.OverrideSlot.Session)
-                        Clash.enableOptimizer()
+
+                        try {
+                            Clash.enableOptimizer()
+                        } catch (e: Exception) {
+                            Log.w("ClashRuntime: enableOptimizer failed: ${e.message}")
+                        }
 
                         // Periodic TCP pool cleanup every 60 seconds
-                        val cleanupJob = launch {
+                        launch {
                             while (isActive) {
                                 delay(60_000)
-                                Clash.periodicOptimizerCleanup()
+                                try {
+                                    Clash.periodicOptimizerCleanup()
+                                } catch (e: Exception) {
+                                    Log.w("ClashRuntime: periodicOptimizerCleanup failed: ${e.message}")
+                                }
                             }
                         }
 
@@ -53,11 +66,11 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                         }
 
                         scope.block()
-
-                        cancel()
                     } finally {
                         withContext(NonCancellable) {
-                            Clash.requestOptimizerGC()
+                            try {
+                                Clash.requestOptimizerGC()
+                            } catch (_: Exception) {}
                             Clash.reset()
                             Clash.clearOverride(Clash.OverrideSlot.Session)
 

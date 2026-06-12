@@ -17,6 +17,7 @@ import okhttp3.Request
 import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 class NetworkObserveModule(service: Service) : Module<Network>(service) {
     private val connectivity = service.getSystemService<ConnectivityManager>()!!
@@ -66,9 +67,9 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             networkInfos.remove(network)
             notifyDnsChange()
 
-            // 网络切换时自动清理连接（异步执行，不阻塞回调线程）
+            // 网络切换时自动清理连接（daemon 线程执行，不阻塞回调且不阻止 JVM 退出）
             if (store.clearConnectionsOnNetworkChange) {
-                Thread {
+                thread(isDaemon = true) {
                     try {
                         val request = Request.Builder()
                             .url("http://127.0.0.1:9090/connections")
@@ -79,7 +80,7 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
                     } catch (e: Exception) {
                         Log.w("NetworkObserve: failed to clear connections: ${e.message}")
                     }
-                }.start()
+                }
             }
 
             networks.trySend(network)

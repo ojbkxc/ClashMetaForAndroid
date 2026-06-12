@@ -51,10 +51,11 @@ object RootHelper {
     }
 
     /**
-     * Check if root permission is available
+     * Check if root permission is available (passive check only, no dialog)
+     * Use requestRootWithRetry() for active root request with dialog
      */
     fun isRootAvailable(): Boolean {
-        return RootChecker.isRooted() && RootChecker.requestRoot()
+        return RootChecker.isRooted()
     }
 
     /**

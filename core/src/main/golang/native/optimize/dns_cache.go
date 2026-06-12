@@ -10,6 +10,7 @@ import (
 type dnsCache struct {
 	mu       sync.RWMutex
 	ttl      time.Duration
+	maxSize  int
 	storeMap map[string]*dnsCacheEntry
 }
 
@@ -21,6 +22,7 @@ type dnsCacheEntry struct {
 func newDNSCache(ttlSeconds int) *dnsCache {
 	return &dnsCache{
 		ttl:      time.Duration(ttlSeconds) * time.Second,
+		maxSize:  512, // prevent unbounded growth on mobile
 		storeMap: make(map[string]*dnsCacheEntry, 64),
 	}
 }
@@ -43,17 +45,43 @@ func (c *dnsCache) lookup(host string) (string, bool) {
 
 func (c *dnsCache) store(host, ip string) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// If at capacity, evict random entries to make room
+	if len(c.storeMap) >= c.maxSize {
+		e := make([]string, 0, len(c.storeMap))
+		for k := range c.storeMap {
+			e = append(e, k)
+		}
+		// Evict the newest entries first (keeping older, more stable entries)
+		evictCount := len(c.storeMap) - c.maxSize + 1
+		for i := 0; i < evictCount && i < len(e); i++ {
+			delete(c.storeMap, e[i])
+		}
+	}
+
 	c.storeMap[host] = &dnsCacheEntry{
 		expiresAt: time.Now().Add(c.ttl),
 		ip:        ip,
 	}
-	c.mu.Unlock()
 }
 
 func (c *dnsCache) clear() {
 	c.mu.Lock()
 	c.storeMap = make(map[string]*dnsCacheEntry, 64)
 	c.mu.Unlock()
+}
+
+func (c *dnsCache) cleanup() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	for host, entry := range c.storeMap {
+		if now.After(entry.expiresAt) {
+			delete(c.storeMap, host)
+		}
+	}
 }
 
 func (c *dnsCache) size() int {

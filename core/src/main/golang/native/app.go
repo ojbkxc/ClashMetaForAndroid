@@ -14,11 +14,12 @@ import (
 
 func openRemoteContent(url string) (int, error) {
 	u := C.CString(url)
+	defer C.free(unsafe.Pointer(u))
+
 	e := (*C.char)(C.malloc(1024))
+	defer C.free(unsafe.Pointer(e))
 
 	log.Debugln("Open remote url: %s", url)
-
-	defer C.free(unsafe.Pointer(e))
 
 	fd := C.open_content(u, e, 1024)
 
@@ -31,6 +32,12 @@ func openRemoteContent(url string) (int, error) {
 
 //export notifyDnsChanged
 func notifyDnsChanged(dnsList C.c_string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[App] panic in notifyDnsChanged: %v", r)
+		}
+	}()
+
 	d := C.GoString(dnsList)
 
 	app.NotifyDnsChanged(d)
@@ -38,6 +45,12 @@ func notifyDnsChanged(dnsList C.c_string) {
 
 //export notifyInstalledAppsChanged
 func notifyInstalledAppsChanged(uids C.c_string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[App] panic in notifyInstalledAppsChanged: %v", r)
+		}
+	}()
+
 	u := C.GoString(uids)
 
 	app.NotifyInstallAppsChanged(u)
@@ -45,12 +58,24 @@ func notifyInstalledAppsChanged(uids C.c_string) {
 
 //export notifyTimeZoneChanged
 func notifyTimeZoneChanged(name C.c_string, offset C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[App] panic in notifyTimeZoneChanged: %v", r)
+		}
+	}()
+
 	app.NotifyTimeZoneChanged(C.GoString(name), int(offset))
 }
 
 
 //export queryConfiguration
 func queryConfiguration() *C.char {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[App] panic in queryConfiguration: %v", r)
+		}
+	}()
+
 	response := &struct{}{}
 
 	return marshalJson(&response)
