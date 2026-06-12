@@ -34,6 +34,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
     private var wakeLock: PowerManager.WakeLock? = null
     private var wakeLockKeepAliveJob: Job? = null
     private var watchdogJob: Job? = null
+    private var started = false
 
     private val runtime = clashRuntime {
         val store = ServiceStore(self)
@@ -105,7 +106,10 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        sendClashStarted()
+        if (!started) {
+            started = true
+            sendClashStarted()
+        }
 
         // 启动看门狗：每 60 秒 AlarmManager 触发检查，如果服务被杀了会自动重启
         ProfileReceiver.scheduleWatchdog(this)

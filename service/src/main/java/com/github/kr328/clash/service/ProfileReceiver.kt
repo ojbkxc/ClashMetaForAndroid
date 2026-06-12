@@ -42,20 +42,20 @@ class ProfileReceiver : BroadcastReceiver() {
                 context.startForegroundServiceCompat(redirect)
             }
             Intents.ACTION_SERVICE_WATCHDOG -> {
-                // 看门狗触发：检查服务是否在运行，如果不在则根据 VPN 模式重启对应服务
-                if (!StatusProvider.serviceRunning) {
-                    Log.w("ServiceWatchdog: service not running, restarting")
-                    try {
-                        val prefs = context.getSharedPreferences("ui", Context.MODE_PRIVATE)
-                        if (prefs.getBoolean("enable_vpn", true)) {
-                            val tunIntent = Intent(context, TunService::class.java)
-                            context.startForegroundServiceCompat(tunIntent)
-                        } else {
-                            val serviceIntent = Intent(context, ClashService::class.java)
-                            context.startForegroundServiceCompat(serviceIntent)
-                        }
-                    } catch (_: Exception) {}
-                }
+                // 看门狗触发：始终尝试重启服务。
+                // 如果服务已在运行，startForegroundServiceCompat 仅触发 onStartCommand（即重新调度看门狗，无害）。
+                // 如果服务已死，将创建新实例恢复代理。
+                Log.d("ServiceWatchdog: ensuring service is alive")
+                try {
+                    val prefs = context.getSharedPreferences("ui", Context.MODE_PRIVATE)
+                    if (prefs.getBoolean("enable_vpn", true)) {
+                        val tunIntent = Intent(context, TunService::class.java)
+                        context.startForegroundServiceCompat(tunIntent)
+                    } else {
+                        val serviceIntent = Intent(context, ClashService::class.java)
+                        context.startForegroundServiceCompat(serviceIntent)
+                    }
+                } catch (_: Exception) {}
             }
         }
     }

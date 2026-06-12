@@ -28,6 +28,7 @@ class ClashService : BaseService() {
 
     private var reason: String? = null
     private var watchdogJob: Job? = null
+    private var started = false
 
     private val runtime = clashRuntime {
         val store = ServiceStore(self)
@@ -97,7 +98,10 @@ class ClashService : BaseService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        sendClashStarted()
+        if (!started) {
+            started = true
+            sendClashStarted()
+        }
 
         // 启动看门狗：每 60 秒 AlarmManager 触发检查，如果服务被杀了会自动重启
         ProfileReceiver.scheduleWatchdog(this)
