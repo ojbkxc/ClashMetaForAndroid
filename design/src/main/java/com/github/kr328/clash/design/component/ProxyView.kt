@@ -108,6 +108,10 @@ class ProxyView(
         super.draw(canvas)
     }
 
+    fun updateState(snap: Boolean): Boolean {
+        return state?.update(snap) ?: false
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -171,7 +175,12 @@ class ProxyView(
             val x = width - state.config.layoutPadding - state.config.contentPadding - delayWidth
             val y = height / 2f - textOffset
 
+            val originalColor = paint.color
+            if (state.delayColor != 0) {
+                paint.color = state.delayColor
+            }
             drawText(state.delayText, 0, delayCount, x, y, paint)
+            paint.color = originalColor
         }
 
         // draw title

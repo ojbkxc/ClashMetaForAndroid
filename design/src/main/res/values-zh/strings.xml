@@ -16,6 +16,14 @@
     <string name="dark_mode">暗黑模式</string>
     <string name="default_">默认</string>
     <string name="delay">延迟</string>
+    <string name="region_filter">地区过滤</string>
+    <string name="region_all">全部</string>
+    <string name="region_hk">香港</string>
+    <string name="region_jp">日本</string>
+    <string name="region_tw">台湾</string>
+    <string name="region_us">美国</string>
+    <string name="region_sg">新加坡</string>
+    <string name="region_kr">韩国</string>
     <string name="delete">删除</string>
     <string name="delete_all_logs">删除所有日志</string>
     <string name="delete_all_logs_warn">所有历史日志将丢失</string>
