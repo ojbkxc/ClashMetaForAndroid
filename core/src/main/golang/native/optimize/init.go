@@ -17,6 +17,10 @@ func Init() {
 	initOnce.Do(func() {
 		_, _ = GetGlobalOptimizer()
 
+		// Install socket-level optimizations (UDP buffer, QUIC PMTUD, TCP_NODELAY)
+		// Must be called before any connections are dialed
+		SetupSocketHook()
+
 		// Enable TCP concurrent dialing for faster connection establishment
 		dialer.SetTcpConcurrent(true)
 
