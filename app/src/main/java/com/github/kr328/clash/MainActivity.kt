@@ -1,6 +1,9 @@
 package com.github.kr328.clash
 
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -34,10 +37,44 @@ import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
+    companion object {
+        private const val PREF_NAME = "main_guide"
+        private const val KEY_GUIDE_SHOWN = "guide_shown"
+    }
+
+    private fun isGuideShown(): Boolean {
+        val prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_GUIDE_SHOWN, false)
+    }
+
+    private fun setGuideShown() {
+        getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_GUIDE_SHOWN, true)
+            .apply()
+    }
+
+    private fun showGuideDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("使用引导")
+            .setMessage("👋 欢迎使用蓝星网络！\n\n点击左上角的 Logo 图标即可进入账户登录页面\n\n右上角的 ⚙️ 图标可进入设置页面")
+            .setPositiveButton("知道了") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
     override suspend fun main() {
         val design = MainDesign(this)
 
         setContentDesign(design)
+
+        // 首次进入显示引导
+        if (!isGuideShown()) {
+            showGuideDialog()
+            setGuideShown()
+        }
 
         // 更新登录状态和日志
         fun updateSyncUI() {
