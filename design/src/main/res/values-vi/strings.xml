@@ -211,7 +211,7 @@
     <string name="socks_port">Cổng Socks</string>
     <string name="sort">Sắp xếp theo</string>
     <string name="sources">Nguồn</string>
-    <string name="stopped">Đã ngắt kết nối</string>
+    <string name="stopped">Bắt đầu</string>
     <string name="strategy">Strategy</string>
     <string name="system_apps">Ứng dụng hệ thống</string>
     <string name="system_proxy">Proxy hệ thống</string>

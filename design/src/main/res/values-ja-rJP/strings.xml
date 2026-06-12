@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="stopped">停止中</string>
+    <string name="stopped">起動</string>
     <string name="tap_to_start">タップしてスタート</string>
     <string name="running">実行中</string>
     <string name="format_traffic_forwarded">%sが転送されました</string>
