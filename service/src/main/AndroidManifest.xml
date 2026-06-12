@@ -17,6 +17,7 @@
             android:name=".ClashService"
             android:exported="false"
             android:label="@string/clash_meta_for_android"
+            android:process=":clash"
             android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
@@ -27,6 +28,7 @@
             android:exported="false"
             android:label="@string/clash_meta_for_android"
             android:permission="android.permission.BIND_VPN_SERVICE"
+            android:process=":clash"
             android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
@@ -37,10 +39,12 @@
         </service>
         <service
             android:name=".RemoteService"
-            android:exported="false" />
+            android:exported="false"
+            android:process=":clash" />
         <service
             android:name=".ProfileWorker"
             android:exported="false"
+            android:process=":clash"
             android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="explanation_for_special_use"/>
