@@ -1,6 +1,7 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.view.View
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.core.util.trafficTotal
@@ -68,6 +69,26 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setLoginStatus(loggedIn: Boolean) {
         withContext(Dispatchers.Main) {
             binding.isLoggedIn = loggedIn
+        }
+    }
+
+    suspend fun setProfileFlowInfo(info: String?) {
+        withContext(Dispatchers.Main) {
+            binding.profileFlowInfo = info
+        }
+    }
+
+    suspend fun setProfileFlowProgress(progress: Int) {
+        withContext(Dispatchers.Main) {
+            binding.profileFlowProgress = progress
+            val color = when {
+                progress >= 800 -> 0xFFF44336.toInt() // 红色 >80%
+                progress >= 500 -> 0xFFFF9800.toInt() // 橙色 50-80%
+                progress > 0    -> 0xFF4CAF50.toInt() // 绿色 <50%
+                else -> return@withContext
+            }
+            binding.profileFlowProgressBar.progressTintList =
+                ColorStateList.valueOf(color)
         }
     }
 

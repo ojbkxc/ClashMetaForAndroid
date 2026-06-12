@@ -140,13 +140,75 @@ class MainActivity : BaseActivity<MainDesign>() {
         setHasProviders(providers.isNotEmpty())
 
         withProfile {
-            setProfileName(queryActive()?.name)
+            val active = queryActive()
+            setProfileName(active?.name)
+
+            // 显示订阅流量信息
+            val flowInfo = if (active != null && active.total > 0) {
+                val usedBytes = active.upload + active.download
+                val usedStr = formatBytes(usedBytes)
+                val totalStr = formatBytes(active.total)
+                val expireStr = if (active.expire > 0) {
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    sdf.format(java.util.Date(active.expire))
+                } else ""
+
+                if (expireStr.isNotEmpty()) {
+                    context.getString(DesignR.string.format_v2board_traffic, usedStr, totalStr, expireStr)
+                } else {
+                    "$usedStr / $totalStr"
+                }
+            } else null
+
+            val flowProgress = if (active != null && active.total > 1) {
+                ((active.upload + active.download) / (active.total / 1000)).toInt().coerceIn(0, 1000)
+            } else 0
+
+            setProfileFlowInfo(flowInfo)
+            setProfileFlowProgress(flowProgress)
+
+            // 订阅到期提醒
+            if (active != null && active.expire > 0) {
+                val daysLeft = ((active.expire - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+                if (daysLeft <= 0) {
+                    this@MainActivity.design?.showToast(
+                        DesignR.string.subscription_expired,
+                        ToastDuration.Long
+                    )
+                } else if (daysLeft <= 3) {
+                    this@MainActivity.design?.showToast(
+                        getString(DesignR.string.subscription_expiring_soon, daysLeft),
+                        ToastDuration.Long
+                    )
+                }
+            }
+
+            // 流量超 90% 提醒
+            if (active != null && active.total > 1) {
+                val usedBytes = active.upload + active.download
+                val usagePercent = (usedBytes * 100.0 / active.total).toInt()
+                if (usagePercent >= 90) {
+                    this@MainActivity.design?.showToast(
+                        DesignR.string.subscription_traffic_warning,
+                        ToastDuration.Long
+                    )
+                }
+            }
         }
     }
 
     private suspend fun MainDesign.fetchTraffic() {
         withClash {
             setForwarded(queryTrafficTotal())
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "${bytes}B"
+            bytes < 1024 * 1024 -> "%.1fKB".format(bytes / 1024.0)
+            bytes < 1024 * 1024 * 1024 -> "%.1fMB".format(bytes / (1024.0 * 1024))
+            else -> "%.2fGB".format(bytes / (1024.0 * 1024 * 1024))
         }
     }
 
