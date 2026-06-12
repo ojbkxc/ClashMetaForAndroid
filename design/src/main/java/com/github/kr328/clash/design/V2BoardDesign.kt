@@ -45,10 +45,6 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             requests.trySend(Request.OpenInBrowser)
         }
 
-        CookieManager.getInstance().apply {
-            setAcceptCookie(true)
-        }
-
         binding.webView.settings.apply {
             @SuppressLint("SetJavaScriptEnabled")
             javaScriptEnabled = true
@@ -70,6 +66,14 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
                 val databasePath = context.applicationContext.getDir("v2board_webview", Context.MODE_PRIVATE).absolutePath
                 setDatabasePath(databasePath)
+            }
+        }
+
+        // 持久化 Cookie - 允许第三方 cookies（V2Board 服务器）
+        android.webkit.CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                setAcceptThirdPartyCookies(binding.webView, true)
             }
         }
 

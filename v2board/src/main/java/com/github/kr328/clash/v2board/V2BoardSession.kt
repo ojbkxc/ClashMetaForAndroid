@@ -57,6 +57,37 @@ class V2BoardSession(context: Context) {
         defaultValue = "",
     )
 
+    // email → profile UUID 映射（JSON格式），用于多账号切换时找到各自的订阅
+    private var profileUuidByEmail: String by store.string(
+        key = "profile_uuid_by_email",
+        defaultValue = "{}",
+    )
+
+    /**
+     * 根据 email 查找对应的订阅 UUID
+     */
+    fun getProfileUuidForEmail(email: String): String? {
+        if (email.isBlank()) return null
+        return try {
+            val json = org.json.JSONObject(profileUuidByEmail)
+            json.optString(email, "").takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 保存 email → 订阅 UUID 的映射
+     */
+    fun setProfileUuidForEmail(email: String, uuid: String) {
+        if (email.isBlank() || uuid.isBlank()) return
+        try {
+            val json = org.json.JSONObject(profileUuidByEmail)
+            json.put(email, uuid)
+            profileUuidByEmail = json.toString()
+        } catch (_: Exception) {}
+    }
+
     val isLoggedIn: Boolean
         get() = authData.isNotBlank()
 

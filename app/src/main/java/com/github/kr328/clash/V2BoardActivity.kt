@@ -443,14 +443,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         }
 
         @JavascriptInterface
-        fun onSubscribeUrl(subscribeUrl: String) {
+        fun onSubscribeUrl(subscribeUrl: String, email: String) {
             if (subscribeUrl.isBlank()) return
-            Log.d("V2Board: onSubscribeUrl called")
+            Log.d("V2Board: onSubscribeUrl called, email=$email")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
+            if (email.isNotBlank()) {
+                SyncLog.add("用户邮箱: $email")
+                activity.sync.session.email = email
+            }
 
             activity.launch {
                 Log.d("V2Board: Starting sync")
-                val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl)
+                val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl, email)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
@@ -571,10 +575,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         if (json && json.data) {
                             var subscribeUrl = json.data.subscribe_url || '';
                             var token = json.data.token || '';
+                            var email = json.data.email || '';
                             // 使用 baseUrl 而不是 location.origin 来构造订阅 URL
                             var finalUrl = subscribeUrl || (baseUrl + '/api/v1/client/subscribe?token=' + token);
                             if (finalUrl) {
-                                AndroidBridge.onSubscribeUrl(finalUrl);
+                                AndroidBridge.onSubscribeUrl(finalUrl, email);
                             } else {
                                 AndroidBridge.onSubscribeError('服务器未返回订阅地址');
                             }
