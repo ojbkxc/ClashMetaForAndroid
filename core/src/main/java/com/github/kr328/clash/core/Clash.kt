@@ -245,4 +245,8 @@ object Clash {
     fun setOptimizerDNSTimeout(seconds: Int) {
         Bridge.nativeSetOptimizerDNSTimeout(seconds)
     }
+
+    fun setAgeSecretKey(secretKey: String) {
+        Bridge.nativeSetAgeSecretKey(secretKey)
+    }
 }

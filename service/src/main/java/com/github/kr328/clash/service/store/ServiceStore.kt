@@ -85,4 +85,9 @@ class ServiceStore(context: Context) {
         key = "root_dns_hijack",
         defaultValue = false
     )
+
+    var ageSecretKey by store.string(
+        key = "age_secret_key",
+        defaultValue = ""
+    )
 }

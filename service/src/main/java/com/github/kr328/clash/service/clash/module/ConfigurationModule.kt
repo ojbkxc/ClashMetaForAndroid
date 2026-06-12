@@ -56,6 +56,12 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 val active = ImportedDao().queryByUUID(current)
                     ?: throw NullPointerException("No profile selected")
 
+                // Set age secret key before loading configuration
+                val ageSecretKey = store.ageSecretKey
+                if (ageSecretKey.isNotBlank()) {
+                    Clash.setAgeSecretKey(ageSecretKey)
+                }
+
                 Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
 
                 val remove = SelectionDao().querySelections(active.uuid)

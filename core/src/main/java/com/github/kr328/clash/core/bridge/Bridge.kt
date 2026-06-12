@@ -54,6 +54,7 @@ object Bridge {
     external fun nativeRequestOptimizerGC()
     external fun nativePeriodicOptimizerCleanup()
     external fun nativeSetOptimizerDNSTimeout(seconds: Int)
+    external fun nativeSetAgeSecretKey(secretKey: String)
 
     private external fun nativeInit(home: String, versionName: String, sdkVersion: Int)
 

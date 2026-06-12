@@ -9,6 +9,7 @@ import (
 
 	"cfa/native/config"
 
+	"github.com/metacubex/mihomo/component/age"
 	"github.com/metacubex/mihomo/log"
 )
 
@@ -94,4 +95,26 @@ func clearOverride(slot C.int) {
 	}()
 
 	config.ClearOverride(config.OverrideSlot(slot))
+}
+
+//export setAgeSecretKey
+func setAgeSecretKey(secretKey C.c_string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorln("[Config] panic in setAgeSecretKey: %v", r)
+		}
+	}()
+
+	key := C.GoString(secretKey)
+	if key == "" {
+		return
+	}
+
+	if err := age.VeritySecretKeys(key); err != nil {
+		log.Errorln("Invalid age secret key: %s", err.Error())
+		return
+	}
+
+	age.SetGlobalSecretKeys(key)
+	log.Infoln("Age secret key set successfully")
 }
