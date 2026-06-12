@@ -30,7 +30,8 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         get() = binding.root
 
     var profile: Profile
-        get() = binding.profile!!
+        get() = binding.profile
+            ?: throw IllegalStateException("profile view not bound in PropertiesDesign")
         set(value) {
             binding.profile = value
         }

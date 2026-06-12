@@ -114,8 +114,9 @@ val RecyclerView.isBottom: Boolean
     get() {
         return when (val mgr = layoutManager) {
             is GridLayoutManager -> {
+                val a = adapter ?: return false
                 mgr.findFirstVisibleItemPosition() != 0 &&
-                        mgr.findLastVisibleItemPosition() == adapter!!.itemCount - 1
+                        mgr.findLastVisibleItemPosition() == a.itemCount - 1
             }
             else -> {
                 throw UnsupportedOperationException("unsupported layout manager")

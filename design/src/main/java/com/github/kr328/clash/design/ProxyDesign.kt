@@ -50,7 +50,8 @@ class ProxyDesign(
     }
 
     private val adapter: ProxyPageAdapter
-        get() = binding.pagesView.adapter!! as ProxyPageAdapter
+        get() = binding.pagesView.adapter as? ProxyPageAdapter
+            ?: throw IllegalStateException("ViewPager2 adapter not initialized")
 
     private var horizontalScrolling = false
     private val verticalBottomScrolled: Boolean
