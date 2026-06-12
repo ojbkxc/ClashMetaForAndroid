@@ -3,6 +3,7 @@ package com.github.kr328.clash.design
 import android.annotation.SuppressLint
 import android.content.Context
 import android.view.View
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -41,6 +42,10 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
 
         binding.root.findViewById<android.widget.ImageView>(R.id.btn_open_in_browser)?.setOnClickListener {
             requests.trySend(Request.OpenInBrowser)
+        }
+
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
         }
 
         binding.webView.settings.apply {
@@ -153,6 +158,7 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
     }
 
     fun destroyWebView() {
+        CookieManager.getInstance().flush()
         binding.webView.destroy()
     }
 }
