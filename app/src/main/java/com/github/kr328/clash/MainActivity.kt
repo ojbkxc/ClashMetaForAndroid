@@ -148,16 +148,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val usedBytes = active.upload + active.download
                 val usedStr = formatBytes(usedBytes)
                 val totalStr = formatBytes(active.total)
-                val expireStr = if (active.expire > 0) {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    sdf.format(java.util.Date(active.expire))
-                } else ""
-
-                if (expireStr.isNotEmpty()) {
-                    context.getString(DesignR.string.format_v2board_traffic, usedStr, totalStr, expireStr)
-                } else {
-                    "$usedStr / $totalStr"
-                }
+                "$usedStr / $totalStr"
             } else null
 
             val flowProgress = if (active != null && active.total > 1) {
@@ -166,6 +157,47 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             setProfileFlowInfo(flowInfo)
             setProfileFlowProgress(flowProgress)
+
+            // 显示套餐名、到期时间、余额到各卡片右侧（从 V2BoardSession 缓存读取）
+            val sync = V2BoardSync.getInstance(this@MainActivity)
+            val session = sync.session
+            if (session.isLoggedIn) {
+                // 运行中卡片右侧：套餐名
+                setProfilePlanName(session.planName.ifBlank { null })
+
+                // 运行中卡片右侧：上=套餐名，下=到期信息
+                // 到期信息：>20天显示日期，≤20天显示"还剩X天"并着色
+                if (session.expiredAt > 0) {
+                    val sdf = java.text.SimpleDateFormat("yy-MM-dd", java.util.Locale.getDefault())
+                    val daysLeft = ((session.expiredAt - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+                    when {
+                        daysLeft > 90 -> setProfileExpiryInfo(null)  // 超过3个月不显示
+                        daysLeft > 20 -> setProfileExpiryInfo(sdf.format(java.util.Date(session.expiredAt)))
+                        else -> {
+                            val (text, color) = when {
+                                daysLeft <= 0  -> "已过期"  to 0xFFFF4444.toInt()
+                                daysLeft <= 7  -> "还剩${daysLeft}天" to 0xFFFF4444.toInt()
+                                else           -> "还剩${daysLeft}天" to 0xFFFF9800.toInt()
+                            }
+                            setProfileExpiryInfo(text, color)
+                        }
+                    }
+                } else {
+                    setProfileExpiryInfo(null)
+                }
+
+                // 账户卡片右侧：余额（≤20元显示）
+                if (session.balance in 1..2000) {
+                    val yuan = session.balance / 100.0
+                    setProfileBalance(String.format("¥%.2f", yuan))
+                } else {
+                    setProfileBalance(null)
+                }
+            } else {
+                setProfilePlanName(null)
+                setProfileExpiryInfo(null)
+                setProfileBalance(null)
+            }
 
             // 订阅到期提醒
             if (active != null && active.expire > 0) {
@@ -259,6 +291,9 @@ class MainActivity : BaseActivity<MainDesign>() {
         if (result.isSuccess) {
             val subscribeUrl = result.getOrNull()!!
             SyncLog.add("API获取订阅URL成功")
+
+            // 顺便获取余额
+            sync.fetchUserInfo()
 
             val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
             if (syncResult.isSuccess) {

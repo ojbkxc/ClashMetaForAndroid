@@ -15,8 +15,9 @@
             android:layout_marginHorizontal="@dimen/large_item_header_margin_horizontal" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginEnd="@dimen/large_item_tailing_margin_horizontal"
             android:orientation="vertical">
 
@@ -32,6 +33,33 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/large_item_text_margin"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/trailing_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/large_item_tailing_margin_horizontal"
+            android:gravity="end"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/trailing_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/trailing_text_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </layout>

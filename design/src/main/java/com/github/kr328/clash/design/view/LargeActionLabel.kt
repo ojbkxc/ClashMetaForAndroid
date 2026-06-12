@@ -46,6 +46,37 @@ class LargeActionLabel @JvmOverloads constructor(
             }
         }
 
+    var trailingText: CharSequence?
+        get() = binding.trailingText.text
+        set(value) {
+            binding.trailingText.text = value
+            binding.trailingText.visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
+            updateTrailingContainer()
+        }
+
+    var trailingText2: CharSequence?
+        get() = binding.trailingText2.text
+        set(value) {
+            binding.trailingText2.text = value
+            binding.trailingText2.visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
+            updateTrailingContainer()
+        }
+
+    private fun updateTrailingContainer() {
+        binding.trailingContainer.visibility = if (
+            binding.trailingText.visibility == View.VISIBLE ||
+            binding.trailingText2.visibility == View.VISIBLE
+        ) View.VISIBLE else View.GONE
+    }
+
+    fun setTrailingTextColor(color: Int) {
+        binding.trailingText.setTextColor(color)
+    }
+
+    fun setTrailingText2Color(color: Int) {
+        binding.trailingText2.setTextColor(color)
+    }
+
     init {
         context.resolveClickableAttrs(
             attributeSet,

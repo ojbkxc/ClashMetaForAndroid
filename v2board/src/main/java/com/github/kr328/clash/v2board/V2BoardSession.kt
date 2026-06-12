@@ -26,6 +26,26 @@ class V2BoardSession(context: Context) {
         defaultValue = "",
     )
 
+    var planName: String by store.string(
+        key = "plan_name",
+        defaultValue = "",
+    )
+
+    var resetDay: Int by store.int(
+        key = "reset_day",
+        defaultValue = 0,
+    )
+
+    var expiredAt: Long by store.long(
+        key = "expired_at",
+        defaultValue = 0L,
+    )
+
+    var balance: Int by store.int(
+        key = "balance",
+        defaultValue = 0,
+    )
+
     var hasEverLoggedIn: Boolean by store.boolean(
         key = "has_ever_logged_in",
         defaultValue = false,

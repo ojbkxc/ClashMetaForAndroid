@@ -3,6 +3,7 @@ package com.github.kr328.clash.design.view
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.view.View
 import androidx.annotation.AttrRes
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.databinding.ComponentLargeActionLabelBinding
@@ -34,6 +35,45 @@ class LargeActionCard @JvmOverloads constructor(
         set(value) {
             binding.iconView.background = value
         }
+
+    var trailingText: CharSequence?
+        get() = binding.trailingText.text
+        set(value) {
+            binding.trailingText.text = value
+            binding.trailingText.visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
+            updateTrailingContainer()
+        }
+
+    var trailingText2: CharSequence?
+        get() = binding.trailingText2.text
+        set(value) {
+            binding.trailingText2.text = value
+            binding.trailingText2.visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
+            updateTrailingContainer()
+        }
+
+    private fun updateTrailingContainer() {
+        binding.trailingContainer.visibility = if (
+            binding.trailingText.visibility == View.VISIBLE ||
+            binding.trailingText2.visibility == View.VISIBLE
+        ) View.VISIBLE else View.GONE
+    }
+
+    fun setTrailingTextColor(color: Int) {
+        binding.trailingText.setTextColor(color)
+    }
+
+    fun setTrailingTextSize(sp: Float) {
+        binding.trailingText.textSize = sp
+    }
+
+    fun setTrailingText2Color(color: Int) {
+        binding.trailingText2.setTextColor(color)
+    }
+
+    fun setTrailingText2Size(sp: Float) {
+        binding.trailingText2.textSize = sp
+    }
 
     init {
         context.resolveClickableAttrs(attributeSet, defStyleAttr) {

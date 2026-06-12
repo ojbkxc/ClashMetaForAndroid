@@ -87,6 +87,7 @@
                 </LinearLayout>
 
                 <com.github.kr328.clash.design.view.LargeActionCard
+                    android:id="@+id/cardStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
@@ -98,6 +99,7 @@
                     app:text="@{clashRunning ? @string/running : @string/stopped}" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
+                    android:id="@+id/cardProxy"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
@@ -147,6 +149,7 @@
                     app:text="@string/providers" />
 
                 <com.github.kr328.clash.design.view.LargeActionLabel
+                    android:id="@+id/cardV2Board"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"

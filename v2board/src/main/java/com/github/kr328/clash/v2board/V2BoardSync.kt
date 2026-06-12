@@ -142,10 +142,18 @@ class V2BoardSync(private val context: Context) {
                     val data = json.optJSONObject("data")
 
                     if (data != null) {
+                        // 解析额外信息
+                        val plan = data.optJSONObject("plan")
+                        session.planName = plan?.optString("name", "") ?: ""
+                        session.resetDay = data.optInt("reset_day", 0)
+                        if (data.has("expired_at") && !data.isNull("expired_at")) {
+                            session.expiredAt = data.optLong("expired_at", 0L) * 1000L
+                        }
+
                         val subscribeUrl = data.optString("subscribe_url", "")
                         val token = data.optString("token", "")
 
-                        Log.d("V2BoardSync: got subscribe_url, token present: ${token.isNotBlank()}")
+                        Log.d("V2BoardSync: got subscribe_url, token present: ${token.isNotBlank()}, plan: ${session.planName}")
                         SyncLog.add("获取到订阅地址")
 
                         val finalUrl = when {
@@ -193,6 +201,44 @@ class V2BoardSync(private val context: Context) {
             } catch (e: Exception) {
                 Log.w("V2BoardSync: Network error", e)
                 SyncLog.add("网络错误: ${e.message}")
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun fetchUserInfo(): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val auth = session.authData
+                if (auth.isBlank()) return@withContext Result.failure(Exception("Not logged in"))
+
+                val currentUrl = getActiveUrl()
+                if (currentUrl.isBlank()) return@withContext Result.failure(Exception("No server URL"))
+
+                val cleanAuth = auth.trim().removeSurrounding("\"").removeSurrounding("'")
+                val apiUrl = "$currentUrl/api/v1/user/info?auth_data=${java.net.URLEncoder.encode(cleanAuth, "UTF-8")}"
+
+                val request = okhttp3.Request.Builder()
+                    .url(apiUrl)
+                    .header("Accept", "application/json")
+                    .get()
+                    .build()
+
+                val response = httpClient.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string() ?: ""
+                    val json = JSONObject(responseBody)
+                    val data = json.optJSONObject("data")
+                    if (data != null) {
+                        session.balance = data.optInt("balance", 0)
+                        Log.d("V2BoardSync: balance=${session.balance}")
+                    }
+                    Result.success(Unit)
+                } else {
+                    Result.failure(Exception("HTTP ${response.code}"))
+                }
+            } catch (e: Exception) {
+                Log.w("V2BoardSync: fetchUserInfo error", e)
                 Result.failure(e)
             }
         }

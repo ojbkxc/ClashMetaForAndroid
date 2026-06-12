@@ -92,6 +92,29 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    suspend fun setProfilePlanName(name: String?) {
+        withContext(Dispatchers.Main) {
+            binding.cardStatus.trailingText = name
+            binding.cardStatus.setTrailingTextSize(11f)
+        }
+    }
+
+    suspend fun setProfileExpiryInfo(text: String?, color: Int? = null) {
+        withContext(Dispatchers.Main) {
+            binding.cardStatus.trailingText2 = text
+            binding.cardStatus.setTrailingText2Size(8f)
+            if (color != null) {
+                binding.cardStatus.setTrailingText2Color(color)
+            }
+        }
+    }
+
+    suspend fun setProfileBalance(balance: String?) {
+        withContext(Dispatchers.Main) {
+            binding.cardV2Board.trailingText = balance
+        }
+    }
+
     init {
         binding.self = this
 
