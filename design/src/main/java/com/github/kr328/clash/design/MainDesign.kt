@@ -109,6 +109,44 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    suspend fun showLogoGuideHighlight() {
+        withContext(Dispatchers.Main) {
+            // Logo 呼吸动画：缩放脉冲 1.0 → 1.15 → 1.0 循环
+            val logoParent = binding.root.findViewById<View>(R.id.logoContainer)
+            logoParent?.let { logo ->
+                val scaleXAnim = ObjectAnimator.ofFloat(logo, "scaleX", 1.0f, 1.15f, 1.0f)
+                val scaleYAnim = ObjectAnimator.ofFloat(logo, "scaleY", 1.0f, 1.15f, 1.0f)
+                scaleXAnim.apply {
+                    duration = 1000
+                    repeatCount = ObjectAnimator.INFINITE
+                    repeatMode = ObjectAnimator.RESTART
+                    interpolator = AccelerateDecelerateInterpolator()
+                    start()
+                }
+                scaleYAnim.apply {
+                    duration = 1000
+                    repeatCount = ObjectAnimator.INFINITE
+                    repeatMode = ObjectAnimator.RESTART
+                    interpolator = AccelerateDecelerateInterpolator()
+                    start()
+                }
+                // 保存引用以便后续停止动画
+                logo.setTag(R.id.logo_guide_anim, scaleXAnim)
+            }
+        }
+    }
+
+    suspend fun hideLogoGuideHighlight() {
+        withContext(Dispatchers.Main) {
+            val logoParent = binding.root.findViewById<View>(R.id.logoContainer)
+            logoParent?.let { logo ->
+                val anim = logo.getTag(R.id.logo_guide_anim) as? ObjectAnimator
+                anim?.cancel()
+                logo.animate().scaleX(1.0f).scaleY(1.0f).setDuration(200).start()
+            }
+        }
+    }
+
     suspend fun setProfileFlowProgress(progress: Int) {
         withContext(Dispatchers.Main) {
             binding.profileFlowProgress = progress

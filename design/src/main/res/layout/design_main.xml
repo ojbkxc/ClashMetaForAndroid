@@ -70,6 +70,7 @@
 
                     <!-- 点击Logo进入账户 -->
                     <FrameLayout
+                        android:id="@+id/logoContainer"
                         android:layout_width="@dimen/large_item_header_layout_size"
                         android:layout_height="@dimen/large_item_header_layout_size"
                         android:background="?attr/selectableItemBackgroundBorderless"

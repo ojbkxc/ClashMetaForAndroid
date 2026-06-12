@@ -29,6 +29,7 @@ import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.SyncLog
 import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -54,14 +55,21 @@ class MainActivity : BaseActivity<MainDesign>() {
             .apply()
     }
 
-    private fun showGuideDialog() {
-        AlertDialog.Builder(this)
+    private suspend fun showGuideDialog() {
+        // 先让 Logo 呼吸动画开始
+        design?.showLogoGuideHighlight()
+        // 延迟 300ms 确保 UI 渲染完毕再弹出对话框
+        delay(300)
+        AlertDialog.Builder(this@MainActivity)
             .setTitle("使用引导")
             .setMessage("👋 欢迎使用蓝星网络！\n\n点击左上角的 Logo 图标即可进入账户登录页面\n\n右上角的 ⚙️ 图标可进入设置页面")
             .setPositiveButton("知道了") { dialog, _ ->
                 dialog.dismiss()
             }
             .setCancelable(false)
+            .setOnDismissListener {
+                launch { design?.hideLogoGuideHighlight() }
+            }
             .show()
     }
 
