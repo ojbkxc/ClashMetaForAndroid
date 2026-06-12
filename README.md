@@ -122,15 +122,45 @@ By using this software, you acknowledge and agree that you are not located in ma
 | **onTaskRemoved 重启** | 用户从最近任务划掉后自动重启服务 | VPN / Root |
 | **模式感知重启** | 看门狗根据 VPN 开关只重启正确的服务，避免资源浪费 | VPN / Root |
 
-### 代码质量保障
+### 稳定性保障（v2.0）
 
-- ✅ **异常处理**：空 catch 块添加日志记录
-- ✅ **国际化**：硬编码字符串抽取到资源文件
-- ✅ **协程规范**：suspend 函数使用 `delay()` 而非 `Thread.sleep()`
-- ✅ **资源管理**：IO 资源使用 `use()` 模式自动关闭
-- ✅ **并发安全**：共享可变状态添加 `@Volatile` 注解
-- ✅ **容错设计**：优化器、DNS 清理、网络请求等关键路径 try-catch 保护
-- ✅ **服务保活**：WakeLock + AlarmManager Watchdog + onTaskRemoved 多层守护
+v2.0 进行了全面的稳定性重构，修复了闪退、运行一段时间后自动关闭等核心问题，共 **26 项修复**：
+
+#### 崩溃防护（Crash Prevention）
+
+| 机制 | 说明 | 修复前 | 修复后 |
+|------|------|--------|--------|
+| **协程异常拦截** | 所有 7 个 CoroutineScope 均添加 CoroutineExceptionHandler | 任何后台协程异常 → 进程崩溃（"应用已停止"） | 异常被捕获并记录日志，服务继续运行 |
+| **空指针防护** | 移除所有 `!!` 强制解包，替换为安全调用或显式异常 | NPE 直接崩溃 | 优雅降级 + 日志记录 |
+| **Go 层 panic 保护** | 所有 export 函数用 `defer recover()` 包裹 | Go panic 导致进程崩溃 | 仅记录错误日志，不影响主进程 |
+| **配置加载容错** | 无 Profile 时不抛异常，改为等待重试 | 启动时无 Profile → NPE 崩溃 | 3 秒等待 + 自动重试 |
+| **服务绑定重试** | RemoteService 断连后最多重试 3 次（每次间隔 2 秒） | 服务断连 → 立即触发 AppCrashedActivity | 多数情况下自动恢复，无需用户干预 |
+
+#### 自动关闭防护（Keep-Alive）
+
+| 机制 | 说明 |
+|------|------|
+| **WakeLock 持续持有** | PARTIAL_WAKE_LOCK 防止 CPU 休眠，每 30 秒检查并重新获取 |
+| **AlarmManager Watchdog** | 每 60 秒精准闹钟，服务被系统杀死后自动拉活 |
+| **Watchdog KeepAlive** | 每 50 秒续期闹钟，防止服务存活时闹钟误触发 |
+| **onTaskRemoved 安全重启** | Android 12+ 通过 watchdog 重启，避免后台启动限制 |
+| **AtomicBoolean 防并发** | 服务启动状态用原子操作，防止多实例争抢 |
+
+#### 内存优化
+
+| 机制 | 说明 |
+|------|------|
+| **Go GC 调优** | GCPercent 从 100% 降至 50%，每 5 分钟且堆 > 32MB 时强制 FreeOSMemory |
+| **TCP 连接池缩减** | 最大连接数从 200 降至 100，降低内存峰值 |
+| **连接跟踪清理** | 每 60 秒清理过期连接，防止连接泄漏 |
+
+#### 编译兼容性
+
+| 修复项 | 说明 |
+|--------|------|
+| **Kotlin 2.1 兼容** | `javaClass` → `::class.java`，`CancellableContinuation.cancel()` → `resumeWithException()` |
+| **Go 常量兼容** | 自定义 `TCP_FASTOPEN_CONNECT`、`IPV6_MTU_DISCOVER` 等 Linux 内核常量 |
+| **kapt 兼容** | 启用 `kapt.use.kotlin2=true` |
 
 ### 功能权限对比
 
@@ -190,8 +220,9 @@ ClashMetaForAndroid/
 | 依赖 | 版本要求 |
 |------|----------|
 | Android SDK | compileSdk 35，minSdk 21 |
-| JDK | OpenJDK 11+ |
+| JDK | OpenJDK 17+ |
 | NDK | 29.0.14206865 |
+| Kotlin | 2.1.0+ |
 | Go | 1.20+ |
 | CMake | 3.0+ |
 | Gradle | 8.8.0+ |
