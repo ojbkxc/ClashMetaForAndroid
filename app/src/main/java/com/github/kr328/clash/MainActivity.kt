@@ -52,6 +52,26 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
+        // 启动后延迟检查更新（非阻塞，不干扰主页加载）
+        launch {
+            kotlinx.coroutines.delay(3000)
+            try {
+                val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName
+                    ?: return@launch
+                val release = withContext(Dispatchers.IO) {
+                    UpdateChecker.checkForUpdate(this@MainActivity)
+                } ?: return@launch
+                if (UpdateChecker.isSkipped(this@MainActivity, release.tagName)) return@launch
+                if (UpdateChecker.compareVersions(currentVersion, release.tagName) < 0) {
+                    withContext(Dispatchers.Main) {
+                        UpdateChecker.showUpdateDialog(this@MainActivity, currentVersion, release)
+                    }
+                }
+            } catch (_: Exception) {
+                // 更新检查失败不影响正常使用
+            }
+        }
+
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
         while (isActive) {
