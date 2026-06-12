@@ -45,7 +45,7 @@ object ProfileProcessor {
                     pending
                 }
 
-                Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
+                snapshot.ageSecretKey?.takeIf { it.isNotBlank() }?.let { Clash.setAgeSecretKey(it) }
 
                 val force = snapshot.type != Profile.Type.File
                 val subscriptionInfo = fetchProfile(context, snapshot.source, force, callback)
@@ -105,7 +105,7 @@ object ProfileProcessor {
                     imported
                 }
 
-                Clash.setAgeSecretKey(snapshot.ageSecretKey?.takeIf { it.isNotBlank() })
+                snapshot.ageSecretKey?.takeIf { it.isNotBlank() }?.let { Clash.setAgeSecretKey(it) }
 
                 val subscriptionInfo = fetchProfile(context, snapshot.source, true, callback)
 
