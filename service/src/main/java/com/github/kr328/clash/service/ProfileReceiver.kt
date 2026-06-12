@@ -41,22 +41,6 @@ class ProfileReceiver : BroadcastReceiver() {
 
                 context.startForegroundServiceCompat(redirect)
             }
-            Intents.ACTION_SERVICE_WATCHDOG -> {
-                // 看门狗触发：始终尝试重启服务。
-                // 如果服务已在运行，startForegroundServiceCompat 仅触发 onStartCommand（即重新调度看门狗，无害）。
-                // 如果服务已死，将创建新实例恢复代理。
-                Log.d("ServiceWatchdog: ensuring service is alive")
-                try {
-                    val prefs = context.getSharedPreferences("ui", Context.MODE_PRIVATE)
-                    if (prefs.getBoolean("enable_vpn", true)) {
-                        val tunIntent = Intent(context, TunService::class.java)
-                        context.startForegroundServiceCompat(tunIntent)
-                    } else {
-                        val serviceIntent = Intent(context, ClashService::class.java)
-                        context.startForegroundServiceCompat(serviceIntent)
-                    }
-                } catch (_: Exception) {}
-            }
         }
     }
 
@@ -132,62 +116,5 @@ class ProfileReceiver : BroadcastReceiver() {
                 pendingIntentFlags(PendingIntent.FLAG_UPDATE_CURRENT)
             )
         }
-
-        /**
-         * 安排看门狗闹钟，每 60 秒检查一次服务是否存活。
-         * 如果服务进程被系统杀死，闹钟会触发 ProfileReceiver 重启服务。
-         */
-        fun scheduleWatchdog(context: Context) {
-            val alarmManager = context.getSystemService<AlarmManager>() ?: return
-            val intent = Intent(Intents.ACTION_SERVICE_WATCHDOG)
-                .setComponent(ProfileReceiver::class.componentName)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                WATCHDOG_REQUEST_CODE,
-                intent,
-                pendingIntentFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            )
-
-            try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        System.currentTimeMillis() + WATCHDOG_INTERVAL_MS,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.setExact(
-                        AlarmManager.RTC_WAKEUP,
-                        System.currentTimeMillis() + WATCHDOG_INTERVAL_MS,
-                        pendingIntent
-                    )
-                }
-            } catch (e: Exception) {
-                Log.w("Failed to schedule watchdog: ${e.message}")
-            }
-        }
-
-        /**
-         * 取消看门狗闹钟（服务正常停止时调用）。
-         */
-        fun cancelWatchdog(context: Context) {
-            val alarmManager = context.getSystemService<AlarmManager>() ?: return
-            val intent = Intent(Intents.ACTION_SERVICE_WATCHDOG)
-                .setComponent(ProfileReceiver::class.componentName)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                WATCHDOG_REQUEST_CODE,
-                intent,
-                pendingIntentFlags(PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_NO_CREATE)
-            )
-
-            pendingIntent?.let {
-                alarmManager.cancel(it)
-                it.cancel()
-            }
-        }
-
-        private const val WATCHDOG_REQUEST_CODE = 0x7F00
-        private const val WATCHDOG_INTERVAL_MS = 60_000L // 60 seconds
     }
 }

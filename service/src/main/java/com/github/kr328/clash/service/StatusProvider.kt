@@ -6,7 +6,6 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import com.github.kr328.clash.common.Global
-import java.util.concurrent.atomic.AtomicBoolean
 
 class StatusProvider : ContentProvider() {
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
@@ -63,12 +62,10 @@ class StatusProvider : ContentProvider() {
 
         private const val CLASH_SERVICE_RUNNING_FILE = "service_running.lock"
 
-        private val _serviceRunning = AtomicBoolean(false)
-
-        var serviceRunning: Boolean
-            get() = _serviceRunning.get()
+        var serviceRunning: Boolean = false
             set(value) {
-                _serviceRunning.set(value)
+                field = value
+
                 shouldStartClashOnBoot = value
             }
         var shouldStartClashOnBoot: Boolean
@@ -81,17 +78,6 @@ class StatusProvider : ContentProvider() {
                         delete()
                 }
             }
-
-        /**
-         * Atomically mark the service as started. Returns true if the caller
-         * should proceed (i.e., was the first to claim the start), false if
-         * another service has already claimed it.
-         */
-        @Synchronized
-        fun claimServiceStart(): Boolean {
-            return _serviceRunning.compareAndSet(false, true)
-        }
-
         var currentProfile: String? = null
     }
 }

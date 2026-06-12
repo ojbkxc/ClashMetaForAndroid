@@ -6,10 +6,7 @@ import android.content.Intent
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
-import android.os.PowerManager
-import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.compat.pendingIntentFlags
-import com.github.kr328.clash.common.compat.startForegroundServiceCompat
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.clash.clashRuntime
@@ -31,10 +28,6 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
         get() = this
 
     private var reason: String? = null
-    private var wakeLock: PowerManager.WakeLock? = null
-    private var wakeLockKeepAliveJob: Job? = null
-    private var watchdogJob: Job? = null
-    private var started = false
 
     private val runtime = clashRuntime {
         val store = ServiceStore(self)
@@ -93,11 +86,10 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
     override fun onCreate() {
         super.onCreate()
 
-        acquireWakeLock()
-        startWakeLockKeepAlive()
-
-        if (!StatusProvider.claimServiceStart())
+        if (StatusProvider.serviceRunning)
             return stopSelf()
+
+        StatusProvider.serviceRunning = true
 
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
@@ -106,14 +98,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!started) {
-            started = true
-            sendClashStarted()
-        }
-
-        // 启动看门狗：每 60 秒 AlarmManager 触发检查，如果服务被杀了会自动重启
-        ProfileReceiver.scheduleWatchdog(this)
-        startWatchdogKeepAlive()
+        sendClashStarted()
 
         return super.onStartCommand(intent, flags, startId)
     }
@@ -121,17 +106,11 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
     override fun onDestroy() {
         TunModule.requestStop()
 
-        stopWatchdogKeepAlive()
-        ProfileReceiver.cancelWatchdog(this)
-
         StatusProvider.serviceRunning = false
 
         sendClashStopped(reason)
 
         cancelAndJoinBlocking()
-
-        stopWakeLockKeepAlive()
-        releaseWakeLock()
 
         Log.i("TunService destroyed: ${reason ?: "successfully"}")
 
@@ -142,99 +121,6 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
         super.onTrimMemory(level)
 
         runtime.requestGc()
-    }
-
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        super.onTaskRemoved(rootIntent)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+ restricts starting foreground services from the background.
-            // The watchdog alarm will restart the service if the process is killed.
-            Log.w("TunService task removed, relying on watchdog for restart (Android 12+)")
-            return
-        }
-
-        Log.w("TunService task removed, restarting service with delay to avoid recursion")
-        val restartIntent = Intent(this, TunService::class.java)
-        startForegroundServiceCompat(restartIntent)
-    }
-
-    /**
-     * 每 50 秒重新安排看门狗闹钟，防止服务存活时闹钟误触发。
-     * 如果服务进程被杀死，闹钟会在 60 秒后触发并重启服务。
-     */
-    private fun startWatchdogKeepAlive() {
-        watchdogJob = launch {
-            while (isActive) {
-                delay(50_000L) // 50 seconds, less than the 60s watchdog interval
-                ProfileReceiver.scheduleWatchdog(this@TunService)
-            }
-        }
-    }
-
-    private fun stopWatchdogKeepAlive() {
-        watchdogJob?.cancel()
-        watchdogJob = null
-    }
-
-    private fun acquireWakeLock() {
-        try {
-            val powerManager = getSystemService<PowerManager>() ?: return
-            wakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "ClashMeta:TunService"
-            ).apply {
-                setReferenceCounted(false)
-                acquire()
-            }
-            Log.d("WakeLock acquired for TunService")
-        } catch (e: Exception) {
-            Log.w("Failed to acquire WakeLock for TunService: ${e.message}")
-        }
-    }
-
-    private fun releaseWakeLock() {
-        try {
-            wakeLock?.let {
-                if (it.isHeld) {
-                    it.release()
-                }
-            }
-            wakeLock = null
-            Log.d("WakeLock released for TunService")
-        } catch (e: Exception) {
-            Log.w("Failed to release WakeLock for TunService: ${e.message}")
-        }
-    }
-
-    private fun startWakeLockKeepAlive() {
-        wakeLockKeepAliveJob = launch {
-            while (isActive) {
-                delay(30 * 1000L) // 30 seconds - 休眠时系统可能在几秒内抢夺 WakeLock
-                try {
-                    val wl = wakeLock
-                    if (wl == null) {
-                        Log.w("WakeLock object is null, re-acquiring for TunService")
-                        acquireWakeLock()
-                    } else if (!wl.isHeld) {
-                        Log.w("WakeLock was released by system, re-acquiring for TunService")
-                        wl.acquire()
-                    }
-                } catch (e: Exception) {
-                    Log.w("WakeLock keep-alive check failed for TunService, trying full re-acquire: ${e.message}")
-                    try {
-                        wakeLock?.let { if (it.isHeld) it.release() }
-                        wakeLock = null
-                        acquireWakeLock()
-                    } catch (_: Exception) {}
-                }
-            }
-        }
-    }
-
-    private fun stopWakeLockKeepAlive() {
-        wakeLockKeepAliveJob?.cancel()
-        wakeLockKeepAliveJob = null
     }
 
     private fun TunModule.open() {
