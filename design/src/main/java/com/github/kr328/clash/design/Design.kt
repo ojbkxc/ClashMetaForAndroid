@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 abstract class Design<R>(val context: Context) :
     CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Unconfined +
             CoroutineExceptionHandler { _, e ->
-                Log.e("Design(${this::class.java.simpleName})", "unhandled exception: ${e.message}", e)
+                Log.e("Design", "unhandled exception: ${e.message}", e)
             }) {
     abstract val root: View
 

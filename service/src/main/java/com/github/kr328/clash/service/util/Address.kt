@@ -10,7 +10,7 @@ fun InetAddress.asSocketAddressText(port: Int): String {
             "[${numericToTextFormat(this)}]:$port"
         is Inet4Address ->
             "${this.hostAddress}:$port"
-        else -> throw IllegalArgumentException("Unsupported Inet type ${this.javaClass}")
+        else -> throw IllegalArgumentException("Unsupported Inet type ${this::class.java}")
     }
 }
 

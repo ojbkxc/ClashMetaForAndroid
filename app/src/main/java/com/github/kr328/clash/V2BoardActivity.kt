@@ -436,7 +436,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         val errorMsg = if (error?.message != null) {
                             error.message
                         } else {
-                            error?.javaClass?.simpleName ?: "Unknown error"
+                            error?.let { it::class.java.simpleName } ?: "Unknown error"
                         }
                         AppLog.w("V2Board", "Sync failed: $errorMsg")
                         SyncLog.add("同步失败: $errorMsg")

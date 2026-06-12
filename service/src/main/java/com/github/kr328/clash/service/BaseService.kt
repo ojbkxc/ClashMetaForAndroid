@@ -42,12 +42,12 @@ abstract class BaseService : Service(), CoroutineScope by CoroutineScope(Supervi
             val powerManager = getSystemService<PowerManager>() ?: return
             wakeLock = powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "ClashMeta:${javaClass.simpleName}"
+                "ClashMeta:${this::class.java.simpleName}"
             ).apply {
                 setReferenceCounted(false)
                 acquire()
             }
-            Log.d("WakeLock acquired for ${javaClass.simpleName}")
+            Log.d("WakeLock acquired for ${this::class.java.simpleName}")
         } catch (e: Exception) {
             Log.w("Failed to acquire WakeLock: ${e.message}")
         }
@@ -61,7 +61,7 @@ abstract class BaseService : Service(), CoroutineScope by CoroutineScope(Supervi
                 }
             }
             wakeLock = null
-            Log.d("WakeLock released for ${javaClass.simpleName}")
+            Log.d("WakeLock released for ${this::class.java.simpleName}")
         } catch (e: Exception) {
             Log.w("Failed to release WakeLock: ${e.message}")
         }
@@ -79,10 +79,10 @@ abstract class BaseService : Service(), CoroutineScope by CoroutineScope(Supervi
                     val wl = wakeLock
                     if (wl == null) {
                         // WakeLock 对象被意外置空，重新获取
-                        Log.w("WakeLock object is null, re-acquiring for ${javaClass.simpleName}")
+                        Log.w("WakeLock object is null, re-acquiring for ${this::class.java.simpleName}")
                         acquireWakeLock()
                     } else if (!wl.isHeld) {
-                        Log.w("WakeLock was released by system, re-acquiring for ${javaClass.simpleName}")
+                        Log.w("WakeLock was released by system, re-acquiring for ${this::class.java.simpleName}")
                         wl.acquire()
                     }
                 } catch (e: Exception) {

@@ -56,7 +56,7 @@ abstract class Module<E>(val service: Service) {
     }
 
     suspend fun execute() {
-        val moduleName = this.javaClass.simpleName
+        val moduleName = this::class.java.simpleName
 
         try {
             Log.d("$moduleName: initialize")
