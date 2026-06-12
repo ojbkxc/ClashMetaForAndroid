@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 abstract class BaseService : Service(), CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default +
         CoroutineExceptionHandler { _, e ->
-            Log.e("BaseService(${this::class.java.simpleName}) unhandled exception: ${e.message}", e)
+            Log.e("BaseService unhandled exception: ${e.message}", e)
         }) {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wakeLockKeepAliveJob: Job? = null
