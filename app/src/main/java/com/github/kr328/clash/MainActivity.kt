@@ -162,6 +162,20 @@ class MainActivity : BaseActivity<MainDesign>() {
             val sync = V2BoardSync.getInstance(this@MainActivity)
             val session = sync.session
             if (session.isLoggedIn) {
+                // 如果缓存为空，后台拉取数据（仅首次）
+                if (session.planName.isBlank() && session.expiredAt <= 0L && session.balance <= 0) {
+                    launch {
+                        try {
+                            sync.fetchSubscribeUrl()
+                            sync.fetchUserInfo()
+                            // 数据就绪后刷新 UI
+                            withContext(Dispatchers.Main) {
+                                fetch()
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+
                 // 运行中卡片右侧：套餐名
                 setProfilePlanName(session.planName.ifBlank { null })
 

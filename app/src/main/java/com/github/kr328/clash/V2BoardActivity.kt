@@ -71,6 +71,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
+                    // 持久化 Cookies
+                    CookieManager.getInstance().flush()
                     if (url != null && !url.startsWith("file://")) {
                         // 先注入 auth_data 到 localStorage
                         restoreAuthToLocalStorage(view)
