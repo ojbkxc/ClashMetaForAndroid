@@ -234,7 +234,7 @@ ClashMetaForAndroid/
 ### 1. 克隆项目
 
 ```bash
-git clone --recurse-submodules https://github.com/<your-org>/ClashMetaForAndroid.git
+git clone --recurse-submodules https://github.com/ojbkxc/ClashMetaForAndroid.git
 cd ClashMetaForAndroid
 ```
 
