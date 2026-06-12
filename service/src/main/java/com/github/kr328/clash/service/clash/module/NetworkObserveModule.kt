@@ -20,7 +20,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 class NetworkObserveModule(service: Service) : Module<Network>(service) {
-    private val connectivity = service.getSystemService<ConnectivityManager>()!!
+    private val connectivity: ConnectivityManager by lazy {
+        service.getSystemService<ConnectivityManager>()
+            ?: throw IllegalStateException("ConnectivityManager not available")
+    }
     private val networks: Channel<Network> = Channel(Channel.UNLIMITED)
     private val store = ServiceStore(service)
     private val httpClient = OkHttpClient.Builder()

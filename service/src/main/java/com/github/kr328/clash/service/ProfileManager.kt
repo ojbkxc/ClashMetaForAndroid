@@ -15,8 +15,10 @@ import com.github.kr328.clash.service.util.generateProfileUUID
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.service.util.sendProfileChanged
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -26,7 +28,10 @@ import java.math.BigDecimal
 import java.util.*
 
 class ProfileManager(private val context: Context) : IProfileManager,
-    CoroutineScope by CoroutineScope(Dispatchers.IO) {
+    CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.IO +
+        CoroutineExceptionHandler { _, e ->
+            Log.e("ProfileManager unhandled exception: ${e.message}", e)
+        }) {
     private val store = ServiceStore(context)
 
     init {

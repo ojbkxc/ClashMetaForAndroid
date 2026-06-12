@@ -283,7 +283,12 @@ class MainActivity : BaseActivity<MainDesign>() {
         val result = sync.fetchSubscribeUrl()
 
         if (result.isSuccess) {
-            val subscribeUrl = result.getOrNull()!!
+            val subscribeUrl = result.getOrNull()
+            if (subscribeUrl == null) {
+                SyncLog.add("API获取订阅URL为空")
+                design.showToast(getString(DesignR.string.sync_failed, "empty subscription URL"), ToastDuration.Long)
+                return
+            }
             SyncLog.add("API获取订阅URL成功")
 
             val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)

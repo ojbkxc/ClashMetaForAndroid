@@ -5,14 +5,19 @@ import android.os.PowerManager
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.util.cancelAndJoinBlocking
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-abstract class BaseService : Service(), CoroutineScope by CoroutineScope(Dispatchers.Default) {
+abstract class BaseService : Service(), CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default +
+        CoroutineExceptionHandler { _, e ->
+            Log.e("BaseService(${javaClass.simpleName}) unhandled exception: ${e.message}", e)
+        }) {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wakeLockKeepAliveJob: Job? = null
 

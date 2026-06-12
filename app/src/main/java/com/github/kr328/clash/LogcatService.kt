@@ -30,7 +30,10 @@ import kotlinx.coroutines.channels.Channel
 import java.io.IOException
 import java.util.*
 
-class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.Default), IInterface {
+class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default +
+        CoroutineExceptionHandler { _, e ->
+            android.util.Log.e("LogcatService", "unhandled exception: ${e.message}", e)
+        }), IInterface {
     private val cache = LogcatCache()
 
     private val connection = object : ServiceConnection {

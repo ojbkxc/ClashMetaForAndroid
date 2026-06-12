@@ -25,7 +25,7 @@ fun CoroutineScope.clashRuntime(block: suspend ClashRuntimeScope.() -> Unit): Cl
                 Log.e("ClashRuntime unhandled exception: ${e.message}", e)
             }
 
-            launch(Dispatchers.IO + handler) {
+            launch(Dispatchers.IO + SupervisorJob() + handler) {
                 globalLock.withLock {
                     Log.d("ClashRuntime: initialize")
 

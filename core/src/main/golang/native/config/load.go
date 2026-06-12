@@ -88,7 +88,8 @@ func Load(path string) error {
 func LoadDefault() {
 	cfg, err := config.Parse([]byte{})
 	if err != nil {
-		panic(err.Error())
+		log.Errorln("Load default config failed: %s", err.Error())
+		return
 	}
 
 	hub.ApplyConfig(cfg)

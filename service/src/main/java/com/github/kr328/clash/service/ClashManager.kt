@@ -14,7 +14,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
 
 class ClashManager(private val context: Context) : IClashManager,
-    CoroutineScope by CoroutineScope(Dispatchers.IO) {
+    CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.IO +
+        CoroutineExceptionHandler { _, e ->
+            Log.e("ClashManager unhandled exception: ${e.message}", e)
+        }) {
     private val store = ServiceStore(context)
     private var logReceiver: ReceiveChannel<LogMessage>? = null
 

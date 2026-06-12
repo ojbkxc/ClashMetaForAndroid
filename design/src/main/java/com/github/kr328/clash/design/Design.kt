@@ -7,13 +7,19 @@ import com.github.kr328.clash.design.ui.Surface
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.setOnInsertsChangedListener
 import com.google.android.material.snackbar.Snackbar
+import android.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 
 abstract class Design<R>(val context: Context) :
-    CoroutineScope by CoroutineScope(Dispatchers.Unconfined) {
+    CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Unconfined +
+            CoroutineExceptionHandler { _, e ->
+                Log.e("Design(${javaClass.simpleName})", "unhandled exception: ${e.message}", e)
+            }) {
     abstract val root: View
 
     val surface = Surface()

@@ -141,7 +141,11 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         return suspendCoroutine { ctx ->
             bindService(LogcatService::class.intent, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                    val srv = service!!.queryLocalInterface("") as LogcatService
+                    val srv = service?.queryLocalInterface("") as? LogcatService
+                        ?: run {
+                            ctx.cancel()
+                            return
+                        }
 
                     ctx.resume(srv)
 
