@@ -65,14 +65,15 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 loaded = current
 
                 val active = ImportedDao().queryByUUID(current)
-                    ?: run {
-                        Log.w("ConfigurationModule: profile $current not found in database")
-                        if (loaded == null) {
-                            delay(5_000L)
-                            reload.trySend(Unit)
-                        }
-                        continue
+
+                if (active == null) {
+                    Log.w("ConfigurationModule: profile $current not found in database")
+                    if (loaded == null) {
+                        delay(5_000L)
+                        reload.trySend(Unit)
                     }
+                    continue
+                }
 
                 val configDir = service.importedDir.resolve(active.uuid.toString())
                 ConfigOptimizer.optimize(configDir)

@@ -65,7 +65,6 @@ class StatusProvider : ContentProvider() {
 
         private val _serviceRunning = AtomicBoolean(false)
 
-        @Volatile
         var serviceRunning: Boolean
             get() = _serviceRunning.get()
             set(value) {

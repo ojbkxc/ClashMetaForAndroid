@@ -24,9 +24,9 @@ class AppListCacheModule(service: Service) : Module<Unit>(service) {
                     // Force use package name if only one app in a single sharedUid group
                     // Example: firefox
 
-                    info.applicationInfo.uid to info.packageName
+                    info.applicationInfo!!.uid to info.packageName
                 } else {
-                    info.applicationInfo.uid to info.uniqueUidName()
+                    info.applicationInfo!!.uid to info.uniqueUidName()
                 }
             }
 
