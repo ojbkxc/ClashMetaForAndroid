@@ -150,6 +150,13 @@ class V2BoardSync(private val context: Context) {
                             session.expiredAt = data.optLong("expired_at", 0L) * 1000L
                         }
 
+                        // 解析并保存邮箱（用于多账号订阅匹配）
+                        val email = data.optString("email", "")
+                        if (email.isNotBlank()) {
+                            session.email = email
+                            Log.d("V2BoardSync: got email: $email")
+                        }
+
                         val subscribeUrl = data.optString("subscribe_url", "")
                         val token = data.optString("token", "")
 

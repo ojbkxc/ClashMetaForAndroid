@@ -51,6 +51,12 @@ class V2BoardSession(context: Context) {
         defaultValue = false,
     )
 
+    // 存储当前登录用户对应的订阅UUID，用于多账号场景下精确匹配订阅
+    var v2boardProfileUuid: String by store.string(
+        key = "v2board_profile_uuid",
+        defaultValue = "",
+    )
+
     val isLoggedIn: Boolean
         get() = authData.isNotBlank()
 
@@ -68,6 +74,7 @@ class V2BoardSession(context: Context) {
         userToken = ""
         email = ""
         // hasEverLoggedIn remains true - user can re-login from within the app
+        // v2boardProfileUuid 也保留，用于下次登录时找到对应的订阅
     }
 
     companion object {

@@ -6,6 +6,7 @@ import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.ConfigManager
 import com.github.kr328.clash.v2board.SyncLog
+import com.github.kr328.clash.v2board.V2BoardSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -22,6 +23,7 @@ object V2BoardAutoSync {
                 val intervalMinutes = ConfigManager.getSyncIntervalMinutes()
                 val intervalMs = TimeUnit.MINUTES.toMillis(intervalMinutes)
                 val profileName = ConfigManager.getAppName()
+                val session = V2BoardSession(context)
 
                 Log.d("$TAG: Syncing subscription: name=$profileName, url=***, interval=${intervalMinutes}min")
                 SyncLog.add("开始同步订阅: $profileName")
@@ -39,8 +41,14 @@ object V2BoardAutoSync {
                     Log.d("$TAG: Total profiles: ${allProfiles.size}")
                     SyncLog.add("当前配置文件数量: ${allProfiles.size}")
 
-                    // 优先匹配名称为应用名的配置，其次匹配包含subscribe关键词的URL配置
-                    val existing = allProfiles.find {
+                    // 优先使用 session 中保存的 UUID 精确匹配（多账号场景）
+                    // 其次匹配名称为应用名的配置，最后匹配包含subscribe关键词的URL配置
+                    val savedUuid = session.v2boardProfileUuid
+                    val existingByUuid = if (savedUuid.isNotBlank()) {
+                        allProfiles.find { it.uuid.toString() == savedUuid && it.type == Profile.Type.Url }
+                    } else null
+
+                    val existing = existingByUuid ?: allProfiles.find {
                         it.type == Profile.Type.Url && it.name == profileName
                     } ?: allProfiles.find {
                         it.type == Profile.Type.Url &&
@@ -78,6 +86,8 @@ object V2BoardAutoSync {
                                 setActive(updated)
                                 Log.d("$TAG: Set active profile: ${updated.uuid}")
                                 SyncLog.add("已激活配置: ${updated.name}")
+                                // 更新 session 中保存的 UUID（确保一致性）
+                                session.v2boardProfileUuid = existing.uuid.toString()
                             }
                             Result.success("订阅已更新")
                         } else {
@@ -91,6 +101,9 @@ object V2BoardAutoSync {
                         val uuid = create(Profile.Type.Url, profileName, subscribeUrl)
                         Log.d("$TAG: Created pending profile: $uuid")
                         SyncLog.add("配置已创建: $uuid")
+                        // 保存新的 UUID 到 session
+                        session.v2boardProfileUuid = uuid.toString()
+                        Log.d("$TAG: Saved profile UUID to session: $uuid")
                         patch(uuid, profileName, subscribeUrl, intervalMs)
 
                         var commitSuccess = false

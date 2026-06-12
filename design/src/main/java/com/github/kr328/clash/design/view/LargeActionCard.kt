@@ -75,6 +75,14 @@ class LargeActionCard @JvmOverloads constructor(
         binding.trailingText2.textSize = sp
     }
 
+    fun setTextSize(sp: Float) {
+        binding.textView.textSize = sp
+    }
+
+    fun setSubtextSize(sp: Float) {
+        binding.subtextView.textSize = sp
+    }
+
     init {
         context.resolveClickableAttrs(attributeSet, defStyleAttr) {
             isFocusable = focusable(true)

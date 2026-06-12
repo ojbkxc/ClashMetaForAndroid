@@ -60,6 +60,21 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.loadUrl(targetUrl)
 
         design.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                // 已登录状态下拦截跳转到登录页的重定向，改为跳转到仪表盘
+                if (sync.session.isLoggedIn && (url.contains("#/login") || url.contains("/login"))) {
+                    val serverUrl = sync.config.serverUrl.ifBlank { sync.getActiveUrl() }
+                    val dashboardUrl = "$serverUrl/#/stage"
+                    if (url != dashboardUrl) {
+                        SyncLog.add("拦截登录页重定向，跳转仪表盘")
+                        view?.loadUrl(dashboardUrl)
+                        return true
+                    }
+                }
+                return false
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
                 // 页面开始加载时就注入 auth_data，确保前端 router guard 能读取
@@ -206,24 +221,45 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
     // 将已保存的 auth_data 注入到 WebView 的 localStorage
     // 确保前端 router guard 能读取到登录状态
+    // 同时注入多种 key 格式和 cookie，兼容不同前端实现
     private fun restoreAuthToLocalStorage(webView: WebView) {
         val authData = sync.session.authData
         if (authData.isBlank()) return
 
+        val safeAuth = authData.replace("'", "\\'").replace("\\", "\\\\")
         val js = """
             (function() {
                 try {
-                    var key = '__AURORA__authorization';
-                    // vue-ls 用 JSON.stringify({value: v}) 存储
-                    var value = JSON.stringify({value: '${authData.replace("'", "\\'")}'});
-                    var current = localStorage.getItem(key) || '';
-                    if (!current || current !== value) {
-                        localStorage.setItem(key, value);
-                    }
+                    var auth = '$safeAuth';
+                    var value = JSON.stringify({value: auth});
+                    var keys = ['__AURORA__authorization', 'authorization', 'auth_data'];
+                    keys.forEach(function(k) {
+                        try {
+                            var current = localStorage.getItem(k) || '';
+                            if (!current || current !== value) {
+                                localStorage.setItem(k, value);
+                            }
+                        } catch(e) {}
+                    });
+                    // 同时写入 sessionStorage（部分前端可能使用）
+                    keys.forEach(function(k) {
+                        try {
+                            sessionStorage.setItem(k, value);
+                        } catch(e) {}
+                    });
                 } catch(e) {}
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
+
+        // 同时设置 Cookie，确保前端通过 cookie 也能读取到
+        try {
+            val cookieManager = CookieManager.getInstance()
+            val domain = android.net.Uri.parse(sync.getActiveUrl()).host ?: ""
+            if (domain.isNotBlank()) {
+                cookieManager.setCookie(domain, "auth_data=${authData}; path=/; Max-Age=2592000")
+            }
+        } catch (_: Exception) {}
     }
 
     private fun injectAuthDetector(webView: WebView) {
@@ -420,6 +456,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     if (syncResult.isSuccess) {
                         Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
+                        // 通知 MainActivity 更新 UI（显示email等）
+                        activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
                         activity.design?.showToast(
                             syncResult.getOrNull() ?: "同步完成",
                             ToastDuration.Short
@@ -466,6 +504,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun onLogout() {
             activity.sync.session.clear()
             activity.loginDetected = false
+            // 通知 MainActivity 更新 UI
+            activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(

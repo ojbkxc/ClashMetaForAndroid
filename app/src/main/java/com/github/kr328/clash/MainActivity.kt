@@ -44,6 +44,12 @@ class MainActivity : BaseActivity<MainDesign>() {
             val sync = V2BoardSync.getInstance(this@MainActivity)
             launch {
                 design.setLoginStatus(sync.session.isLoggedIn)
+                // 登录成功后顶部显示email，未登录显示默认标题
+                if (sync.session.isLoggedIn && sync.session.email.isNotBlank()) {
+                    design.setTitleText(sync.session.email)
+                } else {
+                    design.setTitleText(null)
+                }
             }
         }
 
@@ -85,6 +91,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         Event.ServiceRecreated,
                         Event.ClashStop, Event.ClashStart,
                         Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
+                        Event.V2BoardLoginChanged -> updateSyncUI()
                         else -> Unit
                     }
                 }
@@ -199,19 +206,13 @@ class MainActivity : BaseActivity<MainDesign>() {
                 } else {
                     setProfileExpiryInfo(null)
                 }
-
-                // 账户卡片右侧：余额（≤20元显示）
-                if (session.balance in 1..2000) {
-                    val yuan = session.balance / 100.0
-                    setProfileBalance(String.format("¥%.2f", yuan))
-                } else {
-                    setProfileBalance(null)
-                }
             } else {
                 setProfilePlanName(null)
                 setProfileExpiryInfo(null)
-                setProfileBalance(null)
             }
+
+            // 设置余额并启动交替动画
+            setAccountBalance(session.balance)
 
             // 订阅到期提醒
             if (active != null && active.expire > 0) {
@@ -432,5 +433,10 @@ class MainActivity : BaseActivity<MainDesign>() {
             .build()
 
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+    }
+
+    override fun onDestroy() {
+        design?.onPageDestroy()
+        super.onDestroy()
     }
 }
