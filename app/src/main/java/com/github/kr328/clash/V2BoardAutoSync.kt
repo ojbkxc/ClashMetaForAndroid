@@ -51,7 +51,7 @@ object V2BoardAutoSync {
                         AppLog.d(TAG, " Found existing profile: ${existing.uuid}, name=${existing.name}")
                         SyncLog.add("找到已有配置: ${existing.name}")
                         // 更新现有配置
-                        patch(existing.uuid, profileName, subscribeUrl, intervalMs)
+                        patch(existing.uuid, profileName, subscribeUrl, intervalMs, ageSecretKey = null)
                         SyncLog.add("正在更新配置...")
                         var updateSuccess = false
                         for (attempt in 1..MAX_RETRY) {
@@ -88,10 +88,10 @@ object V2BoardAutoSync {
                         AppLog.d(TAG, " No existing profile found, creating new one")
                         SyncLog.add("未找到已有配置，创建新配置...")
                         // 创建新配置
-                        val uuid = create(Profile.Type.Url, profileName, subscribeUrl)
+                        val uuid = create(Profile.Type.Url, profileName, subscribeUrl, ageSecretKey = null)
                         AppLog.d(TAG, " Created pending profile: $uuid")
                         SyncLog.add("配置已创建: $uuid")
-                        patch(uuid, profileName, subscribeUrl, intervalMs)
+                        patch(uuid, profileName, subscribeUrl, intervalMs, ageSecretKey = null)
 
                         var commitSuccess = false
                         for (attempt in 1..MAX_RETRY) {
