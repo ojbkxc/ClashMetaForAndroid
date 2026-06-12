@@ -118,13 +118,27 @@ func (o *Optimizer) PeriodicCleanup() {
 	o.mu.Lock()
 	enabled := o.enabled
 	tcpPool := o.tcpPool
+	poolManager := o.poolManager
+	retransmit := o.retransmit
+	dnsCache := o.dnsCache
 	o.mu.Unlock()
 
 	if !enabled {
 		return
 	}
 
-	tcpPool.Cleanup()
+	if tcpPool != nil {
+		tcpPool.Cleanup()
+	}
+	if poolManager != nil {
+		poolManager.Cleanup()
+	}
+	if retransmit != nil {
+		retransmit.Cleanup()
+	}
+	if dnsCache != nil {
+		dnsCache.cleanup()
+	}
 }
 
 func (o *Optimizer) UpdateLossRate(protocol string, lossRate float64) {
@@ -136,8 +150,12 @@ func (o *Optimizer) UpdateLossRate(protocol string, lossRate float64) {
 		return
 	}
 
-	o.fec.UpdateLossRate(lossRate)
-	o.quicConfig.UpdateLossRate(lossRate)
+	if o.fec != nil {
+		o.fec.UpdateLossRate(lossRate)
+	}
+	if o.quicConfig != nil {
+		o.quicConfig.UpdateLossRate(lossRate)
+	}
 }
 
 func (o *Optimizer) UpdateRTT(protocol string, rtt time.Duration) {
@@ -149,7 +167,9 @@ func (o *Optimizer) UpdateRTT(protocol string, rtt time.Duration) {
 		return
 	}
 
-	o.retransmit.UpdateRTT(rtt)
+	if o.retransmit != nil {
+		o.retransmit.UpdateRTT(rtt)
+	}
 }
 
 func (o *Optimizer) Close() {
@@ -160,6 +180,9 @@ func (o *Optimizer) Close() {
 	o.poolManager.Close()
 	if o.tcpPool != nil {
 		o.tcpPool.Close()
+	}
+	if o.dnsCache != nil {
+		o.dnsCache.clear()
 	}
 	// Note: The optimizer is a singleton; after Close() it cannot be re-enabled.
 }

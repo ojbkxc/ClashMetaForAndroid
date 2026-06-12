@@ -20,7 +20,7 @@ func NewQUICDynamicConfig() *QUICDynamicConfig {
 	return &QUICDynamicConfig{
 		initialWindowSize: 65536,
 		minWindowSize:     16384,
-		maxWindowSize:     1048576,
+		maxWindowSize:     16777216, // 16MB — supports Hysteria2 large receive window
 		currentWindowSize: 65536,
 		lossRate:          0.0,
 		lastAdjustTime:    time.Now(),

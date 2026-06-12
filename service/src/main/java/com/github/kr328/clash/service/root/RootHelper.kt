@@ -333,6 +333,7 @@ object RootHelper {
     /**
      * Optimize kernel parameters (refer to Surfing)
      * Includes comprehensive UDP buffer and performance optimizations
+     * UDP buffer set to 8MB for Hysteria2/QUIC high throughput
      */
     private fun optimizeKernel(): Boolean {
         val commands = listOf(
@@ -343,26 +344,26 @@ object RootHelper {
             "echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout 2>/dev/null",
             "echo 15 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout_stream 2>/dev/null",
             
-            // UDP buffer optimization - comprehensive settings
-            "sysctl -w net.core.optmem_max=4194304 2>/dev/null",
-            "sysctl -w net.ipv4.udp_mem=\"65536 131072 262144\" 2>/dev/null",
+            // UDP buffer optimization - 8MB for Hysteria2/QUIC
+            "sysctl -w net.core.optmem_max=8388608 2>/dev/null",
+            "sysctl -w net.ipv4.udp_mem=\"2097152 4194304 8388608\" 2>/dev/null",
             "sysctl -w net.ipv4.udp_rmem_min=8192 2>/dev/null",
             "sysctl -w net.ipv4.udp_wmem_min=8192 2>/dev/null",
-            // UDP buffer max limits (increased for better throughput)
-            "sysctl -w net.ipv4.udp_rmem_max=4194304 2>/dev/null",
-            "sysctl -w net.ipv4.udp_wmem_max=4194304 2>/dev/null",
+            // UDP buffer max limits (8MB for Hysteria2 high throughput)
+            "sysctl -w net.ipv4.udp_rmem_max=8388608 2>/dev/null",
+            "sysctl -w net.ipv4.udp_wmem_max=8388608 2>/dev/null",
             
-            // IPv6 UDP buffer optimization
-            "sysctl -w net.ipv6.udp_mem=\"65536 131072 262144\" 2>/dev/null",
+            // IPv6 UDP buffer optimization (8MB)
+            "sysctl -w net.ipv6.udp_mem=\"2097152 4194304 8388608\" 2>/dev/null",
             "sysctl -w net.ipv6.udp_rmem_min=8192 2>/dev/null",
             "sysctl -w net.ipv6.udp_wmem_min=8192 2>/dev/null",
-            // IPv6 UDP buffer max limits
-            "sysctl -w net.ipv6.udp_rmem_max=4194304 2>/dev/null",
-            "sysctl -w net.ipv6.udp_wmem_max=4194304 2>/dev/null",
+            // IPv6 UDP buffer max limits (8MB)
+            "sysctl -w net.ipv6.udp_rmem_max=8388608 2>/dev/null",
+            "sysctl -w net.ipv6.udp_wmem_max=8388608 2>/dev/null",
             
-            // IP fragmentation optimization (for large UDP packets)
-            "sysctl -w net.ipv4.ipfrag_high_thresh=4194304 2>/dev/null",
-            "sysctl -w net.ipv4.ipfrag_low_thresh=2097152 2>/dev/null",
+            // IP fragmentation optimization (for large UDP packets, 8MB)
+            "sysctl -w net.ipv4.ipfrag_high_thresh=8388608 2>/dev/null",
+            "sysctl -w net.ipv4.ipfrag_low_thresh=4194304 2>/dev/null",
             
             // === Network Queue Optimizations ===
             // Increase network device backlog (prevents packet drops under high load)
@@ -385,11 +386,11 @@ object RootHelper {
             "sysctl -w net.ipv4.tcp_tw_reuse=1 2>/dev/null",
             // IP forward
             "sysctl -w net.ipv4.ip_forward=1 2>/dev/null",
-            // TCP buffer optimization
-            "sysctl -w net.ipv4.tcp_wmem=\"4096 16384 4194304\" 2>/dev/null",
-            "sysctl -w net.ipv4.tcp_rmem=\"4096 87380 4194304\" 2>/dev/null",
-            "sysctl -w net.core.rmem_max=4194304 2>/dev/null",
-            "sysctl -w net.core.wmem_max=4194304 2>/dev/null",
+            // TCP buffer optimization (8MB max)
+            "sysctl -w net.ipv4.tcp_wmem=\"4096 16384 8388608\" 2>/dev/null",
+            "sysctl -w net.ipv4.tcp_rmem=\"4096 87380 8388608\" 2>/dev/null",
+            "sysctl -w net.core.rmem_max=8388608 2>/dev/null",
+            "sysctl -w net.core.wmem_max=8388608 2>/dev/null",
             "sysctl -w net.core.rmem_default=262144 2>/dev/null",
             "sysctl -w net.core.wmem_default=262144 2>/dev/null",
             
@@ -410,9 +411,9 @@ object RootHelper {
             // Enable TCP fast open
             "sysctl -w net.ipv4.tcp_fastopen=3 2>/dev/null",
             
-            // === Enhanced UDP Buffer Optimizations (1MB+ Level) ===
-            // Larger UDP buffer for high-bandwidth applications
-            "sysctl -w net.ipv4.udp_mem=\"1048576 2097152 4194304\" 2>/dev/null",
+            // === Enhanced UDP Buffer Optimizations (8MB Level) ===
+            // Larger UDP buffer for high-bandwidth applications (Hysteria2)
+            "sysctl -w net.ipv4.udp_mem=\"2097152 4194304 8388608\" 2>/dev/null",
             "sysctl -w net.ipv4.udp_rmem_min=32768 2>/dev/null",
             "sysctl -w net.ipv4.udp_wmem_min=32768 2>/dev/null",
             "sysctl -w net.ipv6.udp_rmem_min=32768 2>/dev/null",
