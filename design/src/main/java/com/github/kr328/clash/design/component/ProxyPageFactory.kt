@@ -56,7 +56,6 @@ class ProxyPageFactory(private val config: ProxyViewConfig) {
     }
 
     fun fromRoot(root: View): Holder {
-        return root.tag as? Holder
-            ?: throw IllegalStateException("ProxyPageFactory: tag not set on root view")
+        return root.tag!! as Holder
     }
 }

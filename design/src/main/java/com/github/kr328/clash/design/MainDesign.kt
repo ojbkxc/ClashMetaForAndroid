@@ -71,27 +71,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
-    suspend fun setProfileFlowInfo(info: String?) {
-        withContext(Dispatchers.Main) {
-            binding.profileFlowInfo = info
-        }
-    }
-
-    suspend fun setProfileFlowProgress(progress: Int) {
-        withContext(Dispatchers.Main) {
-            binding.profileFlowProgress = progress
-            // 根据使用量变色：<50% 绿色、50-80% 橙色、>80% 红色
-            val color = when {
-                progress >= 800 -> 0xFFF44336.toInt() // 红色
-                progress >= 500 -> 0xFFFF9800.toInt() // 橙色
-                progress > 0    -> 0xFF4CAF50.toInt() // 绿色
-                else -> return@withContext
-            }
-            binding.profileFlowProgressBar.progressTintList =
-                android.content.res.ColorStateList.valueOf(color)
-        }
-    }
-
     init {
         binding.self = this
 

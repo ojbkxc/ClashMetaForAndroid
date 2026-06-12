@@ -30,8 +30,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         get() = binding.root
 
     var profile: Profile
-        get() = binding.profile
-            ?: throw IllegalStateException("profile view not bound in PropertiesDesign")
+        get() = binding.profile!!
         set(value) {
             binding.profile = value
         }
@@ -122,23 +121,6 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         }
     }
 
-    fun inputAgeSecretKey() {
-        launch {
-            val ageSecretKey = context.requestModelTextInput(
-                initial = profile.ageSecretKey ?: "",
-                title = context.getText(R.string.age_secret_key),
-                hint = context.getText(R.string.age_secret_key_hint),
-                error = context.getText(R.string.age_secret_key_error),
-                validator = ValidatorAgeSecretKey
-            )
-
-            val newKey = ageSecretKey.ifBlank { null }
-            if (newKey != profile.ageSecretKey) {
-                profile = profile.copy(ageSecretKey = newKey)
-            }
-        }
-    }
-
     fun inputInterval() {
         launch {
             var minutes = TimeUnit.MILLISECONDS.toMinutes(profile.interval)
@@ -179,7 +161,6 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
                 max = status.max
                 progress = status.progress
             }
-            FetchStatus.Action.SubscriptionInfo -> Unit
             FetchStatus.Action.Verifying -> {
                 text = context.getString(R.string.verifying)
                 isIndeterminate = false

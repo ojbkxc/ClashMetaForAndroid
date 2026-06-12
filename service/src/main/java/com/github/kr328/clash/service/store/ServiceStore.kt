@@ -65,29 +65,4 @@ class ServiceStore(context: Context) {
         key = "dynamic_notification",
         defaultValue = true
     )
-
-    var clearConnectionsOnNetworkChange by store.boolean(
-        key = "clear_connections_on_network_change",
-        defaultValue = false
-    )
-
-    var rootTransparentProxy by store.boolean(
-        key = "root_transparent_proxy",
-        defaultValue = false
-    )
-
-    var rootLockBackground by store.boolean(
-        key = "root_lock_background",
-        defaultValue = false
-    )
-
-    var rootDnsHijack by store.boolean(
-        key = "root_dns_hijack",
-        defaultValue = false
-    )
-
-    var ageSecretKey by store.string(
-        key = "age_secret_key",
-        defaultValue = ""
-    )
 }

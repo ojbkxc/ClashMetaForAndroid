@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
+<network-security-config xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="AcceptsUserCertificates">
     <base-config>
         <trust-anchors>
             <certificates src="system" />
-            <!-- 信任用户证书：支持自签名证书的代理服务器 -->
             <certificates src="user" />
         </trust-anchors>
     </base-config>

@@ -17,7 +17,7 @@ suspend fun Context.requestModelTextInput(
     error: CharSequence? = null,
     validator: Validator = ValidatorAcceptAll,
 ): String {
-    return this.requestModelTextInput(initial, title, null, hint, error, validator) ?: initial
+    return this.requestModelTextInput(initial, title, null, hint, error, validator)!!
 }
 
 suspend fun Context.requestModelTextInput(

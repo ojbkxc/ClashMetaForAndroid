@@ -5,7 +5,6 @@ import (
 	_ "cfa/native/common"
 	_ "cfa/native/config"
 	_ "cfa/native/delegate"
-	_ "cfa/native/optimize"
 	_ "cfa/native/platform"
 	_ "cfa/native/proxy"
 	_ "cfa/native/tun"

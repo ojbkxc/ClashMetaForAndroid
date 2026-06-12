@@ -27,10 +27,10 @@ class AppBottomSheetDialog(context: Context) : BottomSheetDialog(context) {
 
         setCancelable(true)
 
-        window?.apply {
+        window!!.apply {
             isSystemBarsTranslucentCompat = true
             isAllowForceDarkCompat = false
-        } ?: return
+        }
 
         findViewById<ViewGroup>(com.google.android.material.R.id.container)?.apply {
             fitsSystemWindows = false
@@ -77,7 +77,7 @@ class FullScreenDialog(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window?.apply {
+        window!!.apply {
             isSystemBarsTranslucentCompat = true
 
             setLayout(
@@ -89,6 +89,6 @@ class FullScreenDialog(
                 if (surface.insets != it)
                     surface.insets = it
             }
-        } ?: return
+        }
     }
 }

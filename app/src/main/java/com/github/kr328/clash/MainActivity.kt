@@ -14,8 +14,8 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.intent
-import com.github.kr328.clash.util.AppLog
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
@@ -26,7 +26,6 @@ import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.SyncLog
 import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -52,42 +51,6 @@ class MainActivity : BaseActivity<MainDesign>() {
         updateSyncUI()
 
         design.fetch()
-
-        // Delayed root detection (non-critical, deferred to avoid blocking startup)
-        launch {
-            delay(DELAY_BEFORE_NON_CRITICAL_TASKS)
-            try {
-                val isRooted = withContext(Dispatchers.IO) {
-                    com.github.kr328.clash.common.RootChecker.isRooted()
-                }
-                if (isRooted) {
-                    AppLog.d("MainActivity", "Device is rooted.")
-                    // Do NOT call requestRoot() here - it would trigger the superuser
-                    // dialog at startup. Root is requested only when the user explicitly
-                    // clicks "Request Root Permission" in Root Settings.
-                }
-            } catch (e: Exception) {
-                AppLog.e("MainActivity", "Root detection failed", e)
-            }
-        }
-
-        // Delayed update check (non-critical, deferred to avoid blocking startup)
-        launch {
-            delay(DELAY_BEFORE_UPDATE_CHECK)
-            try {
-                val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
-                val release = withContext(Dispatchers.IO) {
-                    UpdateChecker.checkForUpdate(this@MainActivity)
-                }
-                if (release != null && UpdateChecker.compareVersions(currentVersion, release.tagName) < 0) {
-                    withContext(Dispatchers.Main) {
-                        UpdateChecker.showUpdateDialog(this@MainActivity, currentVersion, release)
-                    }
-                }
-            } catch (e: Exception) {
-                AppLog.e("MainActivity", "Update check failed", e)
-            }
-        }
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
@@ -157,69 +120,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         setHasProviders(providers.isNotEmpty())
 
         withProfile {
-            val active = queryActive()
-            setProfileName(active?.name)
-
-            // 显示订阅流量信息
-            val flowInfo = if (active != null && active.total > 0) {
-                val usedBytes = active.upload + active.download
-                val usedStr = formatBytes(usedBytes)
-                val totalStr = formatBytes(active.total)
-                val expireStr = if (active.expire > 0) {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    sdf.format(java.util.Date(active.expire))
-                } else ""
-
-                if (expireStr.isNotEmpty()) {
-                    context.getString(DesignR.string.format_v2board_traffic, usedStr, totalStr, expireStr)
-                } else {
-                    "$usedStr / $totalStr"
-                }
-            } else null
-
-            val flowProgress = if (active != null && active.total > 1) {
-                ((active.upload + active.download) / (active.total / 1000)).toInt().coerceIn(0, 1000)
-            } else 0
-
-            setProfileFlowInfo(flowInfo)
-            setProfileFlowProgress(flowProgress)
-
-            // 订阅到期提醒
-            if (active != null && active.expire > 0) {
-                val daysLeft = ((active.expire - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
-                if (daysLeft <= 0) {
-                    design?.showToast(
-                        DesignR.string.subscription_expired,
-                        com.github.kr328.clash.design.ui.ToastDuration.Long
-                    )
-                } else if (daysLeft <= 3) {
-                    design?.showToast(
-                        getString(DesignR.string.subscription_expiring_soon, daysLeft),
-                        com.github.kr328.clash.design.ui.ToastDuration.Long
-                    )
-                }
-            }
-
-            // 流量超 90% 提醒
-            if (active != null && active.total > 1) {
-                val usedBytes = active.upload + active.download
-                val usagePercent = (usedBytes * 100.0 / active.total).toInt()
-                if (usagePercent >= 90) {
-                    design?.showToast(
-                        DesignR.string.subscription_traffic_warning,
-                        com.github.kr328.clash.design.ui.ToastDuration.Long
-                    )
-                }
-            }
-        }
-    }
-
-    private fun formatBytes(bytes: Long): String {
-        return when {
-            bytes < 1024 -> "${bytes}B"
-            bytes < 1024 * 1024 -> "%.1fKB".format(bytes / 1024.0)
-            bytes < 1024 * 1024 * 1024 -> "%.1fMB".format(bytes / (1024.0 * 1024))
-            else -> "%.2fGB".format(bytes / (1024.0 * 1024 * 1024))
+            setProfileName(queryActive()?.name)
         }
     }
 
@@ -254,8 +155,6 @@ class MainActivity : BaseActivity<MainDesign>() {
                 if (result.resultCode == RESULT_OK)
                     startClashService()
             }
-
-            
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
         }
@@ -276,26 +175,21 @@ class MainActivity : BaseActivity<MainDesign>() {
         val result = sync.fetchSubscribeUrl()
 
         if (result.isSuccess) {
-            val subscribeUrl = result.getOrNull()
-            if (subscribeUrl == null) {
-                SyncLog.add("API获取订阅URL为空")
-                design.showToast(getString(DesignR.string.sync_failed, "empty subscription URL"), ToastDuration.Long)
-                return
-            }
+            val subscribeUrl = result.getOrNull()!!
             SyncLog.add("API获取订阅URL成功")
 
             val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
             if (syncResult.isSuccess) {
-                design.showToast(getString(DesignR.string.sync_success), ToastDuration.Short)
+                design.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
                 design.fetch()
             } else {
-                val errorMsg = syncResult.exceptionOrNull()?.message ?: ""
-                design.showToast(getString(DesignR.string.sync_failed, errorMsg), ToastDuration.Long)
+                val errorMsg = syncResult.exceptionOrNull()?.message ?: "未知错误"
+                design.showToast("同步失败: $errorMsg", ToastDuration.Long)
             }
         } else {
-            val errorMsg = result.exceptionOrNull()?.message ?: ""
+            val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
             SyncLog.add("API获取订阅失败: $errorMsg")
-            design.showToast(getString(DesignR.string.sync_failed, errorMsg), ToastDuration.Long)
+            design.showToast("同步失败: $errorMsg", ToastDuration.Long)
         }
     }
 
@@ -339,8 +233,8 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             // Show a dialog indicating check in progress
             val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                .setTitle(DesignR.string.check_update)
-                .setMessage(DesignR.string.checking_update)
+                .setTitle("检查更新")
+                .setMessage("正在检查...")
                 .setCancelable(false)
                 .create()
             progressDialog.show()
@@ -352,9 +246,9 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             if (release == null) {
                 androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle(DesignR.string.check_update)
-                    .setMessage(DesignR.string.check_update_failed)
-                    .setPositiveButton(DesignR.string.btn_ok, null)
+                    .setTitle("检查更新")
+                    .setMessage("检查更新失败，请稍后重试。")
+                    .setPositiveButton("确定", null)
                     .show()
                 return@launch
             }
@@ -407,14 +301,5 @@ class MainActivity : BaseActivity<MainDesign>() {
             .build()
 
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
-    }
-
-    // Note: We don't stop clash service when MainActivity is destroyed
-    // because user may want the app to run in background with VPN/DNS hijack
-    // Rules cleanup happens in ClashService.onDestroy when service is actually stopped
-
-    companion object {
-        private const val DELAY_BEFORE_NON_CRITICAL_TASKS = 3000L
-        private const val DELAY_BEFORE_UPDATE_CHECK = 10000L
     }
 }

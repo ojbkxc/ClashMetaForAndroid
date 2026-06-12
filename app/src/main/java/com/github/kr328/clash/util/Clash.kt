@@ -3,7 +3,6 @@ package com.github.kr328.clash.util
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
-import androidx.core.app.NotificationManagerCompat
 import com.github.kr328.clash.common.compat.startForegroundServiceCompat
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
@@ -25,24 +24,9 @@ fun Context.startClashService(): Intent? {
         startForegroundServiceCompat(ClashService::class.intent)
     }
 
-    // Check if battery optimization is enabled and warn user
-    if (shouldWarnBatteryOptimization(this)) {
-        AppLog.w("Clash", "Battery optimization is still enabled - service may be killed in background")
-    }
-
     return null
 }
 
 fun Context.stopClashService() {
     sendBroadcastSelf(Intent(Intents.ACTION_CLASH_REQUEST_STOP))
-}
-
-/**
- * Check if we should warn the user about battery optimization.
- * Only show warning if battery optimization is enabled AND notifications are allowed.
- */
-fun shouldWarnBatteryOptimization(context: Context): Boolean {
-    val notBatteryOptimized = !BatteryOptimization.isIgnoringBatteryOptimizations(context)
-    val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
-    return notBatteryOptimized && notificationsEnabled
 }

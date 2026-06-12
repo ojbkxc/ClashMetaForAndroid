@@ -4,12 +4,6 @@ plugins {
     id("com.android.library")
 }
 
-android {
-    buildFeatures {
-        viewBinding = true
-    }
-}
-
 dependencies {
     implementation(project(":common"))
     implementation(project(":core"))

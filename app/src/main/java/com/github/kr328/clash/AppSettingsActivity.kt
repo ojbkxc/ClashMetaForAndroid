@@ -8,7 +8,6 @@ import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.ApplicationObserver
-import com.github.kr328.clash.util.BatteryOptimization
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 
@@ -21,7 +20,6 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
             this,
             clashRunning,
             ::onHideIconChange,
-            ::onRequestBatteryOptimization,
         )
 
         setContentDesign(design)
@@ -36,13 +34,8 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                     }
                 }
                 design.requests.onReceive {
-                    when (it) {
-                        AppSettingsDesign.Request.ReCreateAllActivities ->
-                            ApplicationObserver.createdActivities.forEach { act ->
-                                act.recreate()
-                            }
-                        AppSettingsDesign.Request.RequestBatteryOptimization ->
-                            onRequestBatteryOptimization()
+                    ApplicationObserver.createdActivities.forEach {
+                        it.recreate()
                     }
                 }
             }
@@ -70,9 +63,6 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
             )
         }
 
-    override val batteryOptimized: Boolean
-        get() = BatteryOptimization.isIgnoringBatteryOptimizations(this)
-
     private fun onHideIconChange(hide: Boolean) {
         val newState = if (hide) {
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
@@ -84,9 +74,5 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
             newState,
             PackageManager.DONT_KILL_APP
         )
-    }
-
-    private fun onRequestBatteryOptimization() {
-        startActivity(BatteryOptimization.openBatteryOptimizationSettings(this))
     }
 }

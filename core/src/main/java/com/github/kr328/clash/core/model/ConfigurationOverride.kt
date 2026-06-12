@@ -109,12 +109,6 @@ data class ConfigurationOverride(
         @SerialName("default-nameserver")
         var defaultServer: List<String>? = null,
 
-        @SerialName("fake-ip-range")
-        var fakeIpRange: String? = null,
-
-        @SerialName("fake-ip-range6")
-        var fakeIpRange6: String? = null,
-
         @SerialName("fake-ip-filter")
         var fakeIpFilter: List<String>? = null,
 
@@ -126,12 +120,6 @@ data class ConfigurationOverride(
 
         @SerialName("nameserver-policy")
         var nameserverPolicy: Map<String, String>? = null,
-
-        @SerialName("proxy-server-nameserver")
-        var proxyServerNameserver: List<String>? = null,
-
-        @SerialName("direct-nameserver")
-        var directNameserver: List<String>? = null,
     )
 
     @Serializable

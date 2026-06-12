@@ -1,7 +1,6 @@
 package com.github.kr328.clash.service
 
 import android.content.Context
-import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.service.data.Database
 import com.github.kr328.clash.service.data.Imported
 import com.github.kr328.clash.service.data.ImportedDao
@@ -16,20 +15,18 @@ import com.github.kr328.clash.service.util.generateProfileUUID
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.service.util.sendProfileChanged
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.FileNotFoundException
+import java.math.BigDecimal
 import java.util.*
 
 class ProfileManager(private val context: Context) : IProfileManager,
-    CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.IO +
-        CoroutineExceptionHandler { _, e ->
-            Log.e("ProfileManager unhandled exception: ${e.message}", e)
-        }) {
+    CoroutineScope by CoroutineScope(Dispatchers.IO) {
     private val store = ServiceStore(context)
 
     init {
@@ -40,7 +37,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
         }
     }
 
-    override suspend fun create(type: Profile.Type, name: String, source: String, ageSecretKey: String?): UUID {
+    override suspend fun create(type: Profile.Type, name: String, source: String): UUID {
         val uuid = generateProfileUUID()
         val pending = Pending(
             uuid = uuid,
@@ -52,7 +49,6 @@ class ProfileManager(private val context: Context) : IProfileManager,
             total = 0,
             download = 0,
             expire = 0,
-            ageSecretKey = ageSecretKey,
         )
 
         PendingDao().insert(pending)
@@ -85,7 +81,6 @@ class ProfileManager(private val context: Context) : IProfileManager,
             total = imported.total,
             download = imported.download,
             expire = imported.expire,
-            ageSecretKey = imported.ageSecretKey
         )
 
         cloneImportedFiles(uuid, newUUID)
@@ -95,7 +90,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
         return newUUID
     }
 
-    override suspend fun patch(uuid: UUID, name: String, source: String, interval: Long, ageSecretKey: String?) {
+    override suspend fun patch(uuid: UUID, name: String, source: String, interval: Long) {
         val pending = PendingDao().queryByUUID(uuid)
 
         if (pending == null) {
@@ -115,7 +110,6 @@ class ProfileManager(private val context: Context) : IProfileManager,
                     total = 0,
                     download = 0,
                     expire = 0,
-                    ageSecretKey = ageSecretKey,
                 )
             )
         } else {
@@ -127,7 +121,6 @@ class ProfileManager(private val context: Context) : IProfileManager,
                 total = 0,
                 download = 0,
                 expire = 0,
-                ageSecretKey = ageSecretKey,
             )
 
             PendingDao().update(newPending)
@@ -136,6 +129,76 @@ class ProfileManager(private val context: Context) : IProfileManager,
 
     override suspend fun update(uuid: UUID) {
         scheduleUpdate(uuid, true)
+        ImportedDao().queryByUUID(uuid)?.let {
+            if (it.type == Profile.Type.Url && it.source.startsWith("https://",true)) {
+                updateFlow(it)
+            }
+        }
+    }
+
+    suspend fun updateFlow(old: Imported) {
+        val client = OkHttpClient()
+        try {
+            val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            val request = Request.Builder()
+                .url(old.source)
+                .header("User-Agent", "ClashMetaForAndroid/$versionName")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful || response.headers["subscription-userinfo"] == null) return
+
+                var upload: Long = 0
+                var download: Long = 0
+                var total: Long = 0
+                var expire: Long = 0
+
+                val userinfo = response.headers["subscription-userinfo"]
+                if (response.isSuccessful && userinfo != null) {
+
+                    val flags = userinfo.split(";")
+                    for (flag in flags) {
+                        val info = flag.split("=")
+                        if (info.size < 2 || info[1].isEmpty()) continue
+                        when {
+                            info[0].contains("upload") -> upload =
+                                BigDecimal(info[1].split('.').first()).longValueExact()
+
+                            info[0].contains("download") -> download =
+                                BigDecimal(info[1].split('.').first()).longValueExact()
+
+                            info[0].contains("total") -> total =
+                                BigDecimal(info[1].split('.').first()).longValueExact()
+
+                            info[0].contains("expire") ->
+                                expire = (info[1].toDouble() * 1000).toLong()
+                        }
+                    }
+                }
+
+                val new = Imported(
+                    old.uuid,
+                    old.name,
+                    old.type,
+                    old.source,
+                    old.interval,
+                    upload,
+                    download,
+                    total,
+                    expire,
+                    old.createdAt
+                )
+
+                ImportedDao().update(new)
+
+                PendingDao().remove(new.uuid)
+                context.sendProfileChanged(new.uuid)
+                // println(response.body!!.string())
+            }
+
+        } catch (e: Exception) {
+            System.out.println(e)
+        }
     }
 
     override suspend fun commit(uuid: UUID, callback: IFetchObserver?) {
@@ -209,8 +272,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             expire,
             resolveUpdatedAt(uuid),
             imported != null,
-            pending != null,
-            ageSecretKey = if (pending != null) pending.ageSecretKey else imported?.ageSecretKey,
+            pending != null
         )
     }
 

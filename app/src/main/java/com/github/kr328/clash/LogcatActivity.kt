@@ -8,7 +8,7 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.compat.startForegroundServiceCompat
-import com.github.kr328.clash.util.AppLog
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.fileName
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
@@ -27,7 +27,6 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.io.OutputStreamWriter
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import com.github.kr328.clash.design.R
 
@@ -50,7 +49,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         val messages = try {
             LogcatReader(this, file).readAll()
         } catch (e: Exception) {
-            AppLog.e("Logcat", "Fail to read log file ${file.fileName}: ${e.message}")
+            Log.e("Fail to read log file ${file.fileName}: ${e.message}")
             return showInvalid()
         }
 
@@ -142,10 +141,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
         return suspendCoroutine { ctx ->
             bindService(LogcatService::class.intent, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                    val srv = service?.queryLocalInterface("") as? LogcatService
-                        ?: return ctx.resumeWithException(
-                            IllegalStateException("LogcatService not available — service binding returned null or invalid IBinder")
-                        )
+                    val srv = service!!.queryLocalInterface("") as LogcatService
 
                     ctx.resume(srv)
 
@@ -172,20 +168,13 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
                     withContext(Dispatchers.IO) {
                         it.writeHeader(file.date)
 
-                        var lastProgress = 0
                         messages.forEachIndexed { idx, msg ->
-                            it.writeMessage(msg)
-                            // Update progress bar every 50 messages to reduce context switches
-                            val current = idx + 1
-                            if (current - lastProgress >= 50 || current == messages.size) {
-                                lastProgress = current
-                                withContext(Dispatchers.Main) {
-                                    configure {
-                                        isIndeterminate = false
-                                        progress = idx
-                                    }
-                                }
+                            configure {
+                                isIndeterminate = false
+                                progress = idx
                             }
+
+                            it.writeMessage(msg)
                         }
                     }
                 }

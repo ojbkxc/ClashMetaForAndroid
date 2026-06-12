@@ -92,7 +92,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
                         is NewProfileDesign.Request.LaunchScanner -> {
                             // scanLauncher.launch(null)
-                            design.showExceptionToast(getString(R.string.qr_scanner_unavailable))
+                            design?.showExceptionToast("QR扫描功能暂时不可用")
                         }
                     }
                 }

@@ -12,7 +12,6 @@ import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendProfileLoaded
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.select
-import java.io.File
 import java.util.*
 
 class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadException>(service) {
@@ -56,12 +55,6 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 val active = ImportedDao().queryByUUID(current)
                     ?: throw NullPointerException("No profile selected")
 
-                // Set age secret key before loading configuration
-                val ageSecretKey = store.ageSecretKey
-                if (ageSecretKey.isNotBlank()) {
-                    Clash.setAgeSecretKey(ageSecretKey)
-                }
-
                 Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
 
                 val remove = SelectionDao().querySelections(active.uuid)
@@ -76,28 +69,8 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
 
                 Log.d("Profile ${active.name} loaded")
             } catch (e: Exception) {
-                Log.e("Profile load failed: ${e.message}", e)
-                writeErrorLog(service, e)
                 return enqueueEvent(LoadException(e.message ?: "Unknown"))
             }
-        }
-    }
-
-    private fun writeErrorLog(context: android.content.Context, e: Exception) {
-        try {
-            val logsDir = File(context.cacheDir, "logs").apply { mkdirs() }
-            val file = File(logsDir, "error-${System.currentTimeMillis()}.log")
-            val now = System.currentTimeMillis()
-            file.bufferedWriter().use { writer ->
-                writer.write("$now:Error:Profile load failed: ${e.message}")
-                writer.newLine()
-                e.stackTraceToString().lines().forEach { line ->
-                    writer.write("$now:Warning:  $line")
-                    writer.newLine()
-                }
-            }
-        } catch (_: Exception) {
-            // silently ignore log writing errors
         }
     }
 }

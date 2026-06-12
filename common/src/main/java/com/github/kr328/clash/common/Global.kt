@@ -1,13 +1,11 @@
 package com.github.kr328.clash.common
 
 import android.app.Application
-import com.github.kr328.clash.common.log.Log
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 
-object Global : CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.IO +
-        CoroutineExceptionHandler { _, e ->
-            Log.e("Global scope unhandled exception: ${e.message}", e)
-        }) {
+object Global : CoroutineScope by CoroutineScope(Dispatchers.IO) {
     val application: Application
         get() = application_
 

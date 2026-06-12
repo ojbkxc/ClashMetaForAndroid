@@ -225,28 +225,4 @@ object Clash {
             })
         }
     }
-
-    fun enableOptimizer() {
-        Bridge.nativeEnableOptimizer()
-    }
-
-    fun disableOptimizer() {
-        Bridge.nativeDisableOptimizer()
-    }
-
-    fun requestOptimizerGC() {
-        Bridge.nativeRequestOptimizerGC()
-    }
-
-    fun periodicOptimizerCleanup() {
-        Bridge.nativePeriodicOptimizerCleanup()
-    }
-
-    fun setOptimizerDNSTimeout(seconds: Int) {
-        Bridge.nativeSetOptimizerDNSTimeout(seconds)
-    }
-
-    fun setAgeSecretKey(secretKey: String) {
-        Bridge.nativeSetAgeSecretKey(secretKey)
-    }
 }

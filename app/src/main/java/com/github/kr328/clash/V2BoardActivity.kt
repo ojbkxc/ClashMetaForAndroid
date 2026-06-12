@@ -9,7 +9,7 @@ import android.net.http.SslError
 import android.os.Bundle
 import android.view.View
 import android.webkit.*
-import com.github.kr328.clash.util.AppLog
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.design.V2BoardDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.withProfile
@@ -26,8 +26,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     private val sync by lazy { V2BoardSync.getInstance(this) }
     private var pageLoaded = false
     private var loginDetected = false
-    @Volatile
-    private var destroyed = false
     private val isLoginMode: Boolean
         get() = intent.getBooleanExtra(EXTRA_IS_LOGIN, false)
 
@@ -64,16 +62,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                // 不在 onPageStarted 注入，DOM 未就绪会失败
+                // 页面开始加载时就注入 auth_data，确保前端 router guard 能读取
+                if (view != null) {
+                    restoreAuthToLocalStorage(view)
+                }
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
                     if (url != null && !url.startsWith("file://")) {
-                        // 先检查 localStorage 是否已有 auth_data（前端可能已刷新）
-                        // 如果有，保存到本地；如果没有，注入保存的值
-                        syncLocalStorageWithBackend(view)
+                        // 先注入 auth_data 到 localStorage
+                        restoreAuthToLocalStorage(view)
                         // 再注入登录检测
                         injectAuthDetector(view)
 
@@ -112,7 +112,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                                     }
                                     withContext(Dispatchers.Main) {
                                         design?.showToast(
-                                            getString(com.github.kr328.clash.design.R.string.auto_syncing_subscription),
+                                            "正在自动同步订阅...",
                                             ToastDuration.Short
                                         )
                                         fetchSubscribeViaJs()
@@ -202,42 +202,23 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         }
     }
 
-    // 双向同步：优先使用 localStorage 中的值（前端可能已刷新 token）
-    // 只有 localStorage 为空时才注入保存的旧值
-    private fun syncLocalStorageWithBackend(webView: WebView) {
-        val savedAuth = sync.session.authData
+    // 将已保存的 auth_data 注入到 WebView 的 localStorage
+    // 确保前端 router guard 能读取到登录状态
+    private fun restoreAuthToLocalStorage(webView: WebView) {
+        val authData = sync.session.authData
+        if (authData.isBlank()) return
+
         val js = """
             (function() {
                 try {
-                    var keys = ['__AURORA__authorization', 'authorization', 'auth_data'];
-                    var existing = '';
-                    for (var i = 0; i < keys.length; i++) {
-                        var val = localStorage.getItem(keys[i]);
-                        if (val) {
-                            // vue-ls 格式: {"value":"xxx"}
-                            try {
-                                var parsed = JSON.parse(val);
-                                if (parsed && typeof parsed === 'object' && parsed.value) {
-                                    existing = parsed.value;
-                                } else if (typeof parsed === 'string') {
-                                    existing = parsed;
-                                } else {
-                                    existing = val;
-                                }
-                            } catch(e) { existing = val; }
-                            if (existing) break;
-                        }
-                    }
-                    if (existing && typeof existing === 'string' && existing.length > 10) {
-                        // localStorage 有值，回传给 native 保存
-                        AndroidBridge.onLocalStorageAuth(existing);
-                    } else if ('${savedAuth.replace("'", "\\'")}'.length > 10) {
-                        // localStorage 为空，注入保存的值
-                        var key = '__AURORA__authorization';
-                        var value = JSON.stringify({value: '${savedAuth.replace("'", "\\'")}'});
+                    var key = '__AURORA__authorization';
+                    // vue-ls 用 JSON.stringify({value: v}) 存储
+                    var value = JSON.stringify({value: '${authData.replace("'", "\\'")}'});
+                    var current = localStorage.getItem(key) || '';
+                    if (!current || current !== value) {
                         localStorage.setItem(key, value);
                     }
-                } catch(e) { AndroidBridge.log('syncAuth error: ' + e.message); }
+                } catch(e) {}
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
@@ -366,8 +347,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     class AuthBridge(private val activity: V2BoardActivity) {
         @JavascriptInterface
         fun onAuthData(authData: String, token: String, serverUrl: String) {
-            if (activity.destroyed || activity.design == null) return
             if (authData.isBlank()) return
+            if (activity.loginDetected) return
 
             // 清理 auth_data：处理 vue-ls 的 {"value":"JWT"} 格式
             var cleanAuth = authData.trim().removeSurrounding("\"").removeSurrounding("'")
@@ -382,7 +363,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
             // 如果已登录且 auth_data 相同，不重复触发同步
             val existingAuth = activity.sync.session.authData
-            if (existingAuth.isNotBlank() && existingAuth == cleanAuth && activity.loginDetected) {
+            if (existingAuth.isNotBlank() && existingAuth == cleanAuth) {
                 activity.loginDetected = true
                 SyncLog.add("已登录，跳过重复同步")
                 return
@@ -391,7 +372,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.loginDetected = true
             activity.sync.session.save(cleanAuth, token, "")
 
-            AppLog.d("V2Board", "onAuthData called")
+            Log.d("V2Board: onAuthData called")
             SyncLog.add("登录成功，获取到认证信息")
             SyncLog.add("后端地址: ${SyncLog.maskUrl(serverUrl)}")
             SyncLog.add("auth_data: ${cleanAuth.take(30)}...")
@@ -400,17 +381,24 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
                 activity.sync.resetApi()
-                AppLog.d("V2Board", "Saved backend URL")
+                Log.d("V2Board: Saved backend URL")
             }
 
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        activity.getString(com.github.kr328.clash.design.R.string.login_success_syncing),
+                        "登录成功，3秒后自动同步订阅...",
                         ToastDuration.Short
                     )
-                    // 登录成功后立即获取订阅，不再固定等待
-                    SyncLog.add("登录成功，立即获取订阅...")
+                }
+                SyncLog.add("等待3秒后获取订阅...")
+
+                // 延迟3秒，确保前端 localStorage 已写入 auth_data
+                kotlinx.coroutines.delay(3000)
+
+                withContext(Dispatchers.Main) {
+                    // 用 JavaScript 调用前端的 API，自动带正确的 authorization header
+                    SyncLog.add("通过JS获取订阅URL...")
                     activity.fetchSubscribeViaJs()
                 }
             }
@@ -418,21 +406,20 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onSubscribeUrl(subscribeUrl: String) {
-            if (activity.destroyed) return
             if (subscribeUrl.isBlank()) return
-            AppLog.d("V2Board", "onSubscribeUrl called")
+            Log.d("V2Board: onSubscribeUrl called")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
 
             activity.launch {
-                AppLog.d("V2Board", "Starting sync")
+                Log.d("V2Board: Starting sync")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
-                        AppLog.d("V2Board", "Sync succeeded: ${syncResult.getOrNull()}")
+                        Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
                         activity.design?.showToast(
-                            activity.getString(com.github.kr328.clash.design.R.string.sync_success),
+                            syncResult.getOrNull() ?: "同步完成",
                             ToastDuration.Short
                         )
                     } else {
@@ -440,12 +427,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         val errorMsg = if (error?.message != null) {
                             error.message
                         } else {
-                            error?.let { it::class.java.simpleName } ?: "Unknown error"
+                            error?.javaClass?.simpleName ?: "Unknown error"
                         }
-                        AppLog.w("V2Board", "Sync failed: $errorMsg")
+                        Log.w("V2Board: Sync failed: $errorMsg")
                         SyncLog.add("同步失败: $errorMsg")
                         activity.design?.showToast(
-                            activity.getString(com.github.kr328.clash.design.R.string.sync_failed, errorMsg ?: ""),
+                            "同步失败: $errorMsg",
                             ToastDuration.Long
                         )
                     }
@@ -455,33 +442,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun log(message: String) {
-            AppLog.d("V2Board JS", message)
+            Log.d("V2Board JS: $message")
             SyncLog.add("JS: $message")
         }
 
         @JavascriptInterface
-        fun onLocalStorageAuth(authData: String) {
-            if (activity.destroyed) return
-            if (authData.isBlank() || authData.length < 10) return
-            val existing = activity.sync.session.authData
-            // 只在值不同时更新，避免不必要的写入
-            if (existing != authData) {
-                activity.sync.session.save(authData, "", "")
-                AppLog.d("V2Board", "Saved refreshed auth_data from localStorage")
-                SyncLog.add("检测到前端刷新了认证，已同步保存")
-            }
-            activity.loginDetected = true
-        }
-
-        @JavascriptInterface
         fun onSubscribeError(error: String) {
-            if (activity.destroyed || activity.design == null) return
-            AppLog.w("V2Board", "onSubscribeError: $error")
+            Log.w("V2Board: onSubscribeError: $error")
             SyncLog.add("获取订阅失败: $error")
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        activity.getString(com.github.kr328.clash.design.R.string.sync_failed, error),
+                        "获取订阅失败: $error",
                         ToastDuration.Long
                     )
                 }
@@ -490,10 +462,16 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onLogout() {
-            // 不清理登录认证，保留 auth_data 和 session 信息
-            // 用户登录后，认证信息应持久保存，返回也不清除
-            AppLog.d("V2Board", "onLogout called from JS, but auth preserved")
-            SyncLog.add("前端触发退出登录，但保留本地认证信息")
+            activity.sync.session.clear()
+            activity.loginDetected = false
+            activity.launch {
+                withContext(Dispatchers.Main) {
+                    activity.design?.showToast(
+                        "已退出登录",
+                        ToastDuration.Short
+                    )
+                }
+            }
         }
 
         @JavascriptInterface
@@ -574,22 +552,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     override fun finish() {
-        // 只有在登录模式且未检测到登录且确实未登录时，才返回 CANCELED
-        // 如果用户已登录（session.isLoggedIn），即使本次没有触发新登录，也不应返回 CANCELED
-        if (isLoginMode && !loginDetected && !sync.session.isLoggedIn) {
+        if (isLoginMode && !loginDetected) {
             setResult(Activity.RESULT_CANCELED)
         }
         super.finish()
     }
 
     override fun onDestroy() {
-        destroyed = true
-        // 先移除 JS 接口，防止回调访问已销毁的 Activity
-        try {
-            design?.removeJavascriptInterface("AndroidBridge")
-        } catch (_: Exception) {}
         design?.destroyWebView()
-        design = null
         super.onDestroy()
     }
 

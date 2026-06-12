@@ -15,36 +15,25 @@ class LogcatReader(context: Context, file: LogFile) : AutoCloseable {
         reader.close()
     }
 
-    /**
-     * Read all log messages from file with proper resource management
-     */
-    fun readAll(): List<LogMessage> = reader.use { r ->
+    fun readAll(): List<LogMessage> {
         var lastTime = Date(0)
-        r.lineSequence()
+        return reader.lineSequence()
             .map { it.trim() }
             .filter { !it.startsWith("#") }
             .map { it.split(":", limit = 3) }
-            .map { parts ->
-                val time = parts[0].toLongOrNull()?.let { Date(it) } ?: lastTime
-                val logMessage = if (parts[0].toLongOrNull() != null && parts.size >= 3) {
-                    try {
-                        LogMessage(
-                            time = time,
-                            level = LogMessage.Level.valueOf(parts[1]),
-                            message = parts[2]
-                        )
-                    } catch (e: IllegalArgumentException) {
-                        LogMessage(
-                            time = time,
-                            level = LogMessage.Level.Warning,
-                            message = parts.joinToString(":")
-                        )
-                    }
+            .map {
+                val time = it[0].toLongOrNull()?.let { Date(it) } ?: lastTime
+                val logMessage = if (it[0].toLongOrNull() != null) {
+                    LogMessage(
+                        time = time,
+                        level = LogMessage.Level.valueOf(it[1]),
+                        message = it[2]
+                    )
                 } else {
                     LogMessage(
                         time = time,
-                        level = LogMessage.Level.Warning,
-                        message = parts.joinToString(":")
+                        level = LogMessage.Level.Warning, // or any default level
+                        message = it.joinToString(":")
                     )
                 }
                 lastTime = time

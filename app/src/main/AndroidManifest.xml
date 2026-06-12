@@ -2,14 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Android 11+ 包可见性声明：访问控制功能需要查询已安装应用 -->
-    <queries>
-        <!-- 允许查询所有应用，用于访问控制功能（选择哪些应用走代理） -->
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-        </intent>
-    </queries>
-
     <uses-feature
         android:name="android.software.leanback"
         android:required="false" />
@@ -17,30 +9,19 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
-    <!-- 访问控制功能：需要查询已安装应用列表，用于选择哪些应用走代理 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
-    <!-- 网络基础权限 -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <!-- 后台安装 APK 更新 (Android 8+) -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
-    <!-- 下载 APK 到外部存储 -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
 
     <application
         android:name=".MainApplication"
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:banner="@mipmap/ic_banner"
+        android:fullBackupContent="@xml/full_backup_content"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/application_name"
         android:localeConfig="@xml/locales_config"
@@ -83,7 +64,6 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 外部控制活动：支持通过深链接 (clash://, clashmeta://) 安装配置和控制代理 -->
         <activity
             android:name=".ExternalControlActivity"
             android:excludeFromRecents="true"
@@ -212,12 +192,6 @@
             android:exported="false"
             android:label="@string/v2board_sync_log" />
 
-        <activity
-            android:name=".RootSettingsActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/root_settings" />
-
         <service
             android:name=".LogcatService"
             android:exported="false"
@@ -237,10 +211,9 @@
             </intent-filter>
         </service>
 
-        <!-- 开机自启动接收器：用于在设备重启后恢复 VPN 服务 -->
         <receiver
             android:name=".RestartReceiver"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -248,24 +221,13 @@
             </intent-filter>
         </receiver>
 
-        <!-- 拨号码接收器：用于通过拨号码快速启动应用（252746382 = CLASH META） -->
         <receiver android:name=".DialerReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SECRET_CODE" />
+                <!-- 252746382 is the name of Clash Meta in T9 -->
                 <data android:scheme="android_secret_code" android:host="252746382" />
             </intent-filter>
         </receiver>
-
-        <!-- FileProvider：用于分享 APK 文件触发系统安装 -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 </manifest>

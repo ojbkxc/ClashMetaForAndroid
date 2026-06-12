@@ -22,7 +22,6 @@ class ProxyViewState(
     var title: String = ""
     var subtitle: String = ""
     var delayText: String = ""
-    var delayColor: Int = 0  // 0 表示使用默认颜色
     var background: Int = config.unselectedBackground
     var controls: Int = config.unselectedControl
 
@@ -60,12 +59,6 @@ class ProxyViewState(
         if (delay != proxy.delay) {
             delay = proxy.delay
             delayText = if (proxy.delay in 0..Short.MAX_VALUE) proxy.delay.toString() else ""
-            delayColor = when {
-                proxy.delay <= 0 -> 0                                    // 无延迟，使用默认色
-                proxy.delay < 200 -> Color.parseColor("#4CAF50")        // 绿色 - 快
-                proxy.delay < 500 -> Color.parseColor("#FF9800")        // 橙色 - 中
-                else -> Color.parseColor("#F44336")                     // 红色 - 慢
-            }
         }
 
         if (parentNow !== parent.now) {

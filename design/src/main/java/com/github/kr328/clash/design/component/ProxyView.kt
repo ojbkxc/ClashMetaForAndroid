@@ -60,6 +60,9 @@ class ProxyView(
     override fun draw(canvas: Canvas) {
         val state = state ?: return super.draw(canvas)
 
+        if (state.update(false))
+            postInvalidate()
+
         val width = width.toFloat()
         val height = height.toFloat()
 
@@ -72,7 +75,7 @@ class ProxyView(
 
         // draw background
         canvas.apply {
-            if (state.config.proxyLine == 1) {
+            if (state.config.proxyLine==1) {
                 drawRect(0f, 0f, width, height, paint)
             } else {
                 val path = state.path
@@ -103,10 +106,6 @@ class ProxyView(
         }
 
         super.draw(canvas)
-    }
-
-    fun updateState(snap: Boolean): Boolean {
-        return state?.update(snap) ?: false
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -167,17 +166,12 @@ class ProxyView(
         paint.isAntiAlias = true
         paint.color = state.controls
 
-        // draw delay (使用延迟颜色)
+        // draw delay
         canvas.apply {
             val x = width - state.config.layoutPadding - state.config.contentPadding - delayWidth
             val y = height / 2f - textOffset
 
-            val originalColor = paint.color
-            if (state.delayColor != 0) {
-                paint.color = state.delayColor
-            }
             drawText(state.delayText, 0, delayCount, x, y, paint)
-            paint.color = originalColor
         }
 
         // draw title

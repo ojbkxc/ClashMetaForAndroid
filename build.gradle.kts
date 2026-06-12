@@ -25,7 +25,6 @@ subprojects {
         mavenCentral()
         google()
         maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
-        maven("https://jitpack.io")
     }
 
     val isApp = name == "app"
@@ -59,8 +58,8 @@ subprojects {
             minSdk = 21
             targetSdk = 35
 
-            versionName = "2.0.10"
-            versionCode = 200010
+            versionName = "2.11.29"
+            versionCode = 211029
 
             resValue("string", "release_name", "v$versionName")
             resValue("integer", "release_code", "$versionCode")
@@ -198,7 +197,7 @@ subprojects {
 
         buildFeatures.apply {
             dataBinding {
-                enable = name != "hideapi"
+                isEnabled = name != "hideapi"
             }
         }
 

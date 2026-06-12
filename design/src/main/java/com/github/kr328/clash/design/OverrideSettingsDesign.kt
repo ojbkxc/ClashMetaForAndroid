@@ -315,44 +315,10 @@ class OverrideSettingsDesign(
                 configure = dnsDependencies::add,
             )
 
-            editableText(
-                value = configuration.dns::fakeIpRange,
-                adapter = NullableTextAdapter.String,
-                title = R.string.fakeip_range,
-                placeholder = R.string.dont_modify,
-                empty = R.string.default_fakeip_range,
-                configure = dnsDependencies::add,
-            )
-
-            editableText(
-                value = configuration.dns::fakeIpRange6,
-                adapter = NullableTextAdapter.String,
-                title = R.string.fakeip_range6,
-                placeholder = R.string.dont_modify,
-                empty = R.string.default_fakeip_range6,
-                configure = dnsDependencies::add,
-            )
-
             editableTextList(
                 value = configuration.dns::nameServer,
                 adapter = TextAdapter.String,
                 title = R.string.name_server,
-                placeholder = R.string.dont_modify,
-                configure = dnsDependencies::add,
-            )
-
-            editableTextList(
-                value = configuration.dns::proxyServerNameserver,
-                adapter = TextAdapter.String,
-                title = R.string.proxy_server_nameserver,
-                placeholder = R.string.dont_modify,
-                configure = dnsDependencies::add,
-            )
-
-            editableTextList(
-                value = configuration.dns::directNameserver,
-                adapter = TextAdapter.String,
-                title = R.string.direct_nameserver,
                 placeholder = R.string.dont_modify,
                 configure = dnsDependencies::add,
             )

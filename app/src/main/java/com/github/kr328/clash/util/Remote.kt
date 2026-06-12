@@ -1,7 +1,7 @@
 package com.github.kr328.clash.util
 
 import android.os.DeadObjectException
-import com.github.kr328.clash.util.AppLog
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.IProfileManager
@@ -20,7 +20,7 @@ suspend fun <T> withClash(
         try {
             return withContext(context) { client.block() }
         } catch (e: DeadObjectException) {
-            AppLog.w("Remote", "Remote services panic")
+            Log.w("Remote services panic")
 
             Remote.service.remote.reset(remote)
         }
@@ -38,7 +38,7 @@ suspend fun <T> withProfile(
         try {
             return withContext(context) { client.block() }
         } catch (e: DeadObjectException) {
-            AppLog.w("Remote", "Remote services panic")
+            Log.w("Remote services panic")
 
             Remote.service.remote.reset(remote)
         }

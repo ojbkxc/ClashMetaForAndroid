@@ -45,7 +45,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
                             if (!canceled && profile != original) {
                                 withProfile {
-                                    patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
+                                    patch(profile.uuid, profile.name, profile.source, profile.interval)
                                 }
                             }
                         }
@@ -92,7 +92,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                 try {
                     withProcessing { updateStatus ->
                         withProfile {
-                            patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
+                            patch(profile.uuid, profile.name, profile.source, profile.interval)
 
                             coroutineScope {
                                 commit(profile.uuid) {

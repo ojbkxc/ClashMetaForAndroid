@@ -36,7 +36,7 @@ class SyncLogActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text = getString(com.github.kr328.clash.design.R.string.log_title)
+            text = "日志"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -46,7 +46,7 @@ class SyncLogActivity : AppCompatActivity() {
         // 日志文件路径提示
         val logFile = File(getExternalFilesDir(null), "sync_log.txt")
         val pathText = TextView(this).apply {
-            text = getString(com.github.kr328.clash.design.R.string.log_file_path, logFile.absolutePath)
+            text = "文件: ${logFile.absolutePath}"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             val mb = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics).toInt()
             setPadding(0, 0, 0, mb)
@@ -57,16 +57,16 @@ class SyncLogActivity : AppCompatActivity() {
             try {
                 logFile.readText()
             } catch (e: Exception) {
-                getString(com.github.kr328.clash.design.R.string.log_read_failed, e.message ?: "")
+                "读取日志文件失败: ${e.message}"
             }
         } else {
             SyncLog.getFormatted()
         }
-        val logText = if (content.isBlank()) getString(com.github.kr328.clash.design.R.string.log_empty) else content
+        val logText = if (content.isBlank()) "暂无日志" else content
 
         // 复制按钮
         val copyBtn = Button(this).apply {
-            text = getString(com.github.kr328.clash.design.R.string.btn_copy)
+            text = "复制"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             isAllCaps = false
             minWidth = 0
@@ -76,8 +76,7 @@ class SyncLogActivity : AppCompatActivity() {
             setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("sync_log", logText))
-                Toast.makeText(this@SyncLogActivity,
-                    com.github.kr328.clash.design.R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@SyncLogActivity, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
             }
         }
         titleBar.addView(copyBtn)

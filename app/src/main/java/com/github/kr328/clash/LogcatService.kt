@@ -15,13 +15,12 @@ import androidx.core.app.NotificationManagerCompat
 import com.github.kr328.clash.common.compat.getColorCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.compat.startForegroundCompat
-import com.github.kr328.clash.util.AppLog
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.log.LogcatCache
 import com.github.kr328.clash.log.LogcatWriter
 import com.github.kr328.clash.service.RemoteService
-import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.ILogObserver
 import com.github.kr328.clash.service.remote.IRemoteService
 import com.github.kr328.clash.service.remote.unwrap
@@ -31,10 +30,7 @@ import kotlinx.coroutines.channels.Channel
 import java.io.IOException
 import java.util.*
 
-class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default +
-        CoroutineExceptionHandler { _, e ->
-            android.util.Log.e("LogcatService", "unhandled exception: ${e.message}", e)
-        }), IInterface {
+class LogcatService : Service(), CoroutineScope by CoroutineScope(Dispatchers.Default), IInterface {
     private val cache = LogcatCache()
 
     private val connection = object : ServiceConnection {
@@ -83,7 +79,7 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
         }
     }
 
-    fun snapshot(full: Boolean): LogcatCache.Snapshot? {
+    suspend fun snapshot(full: Boolean): LogcatCache.Snapshot? {
         return cache.snapshot(full)
     }
 
@@ -92,14 +88,7 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
             return stopSelf()
 
         launch(Dispatchers.IO) {
-            val clash: com.github.kr328.clash.service.remote.IClashManager
-            try {
-                clash = binder.unwrap(IRemoteService::class).clash()
-            } catch (e: Exception) {
-                AppLog.e("Logcat", "Failed to bind log observer: ${e.message}", e)
-                stopSelf()
-                return@launch
-            }
+            val service = binder.unwrap(IRemoteService::class).clash()
             val channel = Channel<LogMessage>(CACHE_CAPACITY)
 
             try {
@@ -108,13 +97,11 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
                 LogcatWriter(this@LogcatService).use {
                     val observer = object : ILogObserver {
                         override fun newItem(log: LogMessage) {
-                            if (isActive) {
-                                channel.trySend(log)
-                            }
+                            channel.trySend(log)
                         }
                     }
 
-                    clash.setLogObserver(observer)
+                    service.setLogObserver(observer)
 
                     while (isActive) {
                         val msg = channel.receive()
@@ -125,16 +112,12 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
                     }
                 }
             } catch (e: IOException) {
-                AppLog.e("Logcat", "Write log file: $e", e)
-            } catch (e: Exception) {
-                AppLog.e("Logcat", "Unexpected error in log observer: ${e.message}", e)
+                Log.e("Write log file: $e", e)
             } finally {
                 withContext(NonCancellable) {
-                    try {
-                        if (binder.isBinderAlive) {
-                            clash.setLogObserver(null)
-                        }
-                    } catch (_: Exception) {}
+                    if (binder.isBinderAlive) {
+                        service.setLogObserver(null)
+                    }
 
                     stopSelf()
                 }

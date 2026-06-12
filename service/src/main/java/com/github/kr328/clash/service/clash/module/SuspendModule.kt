@@ -12,16 +12,9 @@ import kotlinx.coroutines.withContext
 
 class SuspendModule(service: Service) : Module<Unit>(service) {
     override suspend fun run() {
-        val interactive = service.getSystemService<PowerManager>()?.isInteractive
+        val interactive = service.getSystemService<PowerManager>()?.isInteractive ?: true
 
-        // Only suspend if we can reliably determine the screen is off.
-        // Some ROMs report isInteractive incorrectly; if null, assume interactive.
-        if (interactive == false) {
-            Clash.suspendCore(true)
-            Log.d("Clash suspended (screen off)")
-        } else {
-            Clash.suspendCore(false)
-        }
+        Clash.suspendCore(!interactive)
 
         val screenToggle = receiveBroadcast(false, Channel.CONFLATED) {
             addAction(Intent.ACTION_SCREEN_ON)
