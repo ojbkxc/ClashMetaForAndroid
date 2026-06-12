@@ -26,6 +26,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     private val sync by lazy { V2BoardSync.getInstance(this) }
     private var pageLoaded = false
     private var loginDetected = false
+    @Volatile
+    private var destroyed = false
     private val isLoginMode: Boolean
         get() = intent.getBooleanExtra(EXTRA_IS_LOGIN, false)
 
@@ -364,6 +366,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     class AuthBridge(private val activity: V2BoardActivity) {
         @JavascriptInterface
         fun onAuthData(authData: String, token: String, serverUrl: String) {
+            if (activity.destroyed || activity.design == null) return
             if (authData.isBlank()) return
 
             // 清理 auth_data：处理 vue-ls 的 {"value":"JWT"} 格式
@@ -415,6 +418,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onSubscribeUrl(subscribeUrl: String) {
+            if (activity.destroyed) return
             if (subscribeUrl.isBlank()) return
             AppLog.d("V2Board", "onSubscribeUrl called")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
@@ -457,6 +461,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onLocalStorageAuth(authData: String) {
+            if (activity.destroyed) return
             if (authData.isBlank() || authData.length < 10) return
             val existing = activity.sync.session.authData
             // 只在值不同时更新，避免不必要的写入
@@ -470,6 +475,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onSubscribeError(error: String) {
+            if (activity.destroyed || activity.design == null) return
             AppLog.w("V2Board", "onSubscribeError: $error")
             SyncLog.add("获取订阅失败: $error")
             activity.launch {
@@ -577,6 +583,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     override fun onDestroy() {
+        destroyed = true
         // 先移除 JS 接口，防止回调访问已销毁的 Activity
         try {
             design?.removeJavascriptInterface("AndroidBridge")

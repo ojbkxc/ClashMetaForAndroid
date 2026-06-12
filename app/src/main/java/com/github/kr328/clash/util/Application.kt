@@ -39,11 +39,13 @@ object ApplicationObserver {
             appVisible = _visibleActivities.isNotEmpty()
         }
 
+        @Synchronized
         override fun onActivityStarted(activity: Activity) {
             _visibleActivities.add(activity)
             appVisible = true
         }
 
+        @Synchronized
         override fun onActivityStopped(activity: Activity) {
             _visibleActivities.remove(activity)
             appVisible = _visibleActivities.isNotEmpty()

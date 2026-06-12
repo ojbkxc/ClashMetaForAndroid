@@ -21,6 +21,7 @@ import com.github.kr328.clash.core.model.LogMessage
 import com.github.kr328.clash.log.LogcatCache
 import com.github.kr328.clash.log.LogcatWriter
 import com.github.kr328.clash.service.RemoteService
+import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.ILogObserver
 import com.github.kr328.clash.service.remote.IRemoteService
 import com.github.kr328.clash.service.remote.unwrap
@@ -91,7 +92,14 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
             return stopSelf()
 
         launch(Dispatchers.IO) {
-            val service = binder.unwrap(IRemoteService::class).clash()
+            val clash: com.github.kr328.clash.service.remote.IClashManager
+            try {
+                clash = binder.unwrap(IRemoteService::class).clash()
+            } catch (e: Exception) {
+                AppLog.e("Logcat", "Failed to bind log observer: ${e.message}", e)
+                stopSelf()
+                return@launch
+            }
             val channel = Channel<LogMessage>(CACHE_CAPACITY)
 
             try {
@@ -100,11 +108,13 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
                 LogcatWriter(this@LogcatService).use {
                     val observer = object : ILogObserver {
                         override fun newItem(log: LogMessage) {
-                            channel.trySend(log)
+                            if (isActive) {
+                                channel.trySend(log)
+                            }
                         }
                     }
 
-                    service.setLogObserver(observer)
+                    clash.setLogObserver(observer)
 
                     while (isActive) {
                         val msg = channel.receive()
@@ -116,11 +126,15 @@ class LogcatService : Service(), CoroutineScope by CoroutineScope(SupervisorJob(
                 }
             } catch (e: IOException) {
                 AppLog.e("Logcat", "Write log file: $e", e)
+            } catch (e: Exception) {
+                AppLog.e("Logcat", "Unexpected error in log observer: ${e.message}", e)
             } finally {
                 withContext(NonCancellable) {
-                    if (binder.isBinderAlive) {
-                        service.setLogObserver(null)
-                    }
+                    try {
+                        if (binder.isBinderAlive) {
+                            clash.setLogObserver(null)
+                        }
+                    } catch (_: Exception) {}
 
                     stopSelf()
                 }
