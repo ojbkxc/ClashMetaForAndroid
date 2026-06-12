@@ -142,10 +142,9 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
             bindService(LogcatService::class.intent, object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                     val srv = service?.queryLocalInterface("") as? LogcatService
-                        ?: run {
-                            ctx.cancel(null)
-                            return
-                        }
+                        ?: return ctx.resumeWithException(
+                            IllegalStateException("LogcatService not available — service binding returned null or invalid IBinder")
+                        )
 
                     ctx.resume(srv)
 
