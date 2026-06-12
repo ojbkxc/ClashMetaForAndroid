@@ -1,15 +1,14 @@
 package com.github.kr328.clash.v2board
 
 import android.content.Context
+import androidx.core.content.edit
 import com.github.kr328.clash.common.store.Store
 import com.github.kr328.clash.common.store.asStoreProvider
 
 class V2BoardSession(context: Context) {
-    private val store = Store(
-        context
-            .getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
-            .asStoreProvider()
-    )
+    private val preferences = context
+        .getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
+    private val store = Store(preferences.asStoreProvider())
 
     var authData: String by store.string(
         key = "auth_data",
@@ -66,12 +65,16 @@ class V2BoardSession(context: Context) {
     }
 
     fun save(authData: String, userToken: String, email: String = "") {
-        this.authData = authData
-        this.userToken = userToken
-        if (email.isNotBlank()) {
-            this.email = email
+        // 使用 commit() 原子性持久化，确保所有 key 同步写入磁盘
+        // apply() 是异步磁盘写入，App 被杀死时可能丢失数据
+        preferences.edit(commit = true) {
+            putString("auth_data", authData)
+            putString("user_token", userToken)
+            if (email.isNotBlank()) {
+                putString("email", email)
+            }
+            putBoolean("has_ever_logged_in", true)
         }
-        this.hasEverLoggedIn = true
     }
 
     fun clear() {
