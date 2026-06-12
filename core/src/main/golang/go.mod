@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/dlclark/regexp2 v1.12.0
+	github.com/klauspost/reedsolomon v1.12.3
 	github.com/metacubex/mihomo v1.7.0
 	golang.org/x/sync v0.11.0
 )
@@ -49,7 +50,6 @@ require (
 	github.com/jsimonetti/rtnetlink v1.4.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
-	github.com/klauspost/reedsolomon v1.12.3 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/metacubex/age v0.0.0-20260603010618-28d156b4ea78 // indirect
