@@ -48,7 +48,16 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
 
             try {
                 val current = store.activeProfile
-                    ?: throw NullPointerException("No profile selected")
+
+                if (current == null) {
+                    // No profile selected yet — wait and retry instead of crashing
+                    if (loaded == null) {
+                        Log.w("ConfigurationModule: no profile selected, waiting for profile...")
+                        delay(3_000L)
+                        reload.trySend(Unit)
+                    }
+                    continue
+                }
 
                 if (current == loaded && changed != null && changed != loaded)
                     continue
@@ -56,7 +65,14 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 loaded = current
 
                 val active = ImportedDao().queryByUUID(current)
-                    ?: throw NullPointerException("No profile selected")
+                    ?: run {
+                        Log.w("ConfigurationModule: profile $current not found in database")
+                        if (loaded == null) {
+                            delay(5_000L)
+                            reload.trySend(Unit)
+                        }
+                        continue
+                    }
 
                 val configDir = service.importedDir.resolve(active.uuid.toString())
                 ConfigOptimizer.optimize(configDir)

@@ -30,7 +30,7 @@ func NewOptimizer() (*Optimizer, error) {
 		quicConfig:     NewQUICDynamicConfig(),
 		quicMultipath:  NewQUICMultipath(),
 		poolManager:    NewPoolManager(),
-		tcpPool:        NewTCPConnPool(200, 30*time.Second, 10),
+		tcpPool:        NewTCPConnPool(100, 30*time.Second, 10),
 		dnsTimeout:     5 * time.Second,
 		enabled:        true,
 	}, nil

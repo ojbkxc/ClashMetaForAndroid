@@ -12,15 +12,13 @@ const (
 )
 
 // Linux/Android socket options not in Go's syscall package.
+// These constants are stable across all Linux kernel versions since 2.6.x
+// and are safe to use on Android (which runs Linux 3.x+).
 const (
-	_IPPROTO_IPV6        = 41  // syscall.IPPROTO_IPV6
-	_IPV6_MTU_DISCOVER   = 23  // not exposed in syscall
-	_IPV6_PMTUDISC_DO    = 2   // same as IP_PMTUDISC_DO
-	_SO_REUSEPORT        = 15  // syscall.SO_REUSEPORT
-	_IP_TOS              = 1   // syscall.IP_TOS
-	_IPV6_TCLASS         = 67  // not exposed in syscall
-	_IPTOS_LOWDELAY      = 0x10 // minimized delay
-	_TCP_FASTOPEN_CONNECT = 30 // syscall.TCP_FASTOPEN_CONNECT (Linux 4.11+)
+	_IPV6_MTU_DISCOVER = 23  // not exposed in syscall; Linux 2.6.17+
+	_IPV6_PMTUDISC_DO  = 2   // same as IP_PMTUDISC_DO
+	_IPV6_TCLASS       = 67  // not exposed in syscall; Linux 2.6+
+	_IPTOS_LOWDELAY    = 0x10 // minimized delay; RFC 1349
 )
 
 // applySocketOpts configures per-connection socket options.
@@ -53,18 +51,18 @@ func applySocketOpts(network string, c syscall.RawConn) error {
 			case "udp4", "udp":
 				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IP, syscall.IP_MTU_DISCOVER, syscall.IP_PMTUDISC_DO)
 			case "udp6":
-				_ = syscall.SetsockoptInt(fdInt, _IPPROTO_IPV6, _IPV6_MTU_DISCOVER, _IPV6_PMTUDISC_DO)
+				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IPV6, _IPV6_MTU_DISCOVER, _IPV6_PMTUDISC_DO)
 			}
 
 			// --- SO_REUSEPORT: allow multiple sockets on same port (multipath) ---
-			_ = syscall.SetsockoptInt(fdInt, syscall.SOL_SOCKET, _SO_REUSEPORT, 1)
+			_ = syscall.SetsockoptInt(fdInt, syscall.SOL_SOCKET, syscall.SO_REUSEPORT, 1)
 
 			// --- QoS: low-latency DSCP marking ---
 			switch network {
 			case "udp4", "udp":
-				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IP, _IP_TOS, _IPTOS_LOWDELAY)
+				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IP, syscall.IP_TOS, _IPTOS_LOWDELAY)
 			case "udp6":
-				_ = syscall.SetsockoptInt(fdInt, _IPPROTO_IPV6, _IPV6_TCLASS, _IPTOS_LOWDELAY)
+				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IPV6, _IPV6_TCLASS, _IPTOS_LOWDELAY)
 			}
 
 		case isTCP(network):
@@ -73,7 +71,7 @@ func applySocketOpts(network string, c syscall.RawConn) error {
 
 			// TCP Fast Open: reduces 1 RTT from handshake (Linux 4.11+)
 			// Non-fatal if kernel doesn't support it — silently ignored.
-			_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_TCP, _TCP_FASTOPEN_CONNECT, 1)
+			_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_TCP, syscall.TCP_FASTOPEN_CONNECT, 1)
 		}
 	})
 	if ctrlErr != nil {

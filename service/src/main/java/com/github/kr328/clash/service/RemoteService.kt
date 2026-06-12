@@ -37,10 +37,12 @@ class RemoteService : BaseService(), IRemoteService {
     }
 
     override fun clash(): IClashManager {
-        return clashBinder!!
+        return clashBinder
+            ?: throw IllegalStateException("ClashManager not initialized — service not yet created")
     }
 
     override fun profile(): IProfileManager {
-        return profileBinder!!
+        return profileBinder
+            ?: throw IllegalStateException("ProfileManager not initialized — service not yet created")
     }
 }

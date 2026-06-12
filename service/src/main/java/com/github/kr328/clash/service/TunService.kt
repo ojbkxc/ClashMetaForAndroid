@@ -92,10 +92,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         acquireWakeLock()
         startWakeLockKeepAlive()
 
-        if (StatusProvider.serviceRunning)
+        if (!StatusProvider.claimServiceStart())
             return stopSelf()
-
-        StatusProvider.serviceRunning = true
 
         StaticNotificationModule.createNotificationChannel(this)
         StaticNotificationModule.notifyLoadingNotification(this)
@@ -142,8 +140,14 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
 
-        // 当用户从最近任务中划掉应用时，重新启动服务以确保代理继续运行
-        Log.w("TunService task removed, restarting service")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ restricts starting foreground services from the background.
+            // The watchdog alarm will restart the service if the process is killed.
+            Log.w("TunService task removed, relying on watchdog for restart (Android 12+)")
+            return
+        }
+
+        Log.w("TunService task removed, restarting service with delay to avoid recursion")
         val restartIntent = Intent(this, TunService::class.java)
         startForegroundServiceCompat(restartIntent)
     }

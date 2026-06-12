@@ -41,9 +41,11 @@ func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
 
 	reset()
 
-	// Aggressive GC to keep memory footprint low on mobile devices.
-	// GC triggers when heap grows by 10% (vs default 100%), preventing OOM kills.
-	debug.SetGCPercent(10)
+	// Moderate GC threshold to balance memory and CPU on mobile.
+	// GC triggers when heap grows by 50% (vs default 100%), reducing
+	// OOM risk without excessive GC pauses that cause ANR.
+	// Values below 20% cause excessive CPU usage and UI jank.
+	debug.SetGCPercent(50)
 
 	// Socket optimizations must be applied before any network activity
 	// (UDP buffers, TCP_NODELAY, IP_MTU_DISCOVER for PMTUD)
@@ -59,8 +61,9 @@ func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
 		optimize.Init()
 	}()
 
-	// Periodic forced GC every 3 minutes to return unused heap memory to the OS,
+	// Periodic forced GC every 5 minutes to return unused heap memory to the OS,
 	// further reducing the risk of OOM process kill on memory-constrained devices.
+	// Increased from 3min to 5min to reduce CPU overhead.
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -68,9 +71,16 @@ func coreInit(home, versionName, gitVersion C.c_string, sdkVersion C.int) {
 			}
 		}()
 		for {
-			time.Sleep(3 * time.Minute)
-			runtime.GC()
-			debug.FreeOSMemory()
+			time.Sleep(5 * time.Minute)
+
+			// Only force GC if heap is above a threshold (32MB) to avoid
+			// unnecessary GC cycles on low-memory idle states.
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			if m.HeapAlloc > 32*1024*1024 {
+				runtime.GC()
+				debug.FreeOSMemory()
+			}
 		}
 	}()
 }
