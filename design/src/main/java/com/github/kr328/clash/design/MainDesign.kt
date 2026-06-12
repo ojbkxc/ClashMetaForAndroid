@@ -95,7 +95,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setProfilePlanName(name: String?) {
         withContext(Dispatchers.Main) {
             binding.cardStatus.trailingText = name
-            binding.cardStatus.setTrailingTextSize(11f)
+            binding.cardStatus.setTrailingTextSize(14f)
         }
     }
 

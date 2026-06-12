@@ -5,6 +5,7 @@ import android.content.Context
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.github.kr328.clash.design.databinding.DesignV2boardWebviewBinding
@@ -62,6 +63,14 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             useWideViewPort = true
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
             mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            
+            // 配置 localStorage 和数据库的持久化路径
+            // 在 Android 11+ 使用 getOrCreateWebViewDataDirectory()，旧版本使用 setDatabasePath
+            @Suppress("DEPRECATION")
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+                val databasePath = context.applicationContext.getDir("v2board_webview", Context.MODE_PRIVATE).absolutePath
+                setDatabasePath(databasePath)
+            }
         }
 
         binding.webView.webChromeClient = object : WebChromeClient() {
