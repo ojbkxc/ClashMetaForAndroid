@@ -6,6 +6,7 @@ import android.content.res.ColorStateList
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.github.kr328.clash.core.model.TunnelState
+import com.github.kr328.clash.core.util.trafficCompact
 import com.github.kr328.clash.core.util.trafficTotal
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.util.layoutInflater
@@ -60,11 +61,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setClashRunning(running: Boolean) {
         withContext(Dispatchers.Main) {
             binding.clashRunning = running
-            // 停止状态时主文字更大更醒目，运行状态保持默认大小
             if (running) {
                 binding.cardStatus.setTextSize(16f)
             } else {
                 binding.cardStatus.setTextSize(22f)
+                binding.cardStatus.text = context.getString(R.string.stopped)
+                binding.cardStatus.subtext = ""
             }
         }
     }
@@ -72,6 +74,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setForwarded(value: Long) {
         withContext(Dispatchers.Main) {
             binding.forwarded = value.trafficTotal()
+            if (binding.clashRunning) {
+                binding.cardStatus.text = context.getString(R.string.running) + "  " + value.trafficCompact()
+            }
         }
     }
 

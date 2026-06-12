@@ -141,14 +141,12 @@
                     android:theme="@style/AppThemeDark"
                     app:cardBackgroundColor="@{clashRunning ? colorClashStarted : colorClashStopped}"
                     app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_baseline_play_arrow}"
-                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : ``}"
+                    app:subtext="@{``}"
                     app:text="@{clashRunning ? @string/running : @string/stopped}" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
-                    android:id="@+id/cardProxy"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="@dimen/large_action_card_min_height"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProxy)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
@@ -159,7 +157,6 @@
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="@dimen/large_action_card_min_height"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProfiles)}"
                     app:icon="@drawable/ic_baseline_view_list"
