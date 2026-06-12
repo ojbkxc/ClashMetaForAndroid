@@ -63,6 +63,13 @@
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/v2board_sync_log" />
 
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.StartRoot)}"
+                    app:icon="@drawable/ic_baseline_vpn_lock"
+                    app:text="@string/root_settings" />
+
             </LinearLayout>
         </com.github.kr328.clash.design.view.ObservableScrollView>
 

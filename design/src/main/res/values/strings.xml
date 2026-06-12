@@ -369,4 +369,29 @@
     <string name="v2board_open_in_browser">Open in browser</string>
     <string name="v2board_sync_log">Log</string>
     <string name="format_v2board_traffic">%1$s / %2$s | Expires: %3$s</string>
+
+    <!-- Root Settings -->
+    <string name="root_not_available">Root access is not available</string>
+    <string name="root_settings">Root(热点)</string>
+    <string name="root_background">Root Background</string>
+    <string name="root_transparent_proxy">Transparent Proxy</string>
+    <string name="root_transparent_proxy_summary">Redirect all traffic through VPN (requires root)</string>
+    <string name="root_transparent_proxy_dns_hint">建议同时启用DNS劫持以防止DNS泄漏</string>
+    <string name="root_lock_background">Lock Background</string>
+    <string name="root_lock_background_summary">Prevent system from killing Clash in background</string>
+    <string name="root_dns_hijack">DNS Hijack</string>
+    <string name="root_dns_hijack_summary">Intercept DNS queries and route through Clash (requires root)</string>
+    <string name="root_dns_hijack_warning">建议同时启用透明代理以获得最佳效果</string>
+    <string name="root_apply_success">Applied successfully</string>
+    <string name="root_rules_cleared">Rules cleared</string>
+    <string name="root_warning_title">Warning</string>
+    <string name="root_warning_message">Are you sure you want to apply this change? This action requires root privileges.</string>
+    <string name="root_apply_failed">Failed to apply: %s</string>
+    <string name="root_request_permission">Request Root Permission</string>
+    <string name="root_request_permission_summary">Click to request root access from superuser</string>
+    <string name="root_requesting">Requesting root access…</string>
+    <string name="root_request_failed">Root access request failed</string>
+
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_ok">OK</string>
 </resources>

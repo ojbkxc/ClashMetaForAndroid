@@ -8,4 +8,5 @@ dependencies {
 
     implementation(libs.kotlin.coroutine)
     implementation(libs.androidx.core)
+    implementation(libs.libsu.core)
 }
