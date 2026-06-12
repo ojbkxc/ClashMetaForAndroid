@@ -1,7 +1,6 @@
 package com.github.kr328.clash.design
 
 import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
@@ -238,6 +237,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     // 页面销毁时停止动画
     fun onPageDestroy() {
         stopBalanceAnimation()
+        animationScope.cancel()
     }
 
     init {
