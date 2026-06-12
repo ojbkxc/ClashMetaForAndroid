@@ -20,10 +20,7 @@ import com.github.kr328.clash.service.util.sendClashStopped
 import kotlinx.coroutines.*
 import kotlinx.coroutines.selects.select
 
-class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default +
-        CoroutineExceptionHandler { _, e ->
-            Log.e("TunService unhandled exception: ${e.message}", e)
-        }) {
+class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.Default) {
     private val self: TunService
         get() = this
 
@@ -220,7 +217,7 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(SupervisorJob(
 
             TunModule.TunDevice(
                 fd = establish()?.detachFd()
-                    ?: throw IllegalStateException("VPN establishment failed — user may have denied the VPN permission"),
+                    ?: throw NullPointerException("Establish VPN rejected by system"),
                 stack = store.tunStackMode,
                 gateway = "$TUN_GATEWAY/$TUN_SUBNET_PREFIX" + if (store.allowIpv6) ",$TUN_GATEWAY6/$TUN_SUBNET_PREFIX6" else "",
                 portal = TUN_PORTAL + if (store.allowIpv6) ",$TUN_PORTAL6" else "",
