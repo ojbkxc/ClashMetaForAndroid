@@ -22,7 +22,6 @@ import com.github.kr328.clash.log.LogcatFilter
 import com.github.kr328.clash.log.LogcatReader
 import com.github.kr328.clash.util.logsDir
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
@@ -144,7 +143,7 @@ class LogcatActivity : BaseActivity<LogcatDesign>() {
                 override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                     val srv = service?.queryLocalInterface("") as? LogcatService
                         ?: run {
-                            ctx.cancel()
+                            ctx.cancel(null)
                             return
                         }
 
