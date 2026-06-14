@@ -71,6 +71,37 @@ class LargeActionCard @JvmOverloads constructor(
         binding.trafficDownload.text = ""
     }
 
+    // 右侧套餐信息（靠右对齐）
+    fun setTrailingInfo(planName: String?, expiredDate: String?) {
+        val hasPlanName = !planName.isNullOrBlank()
+        val hasExpiredDate = !expiredDate.isNullOrBlank()
+        
+        if (hasPlanName) {
+            binding.trailingText2.text = planName
+            binding.trailingText2.visibility = View.VISIBLE
+        } else {
+            binding.trailingText2.visibility = View.GONE
+        }
+        
+        if (hasExpiredDate) {
+            binding.trailingDate.text = expiredDate
+            binding.trailingDate.visibility = View.VISIBLE
+        } else {
+            binding.trailingDate.visibility = View.GONE
+        }
+        
+        // 整个容器根据内容显示
+        binding.trailingContainer.visibility = if (hasPlanName || hasExpiredDate) View.VISIBLE else View.GONE
+    }
+
+    fun clearTrailingInfo() {
+        binding.trailingContainer.visibility = View.GONE
+        binding.trailingText2.visibility = View.GONE
+        binding.trailingDate.visibility = View.GONE
+        binding.trailingText2.text = ""
+        binding.trailingDate.text = ""
+    }
+
     private fun updateTrailingContainer() {
         // 只检查 trailingText2，因为 trailingText 现在在文字行旁边
         binding.trailingContainer.visibility = if (
@@ -88,6 +119,10 @@ class LargeActionCard @JvmOverloads constructor(
 
     fun setTrailingText2Color(color: Int) {
         binding.trailingText2.setTextColor(color)
+    }
+
+    fun setTrailingDateColor(color: Int) {
+        binding.trailingDate.setTextColor(color)
     }
 
     fun setTrailingText2Size(sp: Float) {

@@ -66,6 +66,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.cardStatus.text = context.getString(R.string.stopped)
                 binding.cardStatus.subtext = ""
                 binding.cardStatus.clearTraffic()  // 清除流量显示
+                binding.cardStatus.clearTrailingInfo()  // 清除套餐信息和日期
             }
         }
     }
@@ -168,17 +169,25 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     suspend fun setProfilePlanName(name: String?) {
         withContext(Dispatchers.Main) {
-            binding.cardStatus.trailingText = name
-            binding.cardStatus.setTrailingTextSize(14f)
+            // 套餐名称靠右显示（在 cardStatus 卡片右侧）
+            // 只有在运行状态时才显示，未运行状态在 setClashRunning 中已清除
+            if (binding.clashRunning) {
+                binding.cardStatus.setTrailingInfo(name, null)
+            }
         }
     }
 
     suspend fun setProfileExpiryInfo(text: String?, color: Int? = null) {
         withContext(Dispatchers.Main) {
-            binding.cardStatus.trailingText2 = text
-            binding.cardStatus.setTrailingText2Size(10f)
-            if (color != null) {
-                binding.cardStatus.setTrailingText2Color(color)
+            // 到期日期靠右显示（在 cardStatus 卡片右侧，套餐名称下方）
+            // 只有在运行状态时才显示
+            if (binding.clashRunning) {
+                val currentPlanName = binding.cardStatus.trailingText2?.toString()
+                binding.cardStatus.setTrailingInfo(currentPlanName, text)
+                // 设置日期颜色
+                if (color != null) {
+                    binding.cardStatus.setTrailingDateColor(color)
+                }
             }
         }
     }

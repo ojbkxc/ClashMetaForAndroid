@@ -62,9 +62,11 @@ class MainActivity : BaseActivity<MainDesign>() {
         delay(300)
         AlertDialog.Builder(this@MainActivity)
             .setTitle("使用引导")
-            .setMessage("👋 欢迎使用蓝星网络！\n\n点击左上角的 Logo 图标即可进入账户登录页面\n\n右上角的 ⚙️ 图标可进入设置页面")
+            .setMessage("👋 欢迎使用蓝星网络！\n\n点击左上角logo进入账户\n点击右上角进入设置")
             .setPositiveButton("知道了") { dialog, _ ->
                 dialog.dismiss()
+                // 点击"知道了"后关闭弹框并打开登录页面
+                startActivity(V2BoardLoginActivity::class.java.intent)
             }
             .setCancelable(false)
             .setOnDismissListener {

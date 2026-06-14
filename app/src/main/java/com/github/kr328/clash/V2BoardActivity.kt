@@ -61,10 +61,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.loadUrl(targetUrl)
 
         design.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                return false
+            }
+            
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                // 在页面开始加载时就注入 localStorage（此时 localStorage 已可访问）
-                // 确保前端路由守卫检查时能读取到登录凭证
+                // 在页面开始加载时注入 localStorage
+                // 确保前端 router guard 检查时能读取到登录凭证
                 if (view != null && url != null && !url.startsWith("file://")) {
                     // 强制注入保存的 auth_data，不检查 localStorage 是否已有值
                     // 这确保了第二次进入时不需要重新登录
@@ -78,9 +82,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     if (url != null && !url.startsWith("file://")) {
                         // localStorage 已在 onPageStarted 中注入，这里只注入登录检测
                         injectAuthDetector(view)
+                        
+                        // 页面加载完成后再次注入 localStorage（防止 onPageStarted 的注入时机太早）
+                        // 这是一个额外的保险措施
+                        if (sync.session.isLoggedIn) {
+                            forceInjectLocalStorage(view)
+                        }
 
                         // 如果已登录但页面停在登录页，强制跳转到仪表盘
-                        // evaluateJavascript 是异步的，router guard 可能先于注入执行
                         if (sync.session.isLoggedIn && url.contains("/login")) {
                             val serverUrl = sync.config.serverUrl.ifBlank { sync.getActiveUrl() }
                             val dashboardUrl = "$serverUrl/#/stage"
@@ -90,7 +99,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         }
 
                         // 如果已登录但还没有触发过登录检测，立即获取订阅信息
-                        // 这解决了第二次进入时不需要重新登录的问题
                         if (!loginDetected && sync.session.isLoggedIn) {
                             loginDetected = true
                             launch {
@@ -198,7 +206,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     // 强制注入 localStorage，确保第二次进入时不需要重新登录
-    // 不检查 localStorage 是否已有值，直接注入保存的 auth_data
+    // 在页面开始加载前注入，确保 Vue router guard 能读取到登录凭证
     private fun forceInjectLocalStorage(webView: WebView) {
         val savedAuth = sync.session.authData
         if (savedAuth.isBlank() || savedAuth.length < 10) {
@@ -459,20 +467,24 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun onSubscribeUrl(subscribeUrl: String, email: String) {
             if (activity.destroyed || activity.design == null) return
             if (subscribeUrl.isBlank()) return
-            Log.d("V2Board: onSubscribeUrl called, email=$email")
+            
+            Log.d("V2Board: onSubscribeUrl called, email=$email, url=${SyncLog.maskUrl(subscribeUrl)}")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
+            
+            // 如果邮箱变了，说明切换了账号，清除旧账号缓存
+            val oldEmail = activity.sync.session.email
+            if (oldEmail.isNotBlank() && email != oldEmail) {
+                activity.sync.session.planName = ""
+                activity.sync.session.resetDay = 0
+                activity.sync.session.balance = 0
+                activity.sync.session.expiredAt = 0L
+                SyncLog.add("检测到账号切换: $oldEmail → $email")
+            }
+            
+            // 保存邮箱（无论是否为空）
             if (email.isNotBlank()) {
-                SyncLog.add("用户邮箱: $email")
-                // 如果邮箱变了，说明切换了账号，清除旧账号缓存
-                val oldEmail = activity.sync.session.email
-                if (oldEmail.isNotBlank() && email != oldEmail) {
-                    activity.sync.session.planName = ""
-                    activity.sync.session.resetDay = 0
-                    activity.sync.session.balance = 0
-                    activity.sync.session.expiredAt = 0L
-                    SyncLog.add("检测到账号切换: $oldEmail → $email")
-                }
                 activity.sync.session.email = email
+                SyncLog.add("用户邮箱: $email")
             }
 
             activity.launch {
@@ -658,6 +670,8 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             var finalUrl = subscribeUrl || (baseUrl + '/api/v1/client/subscribe?token=' + token);
                             if (finalUrl) {
                                 console.log('V2Board calling onSubscribeUrl with email:', email);
+                                // 同时保存 email 到 localStorage，方便后续使用
+                                localStorage.setItem('_last_email', email);
                                 AndroidBridge.onSubscribeUrl(finalUrl, email);
                             } else {
                                 AndroidBridge.onSubscribeError('服务器未返回订阅地址');

@@ -91,7 +91,7 @@ object V2BoardAutoSync {
                         Log.d("$TAG: No existing profile found, creating new one")
                         SyncLog.add("未找到已有配置，创建新配置...")
 
-                        // 自动递增命名：蓝星 → 蓝星1 → 蓝星2 → ...
+                        // 自动递增命名：直接使用邮箱，如果邮箱为空则使用 baseName
                         // 配置名称包含邮箱，方便识别不同账号
                         val newName = generateNextProfileName(allProfiles, baseName, email)
                         SyncLog.add("新配置名称: $newName")
@@ -208,20 +208,27 @@ object V2BoardAutoSync {
     }
 
     /**
-     * 自动生成下一个配置名称：直接使用完整邮箱
-     * usera@test.com → userb@example.com → userc@other.com → ...
-     * 配置名称直接使用完整邮箱，方便识别不同账号
+     * 自动生成下一个配置名称：
+     * - 如果有 email：直接使用完整邮箱
+     * - 如果没有 email：使用 baseName + 数字后缀
+     * 配置名称包含邮箱，方便识别不同账号
      */
     private fun generateNextProfileName(allProfiles: List<Profile>, baseName: String, email: String): String {
-        // 直接使用完整邮箱作为配置名称
+        val urlProfiles = allProfiles.filter { it.type == Profile.Type.Url }
+        
+        // 如果有 email，直接使用完整邮箱作为配置名称
         if (email.isNotBlank() && email.contains("@")) {
-            // 使用完整邮箱，如 "usera@test.com"
-            // 不同邮箱天然不同，无需额外处理
+            // 检查是否已存在同名配置
+            val existing = urlProfiles.find { it.name == email }
+            if (existing == null) {
+                // 没有同名配置，直接使用完整邮箱
+                return email
+            }
+            // 存在同名配置，返回相同名称（后续会更新而不是创建）
             return email
         }
         
         // 邮箱无效时使用 baseName + 数字后缀
-        val urlProfiles = allProfiles.filter { it.type == Profile.Type.Url }
         val baseNameConfigs = urlProfiles.filter { 
             it.name == baseName || it.name.startsWith("$baseName-")
         }

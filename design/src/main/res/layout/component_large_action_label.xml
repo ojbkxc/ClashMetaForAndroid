@@ -74,6 +74,7 @@
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
         </LinearLayout>
 
+        <!-- 右侧：套餐信息和日期（靠右对齐） -->
         <LinearLayout
             android:id="@+id/trailing_container"
             android:layout_width="wrap_content"
@@ -83,6 +84,7 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <!-- 套餐名称（靠右） -->
             <TextView
                 android:id="@+id/trailing_text_2"
                 android:layout_width="wrap_content"
@@ -90,6 +92,18 @@
                 android:gravity="end"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="?android:attr/textColorSecondary"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- 到期日期（靠右） -->
+            <TextView
+                android:id="@+id/trailing_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="11sp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
