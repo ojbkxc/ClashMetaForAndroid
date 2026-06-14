@@ -136,7 +136,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                         Event.ServiceRecreated,
                         Event.ClashStop, Event.ClashStart,
                         Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
-                        Event.V2BoardLoginChanged -> updateSyncUI()
+                        Event.V2BoardLoginChanged -> {
+                            design.fetch()
+                            updateSyncUI()
+                        }
                         else -> Unit
                     }
                 }

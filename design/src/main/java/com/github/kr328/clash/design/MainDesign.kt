@@ -64,7 +64,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             if (running) {
                 binding.cardStatus.setTextSize(16f)
             } else {
-                binding.cardStatus.setTextSize(22f)
+                binding.cardStatus.setTextSize(20f)
                 binding.cardStatus.text = context.getString(R.string.stopped)
                 binding.cardStatus.subtext = ""
             }

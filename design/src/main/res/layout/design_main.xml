@@ -136,7 +136,6 @@
                     android:id="@+id/cardStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="@dimen/large_action_card_min_height"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.ToggleStatus)}"
                     android:theme="@style/AppThemeDark"

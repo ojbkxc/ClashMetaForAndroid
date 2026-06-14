@@ -26,6 +26,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     private val sync by lazy { V2BoardSync.getInstance(this) }
     private var pageLoaded = false
     private var loginDetected = false
+    private var destroyed = false
     private val isLoginMode: Boolean
         get() = intent.getBooleanExtra(EXTRA_IS_LOGIN, false)
 
@@ -60,37 +61,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.loadUrl(targetUrl)
 
         design.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val url = request?.url?.toString() ?: return false
-                // 已登录状态下拦截跳转到登录页的重定向，改为跳转到仪表盘
-                if (sync.session.isLoggedIn && (url.contains("#/login") || url.contains("/login"))) {
-                    val serverUrl = sync.config.serverUrl.ifBlank { sync.getActiveUrl() }
-                    val dashboardUrl = "$serverUrl/#/stage"
-                    if (url != dashboardUrl) {
-                        SyncLog.add("拦截登录页重定向，跳转仪表盘")
-                        view?.loadUrl(dashboardUrl)
-                        return true
-                    }
-                }
-                return false
-            }
-
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                // 页面开始加载时就注入 auth_data，确保前端 router guard 能读取
-                if (view != null) {
-                    restoreAuthToLocalStorage(view)
-                }
+                // 不在 onPageStarted 注入，DOM 未就绪会失败
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
-                    // 持久化 Cookies
-                    CookieManager.getInstance().flush()
                     if (url != null && !url.startsWith("file://")) {
-                        // 先注入 auth_data 到 localStorage
-                        restoreAuthToLocalStorage(view)
+                        // 先检查 localStorage 是否已有 auth_data（前端可能已刷新）
+                        // 如果有，保存到本地；如果没有，注入保存的值
+                        syncLocalStorageWithBackend(view)
                         // 再注入登录检测
                         injectAuthDetector(view)
 
@@ -221,45 +203,43 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
     // 将已保存的 auth_data 注入到 WebView 的 localStorage
     // 确保前端 router guard 能读取到登录状态
-    // 同时注入多种 key 格式和 cookie，兼容不同前端实现
-    private fun restoreAuthToLocalStorage(webView: WebView) {
-        val authData = sync.session.authData
-        if (authData.isBlank()) return
-
-        val safeAuth = authData.replace("'", "\\'").replace("\\", "\\\\")
+    private fun syncLocalStorageWithBackend(webView: WebView) {
+        val savedAuth = sync.session.authData
         val js = """
             (function() {
                 try {
-                    var auth = '$safeAuth';
-                    var value = JSON.stringify({value: auth});
                     var keys = ['__AURORA__authorization', 'authorization', 'auth_data'];
-                    keys.forEach(function(k) {
-                        try {
-                            var current = localStorage.getItem(k) || '';
-                            if (!current || current !== value) {
-                                localStorage.setItem(k, value);
-                            }
-                        } catch(e) {}
-                    });
-                    // 同时写入 sessionStorage（部分前端可能使用）
-                    keys.forEach(function(k) {
-                        try {
-                            sessionStorage.setItem(k, value);
-                        } catch(e) {}
-                    });
-                } catch(e) {}
+                    var existing = '';
+                    for (var i = 0; i < keys.length; i++) {
+                        var val = localStorage.getItem(keys[i]);
+                        if (val) {
+                            // vue-ls 格式: {"value":"xxx"}
+                            try {
+                                var parsed = JSON.parse(val);
+                                if (parsed && typeof parsed === 'object' && parsed.value) {
+                                    existing = parsed.value;
+                                } else if (typeof parsed === 'string') {
+                                    existing = parsed;
+                                } else {
+                                    existing = val;
+                                }
+                            } catch(e) { existing = val; }
+                            if (existing) break;
+                        }
+                    }
+                    if (existing && typeof existing === 'string' && existing.length > 10) {
+                        // localStorage 有值，回传给 native 保存
+                        AndroidBridge.onLocalStorageAuth(existing);
+                    } else if ('${savedAuth.replace("'", "\\'")}'.length > 10) {
+                        // localStorage 为空，注入保存的值
+                        var key = '__AURORA__authorization';
+                        var value = JSON.stringify({value: '${savedAuth.replace("'", "\\'")}'});
+                        localStorage.setItem(key, value);
+                    }
+                } catch(e) { AndroidBridge.log('syncAuth error: ' + e.message); }
             })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
-
-        // 同时设置 Cookie，确保前端通过 cookie 也能读取到
-        try {
-            val cookieManager = CookieManager.getInstance()
-            val domain = android.net.Uri.parse(sync.getActiveUrl()).host ?: ""
-            if (domain.isNotBlank()) {
-                cookieManager.setCookie(domain, "auth_data=${authData}; path=/; Max-Age=2592000")
-            }
-        } catch (_: Exception) {}
     }
 
     private fun injectAuthDetector(webView: WebView) {
@@ -385,6 +365,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     class AuthBridge(private val activity: V2BoardActivity) {
         @JavascriptInterface
         fun onAuthData(authData: String, token: String, serverUrl: String) {
+            if (activity.destroyed || activity.design == null) return
             if (authData.isBlank()) return
             if (activity.loginDetected) return
 
@@ -400,8 +381,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (cleanAuth.isBlank()) return
 
             // 如果已登录且 auth_data 相同，不重复触发同步
+            // 注意：必须同时检查 loginDetected，防止新 Activity 实例中 auth_data 相同但未触发同步
             val existingAuth = activity.sync.session.authData
-            if (existingAuth.isNotBlank() && existingAuth == cleanAuth) {
+            if (existingAuth.isNotBlank() && existingAuth == cleanAuth && activity.loginDetected) {
                 activity.loginDetected = true
                 SyncLog.add("已登录，跳过重复同步")
                 return
@@ -425,18 +407,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "登录成功，3秒后自动同步订阅...",
+                        "登录成功，正在同步订阅...",
                         ToastDuration.Short
                     )
-                }
-                SyncLog.add("等待3秒后获取订阅...")
-
-                // 延迟3秒，确保前端 localStorage 已写入 auth_data
-                kotlinx.coroutines.delay(3000)
-
-                withContext(Dispatchers.Main) {
-                    // 用 JavaScript 调用前端的 API，自动带正确的 authorization header
-                    SyncLog.add("通过JS获取订阅URL...")
+                    // 登录成功后立即获取订阅，不再固定等待
+                    SyncLog.add("登录成功，立即获取订阅...")
                     activity.fetchSubscribeViaJs()
                 }
             }
@@ -444,6 +419,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onSubscribeUrl(subscribeUrl: String, email: String) {
+            if (activity.destroyed || activity.design == null) return
             if (subscribeUrl.isBlank()) return
             Log.d("V2Board: onSubscribeUrl called, email=$email")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
@@ -492,6 +468,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun onSubscribeError(error: String) {
+            if (activity.destroyed || activity.design == null) return
             Log.w("V2Board: onSubscribeError: $error")
             SyncLog.add("获取订阅失败: $error")
             activity.launch {
@@ -502,6 +479,20 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     )
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun onLocalStorageAuth(authData: String) {
+            if (activity.destroyed) return
+            if (authData.isBlank() || authData.length < 10) return
+            val existing = activity.sync.session.authData
+            // 只在值不同时更新，避免不必要的写入
+            if (existing != authData) {
+                activity.sync.session.save(authData, "", "")
+                Log.d("V2Board", "Saved refreshed auth_data from localStorage")
+                SyncLog.add("检测到前端刷新了认证，已同步保存")
+            }
+            activity.loginDetected = true
         }
 
         @JavascriptInterface
@@ -606,7 +597,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     override fun onDestroy() {
-        design?.destroyWebView()
+        destroyed = true
+        // 移除 JS 接口防止回调访问已销毁的 Activity
+        // 不销毁 WebView，保留 cookie 和缓存状态避免重复登录
+        try {
+            design?.removeJavascriptInterface("AndroidBridge")
+        } catch (_: Exception) {}
         super.onDestroy()
     }
 

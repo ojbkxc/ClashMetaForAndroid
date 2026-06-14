@@ -151,8 +151,9 @@ object V2BoardAutoSync {
     /**
      * 按优先级查找已存在的订阅配置：
      * 1. email → UUID 映射（最精确，多账号场景）
-     * 2. session 中保存的 UUID
-     * 3. 同名匹配（fallback）
+     *    如果 email 可用但无映射，说明是新账号，直接返回 null（不 fallback 到 UUID/名称）
+     * 2. session 中保存的 UUID（仅当 email 不可用时）
+     * 3. 同名匹配（fallback，仅当 email 不可用时）
      */
     private fun findExistingProfile(
         allProfiles: List<Profile>,
@@ -160,7 +161,7 @@ object V2BoardAutoSync {
         email: String,
         baseName: String
     ): Profile? {
-        // 1. 如果有 email，用 email→UUID 映射查找
+        // 1. 如果有 email，用 email→UUID 映射精确查找
         if (email.isNotBlank()) {
             val uuidByEmail = session.getProfileUuidForEmail(email)
             if (uuidByEmail != null) {
@@ -173,10 +174,15 @@ object V2BoardAutoSync {
                 }
                 // UUID 映射存在但配置已被删除，则当作新配置处理
                 SyncLog.add("邮箱映射的配置已不存在，将创建新配置")
+            } else {
+                // email 可用但无映射 → 新账号，不 fallback 到旧账号的 UUID
+                SyncLog.add("邮箱 $email 无映射，将创建新配置")
             }
+            // 有 email 时不 fallback 到 session UUID 或名称匹配，防止跨账号覆写
+            return null
         }
 
-        // 2. Fallback: 用 session 中保存的 UUID 查找
+        // 2. email 不可用时，fallback 到 session 中保存的 UUID
         val savedUuid = session.v2boardProfileUuid
         if (savedUuid.isNotBlank()) {
             val profile = allProfiles.find {
@@ -188,7 +194,7 @@ object V2BoardAutoSync {
             }
         }
 
-        // 3. Fallback: 同名匹配
+        // 3. email 不可用时，fallback 到同名匹配
         val profile = allProfiles.find {
             it.type == Profile.Type.Url && it.name == baseName
         }

@@ -170,8 +170,11 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.emptyView.visibility = View.VISIBLE
     }
 
+    // 不销毁 WebView，保留 cookie 和 localStorage 避免重复登录
     fun destroyWebView() {
-        CookieManager.getInstance().flush()
-        binding.webView.destroy()
+    }
+
+    fun removeJavascriptInterface(name: String) {
+        binding.webView.removeJavascriptInterface(name)
     }
 }
