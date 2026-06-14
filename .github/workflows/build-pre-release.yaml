@@ -1,9 +1,21 @@
 name: Build Pre-Release
 on:
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild even if no changes'
+        required: false
+        default: 'false'
   push:
     branches:
       - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
 
 jobs:
   BuildPreRelease:
@@ -77,7 +89,19 @@ jobs:
 
       - name: Pre-release Build
         if: success()
-        run: ./gradlew --no-daemon --stacktrace app:assembleAlphaRelease
+        run: ./gradlew --no-daemon --stacktrace app:assembleAlphaRelease 2>&1
+
+      - name: Check Build Output
+        run: |
+          if [ -f app/build/outputs/apk/alpha/release/*.apk ]; then
+            echo "✅ Build successful - APK found"
+            ls -la app/build/outputs/apk/alpha/release/
+          else
+            echo "❌ Build failed - No APK found"
+            echo "Checking for build errors..."
+            find app/build -name "*.log" 2>/dev/null | head -5
+            exit 1
+          fi
 
       - name: Upload Alpha
         uses: softprops/action-gh-release@v2
