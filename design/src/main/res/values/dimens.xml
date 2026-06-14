@@ -47,7 +47,7 @@
     <!-- Large Card -->
     <dimen name="large_action_card_radius">12dp</dimen>
     <dimen name="large_action_card_elevation">5dp</dimen>
-    <dimen name="large_action_card_min_height">85dp</dimen>
+    <dimen name="large_action_card_min_height">96dp</dimen>
 
     <!-- Tips -->
     <dimen name="tips_icon_size">25dp</dimen>
