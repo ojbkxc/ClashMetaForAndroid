@@ -93,8 +93,9 @@ jobs:
 
       - name: Check Build Output
         run: |
-          if [ -f app/build/outputs/apk/alpha/release/*.apk ]; then
-            echo "✅ Build successful - APK found"
+          APK_COUNT=$(ls app/build/outputs/apk/alpha/release/*.apk 2>/dev/null | wc -l)
+          if [ "$APK_COUNT" -gt 0 ]; then
+            echo "✅ Build successful - Found $APK_COUNT APK(s)"
             ls -la app/build/outputs/apk/alpha/release/
           else
             echo "❌ Build failed - No APK found"
