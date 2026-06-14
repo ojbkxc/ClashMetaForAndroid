@@ -79,32 +79,16 @@ jobs:
         if: success()
         run: ./gradlew --no-daemon --stacktrace app:assembleAlphaRelease
 
-      # Delete old Prerelease-alpha
-      - uses: dev-drprasad/delete-tag-and-release@v1.1
-        with:
-          tag_name: Prerelease-alpha
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          delete_release: true
-
-      - name: Tag Repo
-        uses: actions/create-release@v1
-        id: create_tag
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: Prerelease-alpha
-          release_name: Prerelease-alpha
-          prerelease: true
-
       - name: Upload Alpha
         uses: softprops/action-gh-release@v2
-        if: ${{  success() }}
+        if: ${{ success() }}
         with:
           tag_name: Prerelease-alpha
           files: app/build/outputs/apk/alpha/release/*
           prerelease: true
           generate_release_notes: true
+          overwrite: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release Changelog Builder
         uses: mikepenz/release-changelog-builder-action@v4
