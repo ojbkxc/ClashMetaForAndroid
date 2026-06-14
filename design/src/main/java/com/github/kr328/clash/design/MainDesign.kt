@@ -72,7 +72,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         withContext(Dispatchers.Main) {
             binding.forwarded = value.trafficTotal()
             if (binding.clashRunning) {
-                binding.cardStatus.text = context.getString(R.string.running) + "  " + value.trafficCompact()
+                // 主文字只显示"运行中"，流量数据简写后放在右侧
+                binding.cardStatus.text = context.getString(R.string.running)
+                binding.cardStatus.trailingText = value.trafficCompact()
+                binding.cardStatus.setTrailingTextSize(12f)  // 字体变小
             }
         }
     }

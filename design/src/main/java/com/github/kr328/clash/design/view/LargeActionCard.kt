@@ -41,7 +41,7 @@ class LargeActionCard @JvmOverloads constructor(
         set(value) {
             binding.trailingText.text = value
             binding.trailingText.visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
-            updateTrailingContainer()
+            // trailingText 现在在文字行旁边，不需要更新 trailingContainer
         }
 
     var trailingText2: CharSequence?
@@ -53,8 +53,8 @@ class LargeActionCard @JvmOverloads constructor(
         }
 
     private fun updateTrailingContainer() {
+        // 只检查 trailingText2，因为 trailingText 现在在文字行旁边
         binding.trailingContainer.visibility = if (
-            binding.trailingText.visibility == View.VISIBLE ||
             binding.trailingText2.visibility == View.VISIBLE
         ) View.VISIBLE else View.GONE
     }

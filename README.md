@@ -1,15 +1,23 @@
 # 蓝星网络 (LanXing Network)
 
-基于 [ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid) 定制的 V2Board 订阅客户端，集成了 V2Board 账号登录、订阅自动同步、多域名回退等功能，同时完整保留原版 Clash Meta 的代理能力。
+基于 [ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid) 定制的 V2Board 订阅客户端，集成了 V2Board 账号登录、订阅自动同步、多域名回退、多账号管理等功能，同时完整保留原版 Clash Meta 的代理能力。
+
+**当前版本：v2.0.22**
 
 ## 功能特性
 
 ### V2Board 集成
 
-- **账号登录** — 首次安装自动跳转 V2Board 登录页，登录状态持久化
+- **账号登录** — 首次安装自动跳转 V2Board 登录页，登录状态持久化（基于 localStorage），无需重复登录
+- **多账号管理** — 支持多个 V2Board 账号，通过邮箱自动识别：
+  - 同一邮箱 → 自动更新对应订阅配置
+  - 不同邮箱 → 自动创建新订阅（蓝星、蓝星1、蓝星2...）并激活
 - **订阅自动同步** — 支持自定义同步间隔，后台静默完成
 - **多域名自动回退** — 内置域名不可用时自动探测备用域名，保障可用性
-- **账户信息展示** — 主页显示流量使用情况与到期时间
+- **账户信息展示** — 主页卡片实时显示：
+  - 运行状态 + 上下行流量（简写格式：↑1.2M ↓3.4G）
+  - 代理模式（Rule/Direct/Global）
+  - 套餐名称、到期时间、余额
 - **帮助/知识库** — 内置 V2Board 知识库与关于页面
 
 ### 代理核心能力
@@ -162,8 +170,31 @@ key.password=<password>
 再次启动
   → 检测 hasEverLoggedIn = true → 直接进入主页
   → 不发起任何网络请求
-  → 点击"我的账户"等按钮时才加载 WebView
+  → 点击 Logo 进入账户时才加载 WebView
+
+WebView 加载时
+  → 在 onPageStarted 中自动注入已保存的 auth_data 到 localStorage
+  → 前端路由守卫检查到登录状态 → 自动跳转仪表盘
+  → 无需用户重新登录
 ```
+
+### 多账号订阅管理
+
+```
+用户 A (user@example.com) 首次登录
+  → 创建订阅配置：蓝星
+  → 自动激活
+
+用户 B (other@test.com) 登录
+  → 检测到邮箱不同 → 创建订阅配置：蓝星1
+  → 自动激活为当前配置
+
+用户 A 再次登录（切换回）
+  → 检测到邮箱相同 → 更新订阅配置：蓝星
+  → 自动激活
+```
+
+> **注意**：订阅命名基于 `v2board.properties` 中的 `v2board.app.name` 配置，默认为"蓝星"。
 
 ### 域名回退机制
 
@@ -180,11 +211,11 @@ key.password=<password>
 |------|------|
 | `ConfigManager.kt` | 统一配置管理，从 `v2board.properties` 读取配置 |
 | `V2BoardConfig.kt` | 多域名配置、同步间隔管理 |
-| `V2BoardSession.kt` | 登录态持久化（SharedPreferences） |
-| `V2BoardSync.kt` | 域名回退、API 调用、单例管理 |
-| `V2BoardActivity.kt` | WebView 壳（登录/用户中心/套餐/关于/知识库） |
-| `V2BoardAutoSync.kt` | 订阅自动同步到 Profile |
-| `V2BoardDesign.kt` | WebView UI 层 |
+| `V2BoardSession.kt` | 登录态持久化（SharedPreferences、localStorage 注入）、邮箱→订阅 UUID 映射 |
+| `V2BoardSync.kt` | 域名回退、API 调用、单例管理、fetchSubscribeUrl / fetchUserInfo |
+| `V2BoardActivity.kt` | WebView 壳（登录/用户中心/套餐/关于/知识库）、JS Bridge 实现 |
+| `V2BoardAutoSync.kt` | 订阅自动同步到 Profile、多账号检测与配置创建/更新 |
+| `V2BoardDesign.kt` | WebView UI 层、配置 |
 
 ### 更新地址接口格式
 
@@ -224,3 +255,12 @@ key.password=<password>
 本项目基于 [GPLv3](LICENSE) 许可证发布。
 
 贡献代码即表示您同意将代码合并至项目的闭源分支，其余条款遵循 GPLv3 协议。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 更新日志
+
+### v2.0.22
+- **多账号支持**：通过邮箱自动识别用户，同一邮箱更新订阅，不同邮箱创建新订阅配置
+- **登录优化**：WebView 加载时自动注入 localStorage，消除重复登录需求
+- **UI 优化**：主界面卡片布局优化，流量显示简写格式（↑1.2M ↓3.4G）
+- **信息同步**：切换账号后自动重新获取用户信息（套餐、到期时间、余额）
+- **编译修复**：移除废弃的 WebView API，适配最新 Android SDK
