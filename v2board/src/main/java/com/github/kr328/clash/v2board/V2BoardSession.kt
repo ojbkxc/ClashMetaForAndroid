@@ -95,6 +95,13 @@ class V2BoardSession(context: Context) {
         this.authData = authData
         this.userToken = userToken
         if (email.isNotBlank()) {
+            // 如果邮箱变了，说明切换了账号，清除旧账号缓存信息
+            if (this.email.isNotBlank() && email != this.email) {
+                planName = ""
+                resetDay = 0
+                balance = 0
+                expiredAt = 0L
+            }
             this.email = email
         }
         this.hasEverLoggedIn = true

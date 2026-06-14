@@ -397,6 +397,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             SyncLog.add("后端地址: ${SyncLog.maskUrl(serverUrl)}")
             SyncLog.add("auth_data: ${cleanAuth.take(30)}...")
 
+            // 强制持久化 Cookie，确保下次不丢失登录状态
+            try {
+                android.webkit.CookieManager.getInstance().flush()
+            } catch (_: Exception) {}
+
             // 保存后端API地址
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
@@ -425,6 +430,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
             if (email.isNotBlank()) {
                 SyncLog.add("用户邮箱: $email")
+                // 如果邮箱变了，说明切换了账号，清除旧账号缓存
+                val oldEmail = activity.sync.session.email
+                if (oldEmail.isNotBlank() && email != oldEmail) {
+                    activity.sync.session.planName = ""
+                    activity.sync.session.resetDay = 0
+                    activity.sync.session.balance = 0
+                    activity.sync.session.expiredAt = 0L
+                    SyncLog.add("检测到账号切换: $oldEmail → $email")
+                }
                 activity.sync.session.email = email
             }
 
@@ -491,6 +505,10 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 activity.sync.session.save(authData, "", "")
                 Log.d("V2Board: Saved refreshed auth_data from localStorage")
                 SyncLog.add("检测到前端刷新了认证，已同步保存")
+                // 强制持久化 Cookie
+                try {
+                    android.webkit.CookieManager.getInstance().flush()
+                } catch (_: Exception) {}
             }
             activity.loginDetected = true
         }
@@ -602,6 +620,10 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         // 不销毁 WebView，保留 cookie 和缓存状态避免重复登录
         try {
             design?.removeJavascriptInterface("AndroidBridge")
+        } catch (_: Exception) {}
+        // 强制持久化 Cookie，确保下次打开 WebView 时登录状态不丢失
+        try {
+            android.webkit.CookieManager.getInstance().flush()
         } catch (_: Exception) {}
         super.onDestroy()
     }

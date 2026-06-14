@@ -61,10 +61,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setClashRunning(running: Boolean) {
         withContext(Dispatchers.Main) {
             binding.clashRunning = running
-            if (running) {
-                binding.cardStatus.setTextSize(16f)
-            } else {
-                binding.cardStatus.setTextSize(20f)
+            if (!running) {
                 binding.cardStatus.text = context.getString(R.string.stopped)
                 binding.cardStatus.subtext = ""
             }

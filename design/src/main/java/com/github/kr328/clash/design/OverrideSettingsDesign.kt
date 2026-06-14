@@ -225,6 +225,13 @@ class OverrideSettingsDesign(
                 placeholder = R.string.dont_modify,
             )
 
+            editableTextList(
+                value = configuration::rule,
+                adapter = TextAdapter.String,
+                title = R.string.rule,
+                placeholder = R.string.dont_modify,
+            )
+
             category(R.string.dns)
 
             val dnsDependencies: MutableList<Preference> = mutableListOf()
