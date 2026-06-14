@@ -89,12 +89,8 @@ class MainActivity : BaseActivity<MainDesign>() {
             val sync = V2BoardSync.getInstance(this@MainActivity)
             launch {
                 design.setLoginStatus(sync.session.isLoggedIn)
-                // 登录成功后顶部显示email，未登录显示默认标题
-                if (sync.session.isLoggedIn && sync.session.email.isNotBlank()) {
-                    design.setTitleText(sync.session.email)
-                } else {
-                    design.setTitleText(null)
-                }
+                // 标题由 fetch() 函数根据当前活动配置名称设置
+                // 这里不再设置标题，避免覆盖配置名称
             }
         }
 
@@ -197,6 +193,14 @@ class MainActivity : BaseActivity<MainDesign>() {
         withProfile {
             val active = queryActive()
             setProfileName(active?.name)
+            
+            // 顶部标题显示当前活动配置的名称（邮箱名）
+            // 如果切换了配置，标题也会跟着更新
+            if (active != null) {
+                setTitleText(active.name)
+            } else {
+                setTitleText(null)
+            }
 
             // 显示订阅流量信息
             val flowInfo = if (active != null && active.total > 0) {
