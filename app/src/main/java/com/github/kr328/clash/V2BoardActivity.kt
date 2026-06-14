@@ -463,7 +463,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun log(message: String) {
-            Log.d("V2Board JS", message)
+            Log.d("[V2Board JS] $message")
             SyncLog.add("JS: $message")
         }
 
