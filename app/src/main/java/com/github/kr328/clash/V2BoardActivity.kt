@@ -447,6 +447,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 Log.d("V2Board: Starting sync")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl, email)
 
+                // 同步订阅后，重新获取用户信息
+                // fetchSubscribeUrl 会更新 email、planName、expiredAt
+                // fetchUserInfo 会更新 balance
+                try {
+                    if (syncResult.isSuccess) {
+                        activity.sync.fetchSubscribeUrl()
+                        activity.sync.fetchUserInfo()
+                        SyncLog.add("已重新获取用户信息")
+                    }
+                } catch (_: Exception) {
+                    Log.w("V2Board: Failed to fetch user info after sync")
+                }
+
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
                         Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
