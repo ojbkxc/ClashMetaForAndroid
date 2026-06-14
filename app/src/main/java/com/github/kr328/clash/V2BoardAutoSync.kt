@@ -92,7 +92,8 @@ object V2BoardAutoSync {
                         SyncLog.add("未找到已有配置，创建新配置...")
 
                         // 自动递增命名：蓝星 → 蓝星1 → 蓝星2 → ...
-                        val newName = generateNextProfileName(allProfiles, baseName)
+                        // 配置名称包含邮箱，方便识别不同账号
+                        val newName = generateNextProfileName(allProfiles, baseName, email)
                         SyncLog.add("新配置名称: $newName")
 
                         val uuid = create(Profile.Type.Url, newName, subscribeUrl)
@@ -207,34 +208,48 @@ object V2BoardAutoSync {
     }
 
     /**
-     * 自动生成下一个配置名称：蓝星 → 蓝星1 → 蓝星2 → ...
+     * 自动生成下一个配置名称：直接使用邮箱
+     * usera@ → usera@1 → usera@2 → ...
+     * 配置名称直接使用邮箱，方便识别不同账号
      */
-    private fun generateNextProfileName(allProfiles: List<Profile>, baseName: String): String {
+    private fun generateNextProfileName(allProfiles: List<Profile>, baseName: String, email: String): String {
         val urlProfiles = allProfiles.filter { it.type == Profile.Type.Url }
-
-        // 如果没有同名配置，直接用 baseName
-        if (urlProfiles.none { it.name == baseName }) {
-            return baseName
+        
+        // 提取邮箱的用户名部分（@ 之前）用于显示，最多保留 15 个字符
+        val emailName = if (email.isNotBlank() && email.contains("@")) {
+            val username = email.substringBefore("@")
+            if (username.length > 15) username.take(15) else username
+        } else {
+            // 邮箱无效时使用 baseName
+            baseName
         }
 
-        // 找最大的后缀数字
-        var maxSuffix = 0
-        for (profile in urlProfiles) {
-            val name = profile.name
-            if (name.startsWith(baseName)) {
-                val suffix = name.removePrefix(baseName)
-                if (suffix.isEmpty()) {
-                    // "蓝星" 本身算 0
-                    maxSuffix = maxOf(maxSuffix, 0)
-                } else {
-                    val num = suffix.toIntOrNull()
-                    if (num != null) {
-                        maxSuffix = maxOf(maxSuffix, num)
-                    }
-                }
-            }
+        // 提取配置名称中的数字后缀
+        // "usera@" -> 0, "usera@1" -> 1, "usera@2" -> 2
+        fun extractNumber(name: String): Int {
+            val suffix = name.removePrefix(emailName).trim()
+            if (suffix.isEmpty()) return 0  // "usera@" -> 0
+            val numStr = suffix.removePrefix("@")
+            return numStr.toIntOrNull() ?: 0
         }
 
-        return "$baseName${maxSuffix + 1}"
+        // 找出所有以 emailName 开头或以 emailName@ 开头的配置
+        val existingConfigs = urlProfiles.filter { 
+            it.name.startsWith(emailName) && 
+            (it.name == emailName || it.name.startsWith("$emailName@"))
+        }
+        
+        if (existingConfigs.isEmpty()) {
+            // 没有任何匹配的配置，创建第一个配置：emailName
+            // 例如："usera@"
+            return emailName
+        }
+        
+        // 找最大的数字后缀
+        val maxSuffix = existingConfigs.maxOf { extractNumber(it.name) }
+        
+        // 后续配置：emailName + @ + (maxSuffix + 1)
+        // 例如："usera@1"、"usera@2"
+        return "$emailName@${maxSuffix + 1}"
     }
 }

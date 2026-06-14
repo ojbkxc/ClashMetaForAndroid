@@ -87,36 +87,29 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             return
                         }
 
-                        // 如果已登录但还没有触发过登录检测，检查是否需要自动同步
+                        // 如果已登录但还没有触发过登录检测，立即获取订阅信息
+                        // 这解决了第二次进入时不需要重新登录的问题
                         if (!loginDetected && sync.session.isLoggedIn) {
-                            // 检查是否有活动配置
+                            loginDetected = true
                             launch {
-                                val hasActive = withProfile {
-                                    val active = queryActive()
-                                    active != null && active.imported
-                                }
-                                if (!hasActive) {
-                                    // 没有配置，先获取后端地址，再触发同步
-                                    loginDetected = true
-                                    // 从页面获取后端地址
-                                    if (sync.config.serverUrl.isBlank()) {
-                                        view.evaluateJavascript(
-                                            "(window.EnvConfig && window.EnvConfig.serverUrl) || window.location.origin || '';"
-                                        ) { result ->
-                                            val url = result?.removeSurrounding("\"") ?: ""
-                                            if (url.isNotBlank() && url.startsWith("http")) {
-                                                sync.config.serverUrl = url
-                                                sync.resetApi()
-                                            }
+                                // 从页面获取后端地址
+                                if (sync.config.serverUrl.isBlank()) {
+                                    view.evaluateJavascript(
+                                        "(window.EnvConfig && window.EnvConfig.serverUrl) || window.location.origin || '';"
+                                    ) { result ->
+                                        val url = result?.removeSurrounding("\"") ?: ""
+                                        if (url.isNotBlank() && url.startsWith("http")) {
+                                            sync.config.serverUrl = url
+                                            sync.resetApi()
                                         }
                                     }
-                                    withContext(Dispatchers.Main) {
-                                        design?.showToast(
-                                            "正在自动同步订阅...",
-                                            ToastDuration.Short
-                                        )
-                                        fetchSubscribeViaJs()
-                                    }
+                                }
+                                withContext(Dispatchers.Main) {
+                                    design?.showToast(
+                                        "正在获取订阅信息...",
+                                        ToastDuration.Short
+                                    )
+                                    fetchSubscribeViaJs()
                                 }
                             }
                         }
@@ -450,11 +443,14 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 // 同步订阅后，重新获取用户信息
                 // fetchSubscribeUrl 会更新 email、planName、expiredAt
                 // fetchUserInfo 会更新 balance
+                // 必须在这里等待获取完成后再通知 UI 更新
                 try {
                     if (syncResult.isSuccess) {
                         activity.sync.fetchSubscribeUrl()
                         activity.sync.fetchUserInfo()
                         SyncLog.add("已重新获取用户信息")
+                        // 刷新 session 缓存，确保 MainActivity 读取到最新数据
+                        Log.d("V2Board: User info updated, plan=${activity.sync.session.planName}, balance=${activity.sync.session.balance}")
                     }
                 } catch (_: Exception) {
                     Log.w("V2Board: Failed to fetch user info after sync")
@@ -464,7 +460,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                     if (syncResult.isSuccess) {
                         Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
-                        // 通知 MainActivity 更新 UI（显示email等）
+                        // 通知 MainActivity 更新 UI（此时数据已就绪）
                         activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
                         activity.design?.showToast(
                             syncResult.getOrNull() ?: "同步完成",
@@ -514,17 +510,29 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (activity.destroyed) return
             if (authData.isBlank() || authData.length < 10) return
             val existing = activity.sync.session.authData
-            // 只在值不同时更新，避免不必要的写入
+            
+            // 检查 auth_data 是否变化
             if (existing != authData) {
                 activity.sync.session.save(authData, "", "")
                 Log.d("V2Board: Saved refreshed auth_data from localStorage")
-                SyncLog.add("检测到前端刷新了认证，已同步保存")
+                SyncLog.add("检测到认证信息，已同步保存")
                 // 强制持久化 Cookie
                 try {
                     android.webkit.CookieManager.getInstance().flush()
                 } catch (_: Exception) {}
             }
+            
+            // 设置 loginDetected，确保后续流程正确执行
             activity.loginDetected = true
+            
+            // 如果还没有获取过订阅，立即获取
+            // 这解决了第二次进入时不需要重新登录的问题
+            if (activity.sync.session.planName.isBlank() && activity.sync.session.expiredAt == 0L) {
+                activity.launch {
+                    SyncLog.add("检测到已登录，获取订阅信息...")
+                    activity.fetchSubscribeViaJs()
+                }
+            }
         }
 
         @JavascriptInterface
@@ -562,25 +570,31 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         val js = """
             (function() {
                 try {
-                    var auth = localStorage.getItem('__AURORA__authorization') || '';
-                    if (!auth) {
-                        auth = localStorage.getItem('authorization') || '';
-                    }
-                    if (!auth) {
-                        AndroidBridge.onSubscribeError('未找到登录凭证');
-                        return;
-                    }
-                    // vue-ls 用 JSON.stringify({value: v}) 存储，需要解析提取 .value
-                    try {
-                        var parsed = JSON.parse(auth);
-                        if (parsed && typeof parsed === 'object' && parsed.value) {
-                            auth = parsed.value;
-                        } else if (typeof parsed === 'string') {
-                            auth = parsed;
+                    // 兼容多种 localStorage key：AuroraForV2board 的 __AURORA__authorization，
+                    // 以及标准的 authorization 和 auth_data
+                    var keys = ['__AURORA__authorization', 'authorization', 'auth_data'];
+                    var auth = '';
+                    for (var i = 0; i < keys.length; i++) {
+                        var val = localStorage.getItem(keys[i]);
+                        if (val) {
+                            // vue-ls 格式: {"value":"xxx"}，需要解析提取 .value
+                            try {
+                                var parsed = JSON.parse(val);
+                                if (parsed && typeof parsed === 'object' && parsed.value) {
+                                    auth = parsed.value;
+                                } else if (typeof parsed === 'string') {
+                                    auth = parsed;
+                                } else {
+                                    auth = val;
+                                }
+                            } catch(e) { auth = val; }
+                            if (auth && typeof auth === 'string' && auth.length > 10) {
+                                break;
+                            }
                         }
-                    } catch(e) {}
-                    if (!auth || typeof auth !== 'string') {
-                        AndroidBridge.onSubscribeError('登录凭证格式错误');
+                    }
+                    if (!auth || typeof auth !== 'string' || auth.length < 10) {
+                        AndroidBridge.onSubscribeError('未找到登录凭证');
                         return;
                     }
                     // API 使用后端地址（与前端 n["l"] 一致）
