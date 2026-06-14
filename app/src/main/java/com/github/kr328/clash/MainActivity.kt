@@ -1,7 +1,9 @@
 package com.github.kr328.clash
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +17,7 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
+import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.MainDesign
@@ -36,8 +39,38 @@ import com.github.kr328.clash.design.R as DesignR
 
 class MainActivity : BaseActivity<MainDesign>() {
     companion object {
-        private const val DELAY_BEFORE_NON_CRITICAL_TASKS = 3_000L
-        private const val DELAY_BEFORE_UPDATE_CHECK = 5_000L
+        private const val PREF_NAME = "main_guide"
+        private const val KEY_GUIDE_SHOWN = "guide_shown"
+    }
+
+    private fun isGuideShown(): Boolean {
+        val prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_GUIDE_SHOWN, false)
+    }
+
+    private fun setGuideShown() {
+        getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_GUIDE_SHOWN, true)
+            .apply()
+    }
+
+    private suspend fun showGuideDialog() {
+        // 先让 Logo 呼吸动画开始
+        design?.showLogoGuideHighlight()
+        // 延迟 300ms 确保 UI 渲染完毕再弹出对话框
+        delay(300)
+        AlertDialog.Builder(this@MainActivity)
+            .setTitle("使用引导")
+            .setMessage("👋 欢迎使用蓝星网络！\n\n点击左上角的 Logo 图标即可进入账户登录页面\n\n右上角的 ⚙️ 图标可进入设置页面")
+            .setPositiveButton("知道了") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .setOnDismissListener {
+                launch { design?.hideLogoGuideHighlight() }
+            }
+            .show()
     }
 
     override suspend fun main() {
@@ -45,20 +78,22 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        // 更新登录状态以及账户信息
+        // 首次进入显示引导
+        if (!isGuideShown()) {
+            showGuideDialog()
+            setGuideShown()
+        }
+
+        // 更新登录状态和日志
         fun updateSyncUI() {
             val sync = V2BoardSync.getInstance(this@MainActivity)
             launch {
                 design.setLoginStatus(sync.session.isLoggedIn)
-                if (sync.session.isLoggedIn) {
-                    design.setEmail(sync.session.email.ifBlank { null })
-                    design.setPlanName(sync.session.planName.ifBlank { null })
-                    val bal = sync.session.balance
-                    design.setBalance(if (bal > 0) "${bal / 100.0}元" else null)
+                // 登录成功后顶部显示email，未登录显示默认标题
+                if (sync.session.isLoggedIn && sync.session.email.isNotBlank()) {
+                    design.setTitleText(sync.session.email)
                 } else {
-                    design.setEmail(null)
-                    design.setPlanName(null)
-                    design.setBalance(null)
+                    design.setTitleText(null)
                 }
             }
         }
@@ -68,79 +103,23 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
-        // 引导弹窗：未登录时显示呼吸动画和引导
-        val prefs = getSharedPreferences("guide", Context.MODE_PRIVATE)
-        if (!prefs.getBoolean("guide_shown", false)) {
-            design.startLogoBreathingAnimation()
-            launch {
-                delay(1500)
-                withContext(Dispatchers.Main) {
-                    androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                        .setTitle("欢迎使用")
-                        .setMessage("点击左上角图标登录您的订阅账户，即可同步节点和订阅信息。")
-                        .setPositiveButton("知道了") { _, _ ->
-                            design.stopLogoBreathingAnimation()
-                            prefs.edit().putBoolean("guide_shown", true).apply()
-                        }
-                        .setCancelable(false)
-                        .show()
-                }
-            }
-        }
-
-        // 余额交替动画：每隔3秒切换套餐名和余额
-        if (V2BoardSync.getInstance(this@MainActivity).session.isLoggedIn) {
-            launch {
-                val sync = V2BoardSync.getInstance(this@MainActivity)
-                var showingBalance = false
-                while (isActive) {
-                    delay(3000)
-                    val planName = sync.session.planName
-                    val bal = sync.session.balance
-                    if (planName.isNotBlank() && bal > 0) {
-                        showingBalance = !showingBalance
-                        withContext(Dispatchers.Main) {
-                            if (showingBalance) {
-                                design.setPlanName("${bal / 100.0}元")
-                            } else {
-                                design.setPlanName(planName)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Delayed root detection (non-critical, deferred to avoid blocking startup)
+        // 启动后延迟检查更新（非阻塞，不干扰主页加载）
         launch {
-            delay(DELAY_BEFORE_NON_CRITICAL_TASKS)
+            kotlinx.coroutines.delay(3000)
             try {
-                val isRooted = withContext(Dispatchers.IO) {
-                    com.github.kr328.clash.common.RootChecker.isRooted()
-                }
-                if (isRooted) {
-                    com.github.kr328.clash.common.log.Log.d("Device is rooted.")
-                }
-            } catch (e: Exception) {
-                com.github.kr328.clash.common.log.Log.e("Root detection failed", e)
-            }
-        }
-
-        // Delayed update check (non-critical, deferred to avoid blocking startup)
-        launch {
-            delay(DELAY_BEFORE_UPDATE_CHECK)
-            try {
-                val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+                val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName
+                    ?: return@launch
                 val release = withContext(Dispatchers.IO) {
                     UpdateChecker.checkForUpdate(this@MainActivity)
-                }
-                if (release != null && UpdateChecker.compareVersions(currentVersion, release.tagName) < 0) {
+                } ?: return@launch
+                if (UpdateChecker.isSkipped(this@MainActivity, release.tagName)) return@launch
+                if (UpdateChecker.compareVersions(currentVersion, release.tagName) < 0) {
                     withContext(Dispatchers.Main) {
                         UpdateChecker.showUpdateDialog(this@MainActivity, currentVersion, release)
                     }
                 }
-            } catch (e: Exception) {
-                com.github.kr328.clash.common.log.Log.e("Update check failed", e)
+            } catch (_: Exception) {
+                // 更新检查失败不影响正常使用
             }
         }
 
@@ -185,6 +164,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.OpenAbout ->
                             startActivity(V2BoardActivity.openAbout(this@MainActivity))
                         MainDesign.Request.OpenV2BoardLogin -> {
+                            // 始终打开 WebView（已登录时显示仪表盘，未登录时显示登录页）
                             startActivity(V2BoardActivity.openLogin(this@MainActivity))
                         }
                         MainDesign.Request.ViewSyncLog -> {
@@ -223,16 +203,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val usedBytes = active.upload + active.download
                 val usedStr = formatBytes(usedBytes)
                 val totalStr = formatBytes(active.total)
-                val expireStr = if (active.expire > 0) {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    sdf.format(java.util.Date(active.expire))
-                } else ""
-
-                if (expireStr.isNotEmpty()) {
-                    context.getString(DesignR.string.format_v2board_traffic, usedStr, totalStr, expireStr)
-                } else {
-                    "$usedStr / $totalStr"
-                }
+                "$usedStr / $totalStr"
             } else null
 
             val flowProgress = if (active != null && active.total > 1) {
@@ -242,16 +213,65 @@ class MainActivity : BaseActivity<MainDesign>() {
             setProfileFlowInfo(flowInfo)
             setProfileFlowProgress(flowProgress)
 
+            // 显示套餐名、到期时间、余额到各卡片右侧（从 V2BoardSession 缓存读取）
+            val sync = V2BoardSync.getInstance(this@MainActivity)
+            val session = sync.session
+            if (session.isLoggedIn) {
+                // 如果缓存为空，后台拉取数据（仅首次）
+                if (session.planName.isBlank() && session.expiredAt <= 0L && session.balance <= 0) {
+                    launch {
+                        try {
+                            sync.fetchSubscribeUrl()
+                            sync.fetchUserInfo()
+                            // 数据就绪后刷新 UI
+                            withContext(Dispatchers.Main) {
+                                fetch()
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+
+                // 运行中卡片右侧：套餐名
+                setProfilePlanName(session.planName.ifBlank { null })
+
+                // 运行中卡片右侧：上=套餐名，下=到期信息
+                // 到期信息：>20天显示日期，≤20天显示"还剩X天"并着色
+                if (session.expiredAt > 0) {
+                    val sdf = java.text.SimpleDateFormat("yy-MM-dd", java.util.Locale.getDefault())
+                    val daysLeft = ((session.expiredAt - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
+                    when {
+                        daysLeft > 90 -> setProfileExpiryInfo(null)  // 超过3个月不显示
+                        daysLeft > 20 -> setProfileExpiryInfo(sdf.format(java.util.Date(session.expiredAt)))
+                        else -> {
+                            val (text, color) = when {
+                                daysLeft <= 0  -> "已过期"  to 0xFFFF4444.toInt()
+                                daysLeft <= 7  -> "还剩${daysLeft}天" to 0xFFFF4444.toInt()
+                                else           -> "还剩${daysLeft}天" to 0xFFFF9800.toInt()
+                            }
+                            setProfileExpiryInfo(text, color)
+                        }
+                    }
+                } else {
+                    setProfileExpiryInfo(null)
+                }
+            } else {
+                setProfilePlanName(null)
+                setProfileExpiryInfo(null)
+            }
+
+            // 设置余额并启动交替动画
+            setAccountBalance(session.balance)
+
             // 订阅到期提醒
             if (active != null && active.expire > 0) {
                 val daysLeft = ((active.expire - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
                 if (daysLeft <= 0) {
-                    design?.showToast(
+                    this@MainActivity.design?.showToast(
                         DesignR.string.subscription_expired,
                         ToastDuration.Long
                     )
                 } else if (daysLeft <= 3) {
-                    design?.showToast(
+                    this@MainActivity.design?.showToast(
                         getString(DesignR.string.subscription_expiring_soon, daysLeft),
                         ToastDuration.Long
                     )
@@ -263,12 +283,18 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val usedBytes = active.upload + active.download
                 val usagePercent = (usedBytes * 100.0 / active.total).toInt()
                 if (usagePercent >= 90) {
-                    design?.showToast(
+                    this@MainActivity.design?.showToast(
                         DesignR.string.subscription_traffic_warning,
                         ToastDuration.Long
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun MainDesign.fetchTraffic() {
+        withClash {
+            setForwarded(queryTrafficTotal())
         }
     }
 
@@ -278,12 +304,6 @@ class MainActivity : BaseActivity<MainDesign>() {
             bytes < 1024 * 1024 -> "%.1fKB".format(bytes / 1024.0)
             bytes < 1024 * 1024 * 1024 -> "%.1fMB".format(bytes / (1024.0 * 1024))
             else -> "%.2fGB".format(bytes / (1024.0 * 1024 * 1024))
-        }
-    }
-
-    private suspend fun MainDesign.fetchTraffic() {
-        withClash {
-            setForwarded(queryTrafficTotal())
         }
     }
 
@@ -314,6 +334,42 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
         } catch (e: Exception) {
             design?.showToast(DesignR.string.unable_to_start_vpn, ToastDuration.Long)
+        }
+    }
+
+    private suspend fun autoSyncSubscription(design: MainDesign) {
+        val sync = V2BoardSync.getInstance(this)
+        val session = sync.session
+
+        if (!session.isLoggedIn) {
+            SyncLog.add("未登录，请先登录")
+            return
+        }
+
+        SyncLog.add("已登录，开始通过API获取订阅...")
+
+        // 方式一：通过 Kotlin API 获取订阅（推荐，不需要 WebView）
+        val result = sync.fetchSubscribeUrl()
+
+        if (result.isSuccess) {
+            val subscribeUrl = result.getOrNull()!!
+            SyncLog.add("API获取订阅URL成功")
+
+            // 顺便获取余额
+            sync.fetchUserInfo()
+
+            val syncResult = V2BoardAutoSync.sync(this, subscribeUrl)
+            if (syncResult.isSuccess) {
+                design.showToast(syncResult.getOrNull() ?: "订阅同步成功", ToastDuration.Short)
+                design.fetch()
+            } else {
+                val errorMsg = syncResult.exceptionOrNull()?.message ?: "未知错误"
+                design.showToast("同步失败: $errorMsg", ToastDuration.Long)
+            }
+        } else {
+            val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
+            SyncLog.add("API获取订阅失败: $errorMsg")
+            design.showToast("同步失败: $errorMsg", ToastDuration.Long)
         }
     }
 
@@ -355,9 +411,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                 "unknown"
             }
 
+            // Show a dialog indicating check in progress
             val progressDialog = androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                .setTitle(DesignR.string.check_update)
-                .setMessage(DesignR.string.checking_update)
+                .setTitle("检查更新")
+                .setMessage("正在检查...")
                 .setCancelable(false)
                 .create()
             progressDialog.show()
@@ -369,9 +426,9 @@ class MainActivity : BaseActivity<MainDesign>() {
 
             if (release == null) {
                 androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle(DesignR.string.check_update)
-                    .setMessage(DesignR.string.check_update_failed)
-                    .setPositiveButton(DesignR.string.btn_ok, null)
+                    .setTitle("检查更新")
+                    .setMessage("检查更新失败，请稍后重试。")
+                    .setPositiveButton("确定", null)
                     .show()
                 return@launch
             }
@@ -423,8 +480,11 @@ class MainActivity : BaseActivity<MainDesign>() {
             .setRank(2)
             .build()
 
-        ShortcutManagerCompat.pushDynamicShortcut(this, toggle)
-        ShortcutManagerCompat.pushDynamicShortcut(this, start)
-        ShortcutManagerCompat.pushDynamicShortcut(this, stop)
+        ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+    }
+
+    override fun onDestroy() {
+        design?.onPageDestroy()
+        super.onDestroy()
     }
 }

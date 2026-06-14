@@ -35,15 +35,6 @@
         <variable
             name="profileFlowProgress"
             type="int" />
-        <variable
-            name="email"
-            type="String" />
-        <variable
-            name="planName"
-            type="String" />
-        <variable
-            name="balance"
-            type="String" />
 
         <import type="android.view.View" />
         <import type="com.github.kr328.clash.design.MainDesign.Request" />
@@ -77,6 +68,7 @@
                     android:minHeight="@dimen/main_top_banner_height"
                     android:orientation="horizontal">
 
+                    <!-- 点击Logo进入账户 -->
                     <FrameLayout
                         android:id="@+id/logoContainer"
                         android:layout_width="@dimen/large_item_header_layout_size"
@@ -85,33 +77,59 @@
                         android:onClick="@{() -> self.request(Request.OpenV2BoardLogin)}">
 
                         <View
-                            android:id="@+id/logoView"
                             android:layout_width="@dimen/main_logo_size"
                             android:layout_height="@dimen/main_logo_size"
                             android:layout_gravity="center"
                             android:background="@drawable/ic_clash" />
                     </FrameLayout>
 
-                    <LinearLayout
+                    <TextView
+                        android:id="@+id/titleText"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:text="@string/application_name"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/application_name"
-                            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+                    <!-- 右侧：设置图标和余额交替展示 -->
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="8dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@{email}"
-                            android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:visibility="@{email != null &amp;&amp; !email.isEmpty() ? View.VISIBLE : View.GONE}" />
-                    </LinearLayout>
+                        <!-- 设置图标（可点击） -->
+                        <FrameLayout
+                            android:id="@+id/settingsContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:onClick="@{() -> self.request(Request.OpenSettings)}">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_baseline_settings"
+                                android:contentDescription="@string/settings" />
+                        </FrameLayout>
+
+                        <!-- 余额（可点击进入账户） -->
+                        <FrameLayout
+                            android:id="@+id/balanceContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:onClick="@{() -> self.request(Request.OpenV2BoardLogin)}"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:id="@+id/accountBalance"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption" />
+                        </FrameLayout>
+                    </FrameLayout>
                 </LinearLayout>
 
                 <com.github.kr328.clash.design.view.LargeActionCard
@@ -122,8 +140,8 @@
                     android:onClick="@{() -> self.request(Request.ToggleStatus)}"
                     android:theme="@style/AppThemeDark"
                     app:cardBackgroundColor="@{clashRunning ? colorClashStarted : colorClashStopped}"
-                    app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
-                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
+                    app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_baseline_play_arrow}"
+                    app:subtext="@{``}"
                     app:text="@{clashRunning ? @string/running : @string/stopped}" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
@@ -137,7 +155,6 @@
                     app:text="@string/proxy" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
-                    android:id="@+id/cardProfile"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
@@ -169,10 +186,10 @@
 
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProviders)}"
-                    android:visibility="@{hasProviders ? View.VISIBLE : View.GONE}"
+                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_swap_vertical_circle"
                     app:text="@string/providers" />
 
@@ -180,15 +197,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenV2BoardLogin)}"
-                    app:icon="@drawable/ic_baseline_vpn_lock"
-                    app:text="@{isLoggedIn ? @string/v2board_dashboard : @string/v2board_login}" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.ViewSyncLog)}"
+                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/v2board_sync_log" />
 
@@ -196,7 +206,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenSettings)}"
+                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_settings"
                     app:text="@string/settings" />
 
@@ -205,6 +215,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenHelp)}"
+                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_help_center"
                     app:text="@string/help" />
 
@@ -213,9 +224,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/main_label_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenAbout)}"
+                    android:visibility="gone"
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/about" />
-
             </LinearLayout>
         </ScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

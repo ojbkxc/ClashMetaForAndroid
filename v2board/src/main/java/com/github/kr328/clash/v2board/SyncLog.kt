@@ -10,6 +10,7 @@ object SyncLog {
     data class Entry(val time: Long, val message: String)
 
     private val entries = CopyOnWriteArrayList<Entry>()
+    private val listeners = CopyOnWriteArrayList<() -> Unit>()
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     private const val MAX_ENTRIES = 100
     private var logFile: File? = null
@@ -26,16 +27,21 @@ object SyncLog {
         }
         // 写入文件
         appendToFile(entry)
+        listeners.forEach { it() }
+    }
+
+    fun getAll(): List<Entry> = entries.toList()
+
+    fun getFormatted(): String {
+        if (entries.isEmpty()) return "暂无日志"
+        return entries.joinToString("\n") { entry ->
+            "[${timeFormat.format(Date(entry.time))}] ${entry.message}"
+        }
     }
 
     fun clear() {
         entries.clear()
-    }
-
-    fun getFormatted(): String {
-        return entries.joinToString("\n") { entry ->
-            "[${timeFormat.format(Date(entry.time))}] ${entry.message}"
-        }
+        listeners.forEach { it() }
     }
 
     /**
@@ -57,6 +63,14 @@ object SyncLog {
         } catch (_: Exception) {
             "***"
         }
+    }
+
+    fun addListener(listener: () -> Unit) {
+        listeners.add(listener)
+    }
+
+    fun removeListener(listener: () -> Unit) {
+        listeners.remove(listener)
     }
 
     private fun appendToFile(entry: Entry) {
