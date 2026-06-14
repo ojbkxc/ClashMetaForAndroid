@@ -63,17 +63,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         design.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 pageLoaded = false
-                // 不在 onPageStarted 注入，DOM 未就绪会失败
+                // 在页面开始加载时就注入 localStorage（此时 localStorage 已可访问）
+                // 确保前端路由守卫检查时能读取到登录凭证
+                if (view != null && url != null && !url.startsWith("file://")) {
+                    syncLocalStorageWithBackend(view)
+                }
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!pageLoaded && view != null) {
                     pageLoaded = true
                     if (url != null && !url.startsWith("file://")) {
-                        // 先检查 localStorage 是否已有 auth_data（前端可能已刷新）
-                        // 如果有，保存到本地；如果没有，注入保存的值
-                        syncLocalStorageWithBackend(view)
-                        // 再注入登录检测
+                        // localStorage 已在 onPageStarted 中注入，这里只注入登录检测
                         injectAuthDetector(view)
 
                         // 如果已登录但页面停在登录页，强制跳转到仪表盘

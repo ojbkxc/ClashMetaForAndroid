@@ -59,6 +59,8 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             useWideViewPort = true
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
             mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            // 启用应用缓存
+            setAppCacheEnabled(true)
             
             // 配置 localStorage 和数据库的持久化路径
             // 在 Android 11+ 使用 getOrCreateWebViewDataDirectory()，旧版本使用 setDatabasePath
@@ -66,7 +68,13 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
                 val databasePath = context.applicationContext.getDir("v2board_webview", Context.MODE_PRIVATE).absolutePath
                 setDatabasePath(databasePath)
+                setAppCachePath(databasePath)
             }
+        }
+        
+        // 启用 WebView 数据目录（Android 11+）
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            binding.webView.setDataDirectorySuffix("v2board_webview")
         }
 
         // 持久化 Cookie - 允许第三方 cookies（V2Board 服务器）
