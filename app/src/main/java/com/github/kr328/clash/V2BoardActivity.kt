@@ -489,7 +489,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             // 只在值不同时更新，避免不必要的写入
             if (existing != authData) {
                 activity.sync.session.save(authData, "", "")
-                Log.d("V2Board", "Saved refreshed auth_data from localStorage")
+                Log.d("V2Board: Saved refreshed auth_data from localStorage")
                 SyncLog.add("检测到前端刷新了认证，已同步保存")
             }
             activity.loginDetected = true
