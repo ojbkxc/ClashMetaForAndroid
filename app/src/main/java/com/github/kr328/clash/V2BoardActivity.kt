@@ -393,7 +393,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
                 activity.sync.resetApi()
-                Log.d("V2Board", "Saved backend URL")
+                Log.d("[V2Board] Saved backend URL")
             }
 
             activity.launch {
@@ -413,7 +413,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun onSubscribeUrl(subscribeUrl: String, email: String) {
             if (activity.destroyed || activity.design == null) return
             if (subscribeUrl.isBlank()) return
-            Log.d("V2Board", "onSubscribeUrl called, email=$email")
+            Log.d("[V2Board] onSubscribeUrl called, email=$email")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
             if (email.isNotBlank()) {
                 SyncLog.add("用户邮箱: $email")
@@ -430,12 +430,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             }
 
             activity.launch {
-                Log.d("V2Board", "Starting sync")
+                Log.d("[V2Board] Starting sync")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl, email)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
-                        Log.d("V2Board", "Sync succeeded: ${syncResult.getOrNull()}")
+                        Log.d("[V2Board] Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
                         // 通知 MainActivity 更新 UI（显示email等）
                         activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
@@ -450,7 +450,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         } else {
                             error?.javaClass?.simpleName ?: "Unknown error"
                         }
-                        Log.w("V2Board", "Sync failed: $errorMsg")
+                        Log.w("[V2Board] Sync failed: $errorMsg")
                         SyncLog.add("同步失败: $errorMsg")
                         activity.design?.showToast(
                             activity.getString(com.github.kr328.clash.design.R.string.sync_failed, errorMsg ?: ""),
@@ -470,7 +470,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         @JavascriptInterface
         fun onSubscribeError(error: String) {
             if (activity.destroyed || activity.design == null) return
-            Log.w("V2Board", "onSubscribeError: $error")
+            Log.w("[V2Board] onSubscribeError: $error")
             SyncLog.add("获取订阅失败: $error")
             activity.launch {
                 withContext(Dispatchers.Main) {
@@ -490,7 +490,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             // 只在值不同时更新，避免不必要的写入
             if (existing != authData) {
                 activity.sync.session.save(authData, "", "")
-                Log.d("V2Board", "Saved refreshed auth_data from localStorage")
+                Log.d("[V2Board] Saved refreshed auth_data from localStorage")
                 SyncLog.add("检测到前端刷新了认证，已同步保存")
             }
             activity.loginDetected = true
@@ -500,7 +500,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun onLogout() {
             // 不清理登录认证，保留 auth_data 和 session 信息
             // 用户登录后，认证信息应持久保存，返回也不清除
-            Log.d("V2Board", "onLogout called from JS, but auth preserved")
+            Log.d("[V2Board] onLogout called from JS, but auth preserved")
             SyncLog.add("前端触发退出登录，但保留本地认证信息")
         }
 

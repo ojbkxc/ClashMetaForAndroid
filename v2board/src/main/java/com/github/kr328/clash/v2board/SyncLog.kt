@@ -32,6 +32,12 @@ object SyncLog {
         entries.clear()
     }
 
+    fun getFormatted(): String {
+        return entries.joinToString("\n") { entry ->
+            "[${timeFormat.format(Date(entry.time))}] ${entry.message}"
+        }
+    }
+
     /**
      * 域名脱敏: https://cdn.lxseek.link → https://c***.l***.***
      */

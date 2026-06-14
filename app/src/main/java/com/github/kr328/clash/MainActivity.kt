@@ -119,10 +119,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                     com.github.kr328.clash.common.RootChecker.isRooted()
                 }
                 if (isRooted) {
-                    com.github.kr328.clash.common.log.Log.d("MainActivity", "Device is rooted.")
+                    com.github.kr328.clash.common.log.Log.d("Device is rooted.")
                 }
             } catch (e: Exception) {
-                com.github.kr328.clash.common.log.Log.e("MainActivity", "Root detection failed", e)
+                com.github.kr328.clash.common.log.Log.e("Root detection failed", e)
             }
         }
 
@@ -140,7 +140,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                     }
                 }
             } catch (e: Exception) {
-                com.github.kr328.clash.common.log.Log.e("MainActivity", "Update check failed", e)
+                com.github.kr328.clash.common.log.Log.e("Update check failed", e)
             }
         }
 
