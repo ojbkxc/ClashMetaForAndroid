@@ -43,6 +43,29 @@
                     android:visibility="gone" />
             </LinearLayout>
 
+            <!-- 流量信息：上传和下载分两行显示 -->
+            <LinearLayout
+                android:id="@+id/traffic_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/traffic_upload"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/traffic_download"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/subtext_view"
                 android:layout_width="match_parent"

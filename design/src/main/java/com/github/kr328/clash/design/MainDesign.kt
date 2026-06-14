@@ -6,7 +6,8 @@ import android.content.res.ColorStateList
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import com.github.kr328.clash.core.model.TunnelState
-import com.github.kr328.clash.core.util.trafficCompact
+import com.github.kr328.clash.core.util.trafficCompactUpload
+import com.github.kr328.clash.core.util.trafficCompactDownload
 import com.github.kr328.clash.core.util.trafficTotal
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.util.layoutInflater
@@ -64,6 +65,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             if (!running) {
                 binding.cardStatus.text = context.getString(R.string.stopped)
                 binding.cardStatus.subtext = ""
+                binding.cardStatus.clearTraffic()  // 清除流量显示
             }
         }
     }
@@ -72,10 +74,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         withContext(Dispatchers.Main) {
             binding.forwarded = value.trafficTotal()
             if (binding.clashRunning) {
-                // 主文字只显示"运行中"，流量数据简写后放在右侧
+                // 主文字只显示"运行中"
                 binding.cardStatus.text = context.getString(R.string.running)
-                binding.cardStatus.trailingText = value.trafficCompact()
-                binding.cardStatus.setTrailingTextSize(12f)  // 字体变小
+                // 流量数据分两行显示：上行上传，下行下载
+                binding.cardStatus.setTraffic(
+                    upload = value.trafficCompactUpload(),
+                    download = value.trafficCompactDownload()
+                )
             }
         }
     }

@@ -52,6 +52,25 @@ class LargeActionCard @JvmOverloads constructor(
             updateTrailingContainer()
         }
 
+    // 流量显示：上传和下载分两行
+    fun setTraffic(upload: String?, download: String?) {
+        if (upload != null && download != null) {
+            binding.trafficUpload.text = upload
+            binding.trafficDownload.text = download
+            binding.trafficContainer.visibility = View.VISIBLE
+            // 隐藏单行的 trailingText
+            binding.trailingText.visibility = View.GONE
+        } else {
+            binding.trafficContainer.visibility = View.GONE
+        }
+    }
+
+    fun clearTraffic() {
+        binding.trafficContainer.visibility = View.GONE
+        binding.trafficUpload.text = ""
+        binding.trafficDownload.text = ""
+    }
+
     private fun updateTrailingContainer() {
         // 只检查 trailingText2，因为 trailingText 现在在文字行旁边
         binding.trailingContainer.visibility = if (

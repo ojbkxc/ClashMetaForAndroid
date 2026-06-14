@@ -60,6 +60,32 @@ fun Traffic.trafficCompact(): String {
     return "↑$up ↓$down"
 }
 
+fun Traffic.trafficCompactUpload(): String {
+    val upload = scaleTraffic(this ushr 32)
+
+    val up = when {
+        upload > 1024 * 1024 * 1024 * 100L -> "%.1fG".format(upload.toFloat() / 1024 / 1024 / 1024 / 100)
+        upload > 1024 * 1024 * 100L -> "%.1fM".format(upload.toFloat() / 1024 / 1024 / 100)
+        upload > 1024 * 100L -> "%.1fK".format(upload.toFloat() / 1024 / 100)
+        else -> "${upload}B"
+    }
+
+    return "↑$up"
+}
+
+fun Traffic.trafficCompactDownload(): String {
+    val download = scaleTraffic(this and 0xFFFFFFFF)
+
+    val down = when {
+        download > 1024 * 1024 * 1024 * 100L -> "%.1fG".format(download.toFloat() / 1024 / 1024 / 1024 / 100)
+        download > 1024 * 1024 * 100L -> "%.1fM".format(download.toFloat() / 1024 / 1024 / 100)
+        download > 1024 * 100L -> "%.1fK".format(download.toFloat() / 1024 / 100)
+        else -> "${download}B"
+    }
+
+    return "↓$down"
+}
+
 private fun scaleTraffic(value: Long): Long {
     val type = (value ushr 30) and 0x3
     val data = value and 0x3FFFFFFF

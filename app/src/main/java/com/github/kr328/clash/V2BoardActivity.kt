@@ -66,7 +66,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 // 在页面开始加载时就注入 localStorage（此时 localStorage 已可访问）
                 // 确保前端路由守卫检查时能读取到登录凭证
                 if (view != null && url != null && !url.startsWith("file://")) {
-                    syncLocalStorageWithBackend(view)
+                    // 强制注入保存的 auth_data，不检查 localStorage 是否已有值
+                    // 这确保了第二次进入时不需要重新登录
+                    forceInjectLocalStorage(view)
                 }
             }
 
@@ -193,6 +195,43 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 }
             }
         }
+    }
+
+    // 强制注入 localStorage，确保第二次进入时不需要重新登录
+    // 不检查 localStorage 是否已有值，直接注入保存的 auth_data
+    private fun forceInjectLocalStorage(webView: WebView) {
+        val savedAuth = sync.session.authData
+        if (savedAuth.isBlank() || savedAuth.length < 10) {
+            // 没有保存的 auth_data，不需要注入
+            return
+        }
+        
+        // 强制注入到多个 localStorage key，确保前端能读取到
+        // 使用 loadUrl 而不是 evaluateJavascript，确保同步执行
+        val escapedAuth = savedAuth.replace("'", "\\'").replace("\"", "\\\"").replace("\n", "\\n")
+        val js = """
+            javascript:(function() {
+                try {
+                    var auth = '${escapedAuth}';
+                    // vue-ls 格式: {"value":"xxx"}
+                    var value = JSON.stringify({value: auth});
+                    
+                    // 注入到多个 key，确保前端能读取到
+                    localStorage.setItem('__AURORA__authorization', value);
+                    localStorage.setItem('authorization', value);
+                    localStorage.setItem('auth_data', value);
+                    
+                    // 同时设置 Cookie（某些前端可能使用 Cookie）
+                    document.cookie = 'auth_data=' + auth + '; path=/; max-age=31536000';
+                    
+                    console.log('V2Board: Injected auth_data to localStorage');
+                } catch(e) { 
+                    console.log('V2Board inject error: ' + e.message);
+                }
+            })();
+        """.trimIndent()
+        // 使用 loadUrl 确保同步执行，evaluateJavascript 是异步的
+        webView.loadUrl(js)
     }
 
     // 将已保存的 auth_data 注入到 WebView 的 localStorage
@@ -609,13 +648,16 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         }
                     }).then(function(r) { return r.json(); })
                     .then(function(json) {
+                        console.log('V2Board API response:', JSON.stringify(json));
                         if (json && json.data) {
                             var subscribeUrl = json.data.subscribe_url || '';
                             var token = json.data.token || '';
                             var email = json.data.email || '';
+                            console.log('V2Board email from API:', email);
                             // 使用 baseUrl 而不是 location.origin 来构造订阅 URL
                             var finalUrl = subscribeUrl || (baseUrl + '/api/v1/client/subscribe?token=' + token);
                             if (finalUrl) {
+                                console.log('V2Board calling onSubscribeUrl with email:', email);
                                 AndroidBridge.onSubscribeUrl(finalUrl, email);
                             } else {
                                 AndroidBridge.onSubscribeError('服务器未返回订阅地址');
