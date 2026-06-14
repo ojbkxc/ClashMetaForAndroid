@@ -381,6 +381,9 @@
     <string name="subscription_expiring_soon">Subscription expires in %d days</string>
     <string name="subscription_expired">Subscription has expired</string>
     <string name="subscription_traffic_warning">Data usage exceeds 90%%</string>
+    <string name="login_success_syncing">Login successful, syncing subscription…</string>
+    <string name="sync_success">Sync successful</string>
+    <string name="sync_failed">Sync failed: %s</string>
 
     <!-- Root Settings -->
     <string name="root_not_available">Root access is not available</string>
@@ -406,4 +409,7 @@
 
     <string name="btn_cancel">Cancel</string>
     <string name="btn_ok">OK</string>
+    <string name="check_update">Check for Updates</string>
+    <string name="checking_update">Checking…</string>
+    <string name="check_update_failed">Update check failed, please try again later.</string>
 </resources>

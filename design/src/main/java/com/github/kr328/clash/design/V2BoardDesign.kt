@@ -5,7 +5,6 @@ import android.content.Context
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.github.kr328.clash.design.databinding.DesignV2boardWebviewBinding
@@ -170,11 +169,17 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
         binding.emptyView.visibility = View.VISIBLE
     }
 
-    // 不销毁 WebView，保留 cookie 和 localStorage 避免重复登录
-    fun destroyWebView() {
-    }
-
     fun removeJavascriptInterface(name: String) {
         binding.webView.removeJavascriptInterface(name)
+    }
+
+    fun destroyWebView() {
+        binding.webView.apply {
+            stopLoading()
+            loadUrl("about:blank")
+            clearHistory()
+            removeAllViews()
+            destroy()
+        }
     }
 }

@@ -292,6 +292,9 @@
     <string name="subscription_expiring_soon">订阅将在 %d 天后到期</string>
     <string name="subscription_expired">订阅已到期</string>
     <string name="subscription_traffic_warning">流量已使用超过 90%%</string>
+    <string name="login_success_syncing">登录成功，正在同步订阅…</string>
+    <string name="sync_success">同步成功</string>
+    <string name="sync_failed">同步失败: %s</string>
 
     <!-- Root Settings -->
     <string name="root_not_available">Root 权限不可用</string>
@@ -317,4 +320,7 @@
 
     <string name="btn_cancel">取消</string>
     <string name="btn_ok">确定</string>
+    <string name="check_update">检查更新</string>
+    <string name="checking_update">正在检查…</string>
+    <string name="check_update_failed">检查更新失败，请稍后重试。</string>
 </resources>

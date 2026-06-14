@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.http.SslError
-import android.os.Bundle
-import android.view.View
 import android.webkit.*
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.design.V2BoardDesign
@@ -105,7 +103,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                                             val url = result?.removeSurrounding("\"") ?: ""
                                             if (url.isNotBlank() && url.startsWith("http")) {
                                                 sync.config.serverUrl = url
-                                                sync.resetApi()
                                             }
                                         }
                                     }
@@ -392,27 +389,17 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             activity.loginDetected = true
             activity.sync.session.save(cleanAuth, token, "")
 
-            Log.d("V2Board: onAuthData called")
-            SyncLog.add("登录成功，获取到认证信息")
-            SyncLog.add("后端地址: ${SyncLog.maskUrl(serverUrl)}")
-            SyncLog.add("auth_data: ${cleanAuth.take(30)}...")
-
-            // 强制持久化 Cookie，确保下次不丢失登录状态
-            try {
-                android.webkit.CookieManager.getInstance().flush()
-            } catch (_: Exception) {}
-
             // 保存后端API地址
             if (serverUrl.isNotBlank()) {
                 activity.sync.config.serverUrl = serverUrl
                 activity.sync.resetApi()
-                Log.d("V2Board: Saved backend URL")
+                Log.d("V2Board", "Saved backend URL")
             }
 
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "登录成功，正在同步订阅...",
+                        activity.getString(com.github.kr328.clash.design.R.string.login_success_syncing),
                         ToastDuration.Short
                     )
                     // 登录成功后立即获取订阅，不再固定等待
@@ -426,7 +413,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
         fun onSubscribeUrl(subscribeUrl: String, email: String) {
             if (activity.destroyed || activity.design == null) return
             if (subscribeUrl.isBlank()) return
-            Log.d("V2Board: onSubscribeUrl called, email=$email")
+            Log.d("V2Board", "onSubscribeUrl called, email=$email")
             SyncLog.add("获取到订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
             if (email.isNotBlank()) {
                 SyncLog.add("用户邮箱: $email")
@@ -443,17 +430,17 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             }
 
             activity.launch {
-                Log.d("V2Board: Starting sync")
+                Log.d("V2Board", "Starting sync")
                 val syncResult = V2BoardAutoSync.sync(activity, subscribeUrl, email)
 
                 withContext(Dispatchers.Main) {
                     if (syncResult.isSuccess) {
-                        Log.d("V2Board: Sync succeeded: ${syncResult.getOrNull()}")
+                        Log.d("V2Board", "Sync succeeded: ${syncResult.getOrNull()}")
                         SyncLog.add("同步成功: ${syncResult.getOrNull()}")
                         // 通知 MainActivity 更新 UI（显示email等）
                         activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
                         activity.design?.showToast(
-                            syncResult.getOrNull() ?: "同步完成",
+                            activity.getString(com.github.kr328.clash.design.R.string.sync_success),
                             ToastDuration.Short
                         )
                     } else {
@@ -463,10 +450,10 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                         } else {
                             error?.javaClass?.simpleName ?: "Unknown error"
                         }
-                        Log.w("V2Board: Sync failed: $errorMsg")
+                        Log.w("V2Board", "Sync failed: $errorMsg")
                         SyncLog.add("同步失败: $errorMsg")
                         activity.design?.showToast(
-                            "同步失败: $errorMsg",
+                            activity.getString(com.github.kr328.clash.design.R.string.sync_failed, errorMsg ?: ""),
                             ToastDuration.Long
                         )
                     }
@@ -476,19 +463,19 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
 
         @JavascriptInterface
         fun log(message: String) {
-            Log.d("V2Board JS: $message")
+            Log.d("V2Board JS", message)
             SyncLog.add("JS: $message")
         }
 
         @JavascriptInterface
         fun onSubscribeError(error: String) {
             if (activity.destroyed || activity.design == null) return
-            Log.w("V2Board: onSubscribeError: $error")
+            Log.w("V2Board", "onSubscribeError: $error")
             SyncLog.add("获取订阅失败: $error")
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
-                        "获取订阅失败: $error",
+                        activity.getString(com.github.kr328.clash.design.R.string.sync_failed, error),
                         ToastDuration.Long
                     )
                 }
@@ -503,30 +490,18 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             // 只在值不同时更新，避免不必要的写入
             if (existing != authData) {
                 activity.sync.session.save(authData, "", "")
-                Log.d("V2Board: Saved refreshed auth_data from localStorage")
+                Log.d("V2Board", "Saved refreshed auth_data from localStorage")
                 SyncLog.add("检测到前端刷新了认证，已同步保存")
-                // 强制持久化 Cookie
-                try {
-                    android.webkit.CookieManager.getInstance().flush()
-                } catch (_: Exception) {}
             }
             activity.loginDetected = true
         }
 
         @JavascriptInterface
         fun onLogout() {
-            activity.sync.session.clear()
-            activity.loginDetected = false
-            // 通知 MainActivity 更新 UI
-            activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
-            activity.launch {
-                withContext(Dispatchers.Main) {
-                    activity.design?.showToast(
-                        "已退出登录",
-                        ToastDuration.Short
-                    )
-                }
-            }
+            // 不清理登录认证，保留 auth_data 和 session 信息
+            // 用户登录后，认证信息应持久保存，返回也不清除
+            Log.d("V2Board", "onLogout called from JS, but auth preserved")
+            SyncLog.add("前端触发退出登录，但保留本地认证信息")
         }
 
         @JavascriptInterface
@@ -608,7 +583,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     }
 
     override fun finish() {
-        if (isLoginMode && !loginDetected) {
+        // 只有在登录模式且未检测到登录且确实未登录时，才返回 CANCELED
+        // 如果用户已登录（session.isLoggedIn），即使本次没有触发新登录，也不应返回 CANCELED
+        if (isLoginMode && !loginDetected && !sync.session.isLoggedIn) {
             setResult(Activity.RESULT_CANCELED)
         }
         super.finish()
@@ -617,14 +594,11 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     override fun onDestroy() {
         destroyed = true
         // 移除 JS 接口防止回调访问已销毁的 Activity
-        // 不销毁 WebView，保留 cookie 和缓存状态避免重复登录
         try {
             design?.removeJavascriptInterface("AndroidBridge")
         } catch (_: Exception) {}
-        // 强制持久化 Cookie，确保下次打开 WebView 时登录状态不丢失
-        try {
-            android.webkit.CookieManager.getInstance().flush()
-        } catch (_: Exception) {}
+        design?.destroyWebView()
+        design = null
         super.onDestroy()
     }
 

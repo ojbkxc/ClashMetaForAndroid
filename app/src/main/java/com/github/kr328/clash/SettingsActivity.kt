@@ -2,7 +2,6 @@ package com.github.kr328.clash
 
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.SettingsDesign
-import com.github.kr328.clash.SyncLogActivity
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 
