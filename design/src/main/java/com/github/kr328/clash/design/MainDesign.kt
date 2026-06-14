@@ -1,8 +1,12 @@
 package com.github.kr328.clash.design
 
+import android.animation.Animator
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.core.util.trafficTotal
 import com.github.kr328.clash.design.databinding.DesignMainBinding
@@ -72,6 +76,24 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    suspend fun setEmail(email: String?) {
+        withContext(Dispatchers.Main) {
+            binding.email = email
+        }
+    }
+
+    suspend fun setPlanName(name: String?) {
+        withContext(Dispatchers.Main) {
+            binding.cardProfile.trailingText = name
+        }
+    }
+
+    suspend fun setBalance(balance: String?) {
+        withContext(Dispatchers.Main) {
+            binding.cardProfile.trailingText2 = balance
+        }
+    }
+
     suspend fun setProfileFlowInfo(info: String?) {
         withContext(Dispatchers.Main) {
             binding.profileFlowInfo = info
@@ -82,14 +104,54 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         withContext(Dispatchers.Main) {
             binding.profileFlowProgress = progress
             val color = when {
-                progress >= 800 -> 0xFFF44336.toInt() // 红色 >80%
-                progress >= 500 -> 0xFFFF9800.toInt() // 橙色 50-80%
-                progress > 0    -> 0xFF4CAF50.toInt() // 绿色 <50%
+                progress >= 800 -> 0xFFF44336.toInt()
+                progress >= 500 -> 0xFFFF9800.toInt()
+                progress > 0    -> 0xFF4CAF50.toInt()
                 else -> return@withContext
             }
             binding.profileFlowProgressBar.progressTintList =
                 ColorStateList.valueOf(color)
         }
+    }
+
+    private var breathingAnimation: AnimatorSet? = null
+
+    fun startLogoBreathingAnimation() {
+        breathingAnimation?.cancel()
+        val logoView = binding.logoView
+        val scaleUpX = ObjectAnimator.ofFloat(logoView, "scaleX", 1.0f, 1.15f)
+        val scaleUpY = ObjectAnimator.ofFloat(logoView, "scaleY", 1.0f, 1.15f)
+        val scaleDownX = ObjectAnimator.ofFloat(logoView, "scaleX", 1.15f, 1.0f)
+        val scaleDownY = ObjectAnimator.ofFloat(logoView, "scaleY", 1.15f, 1.0f)
+
+        scaleUpX.duration = 800
+        scaleUpY.duration = 800
+        scaleDownX.duration = 800
+        scaleDownY.duration = 800
+
+        val breatheIn = AnimatorSet().apply { playTogether(scaleUpX, scaleUpY) }
+        val breatheOut = AnimatorSet().apply { playTogether(scaleDownX, scaleDownY) }
+
+        breathingAnimation = AnimatorSet().apply {
+            playSequentially(breatheIn, breatheOut)
+            interpolator = AccelerateDecelerateInterpolator()
+            addListener(object : Animator.AnimatorListener {
+                override fun onAnimationRepeat(animation: Animator) {}
+                override fun onAnimationEnd(animation: Animator) {
+                    startLogoBreathingAnimation()
+                }
+                override fun onAnimationCancel(animation: Animator) {}
+                override fun onAnimationStart(animation: Animator) {}
+            })
+            start()
+        }
+    }
+
+    fun stopLogoBreathingAnimation() {
+        breathingAnimation?.cancel()
+        breathingAnimation = null
+        binding.logoView.scaleX = 1.0f
+        binding.logoView.scaleY = 1.0f
     }
 
     init {

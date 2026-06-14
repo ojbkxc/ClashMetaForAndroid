@@ -1,5 +1,6 @@
 package com.github.kr328.clash
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -44,11 +45,21 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setContentDesign(design)
 
-        // 更新登录状态
+        // 更新登录状态以及账户信息
         fun updateSyncUI() {
             val sync = V2BoardSync.getInstance(this@MainActivity)
             launch {
                 design.setLoginStatus(sync.session.isLoggedIn)
+                if (sync.session.isLoggedIn) {
+                    design.setEmail(sync.session.email.ifBlank { null })
+                    design.setPlanName(sync.session.planName.ifBlank { null })
+                    val bal = sync.session.balance
+                    design.setBalance(if (bal > 0) "${bal / 100.0}元" else null)
+                } else {
+                    design.setEmail(null)
+                    design.setPlanName(null)
+                    design.setBalance(null)
+                }
             }
         }
 
@@ -56,6 +67,49 @@ class MainActivity : BaseActivity<MainDesign>() {
         updateSyncUI()
 
         design.fetch()
+
+        // 引导弹窗：未登录时显示呼吸动画和引导
+        val prefs = getSharedPreferences("guide", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("guide_shown", false)) {
+            design.startLogoBreathingAnimation()
+            launch {
+                delay(1500)
+                withContext(Dispatchers.Main) {
+                    androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("欢迎使用")
+                        .setMessage("点击左上角图标登录您的订阅账户，即可同步节点和订阅信息。")
+                        .setPositiveButton("知道了") { _, _ ->
+                            design.stopLogoBreathingAnimation()
+                            prefs.edit().putBoolean("guide_shown", true).apply()
+                        }
+                        .setCancelable(false)
+                        .show()
+                }
+            }
+        }
+
+        // 余额交替动画：每隔3秒切换套餐名和余额
+        if (V2BoardSync.getInstance(this@MainActivity).session.isLoggedIn) {
+            launch {
+                val sync = V2BoardSync.getInstance(this@MainActivity)
+                var showingBalance = false
+                while (isActive) {
+                    delay(3000)
+                    val planName = sync.session.planName
+                    val bal = sync.session.balance
+                    if (planName.isNotBlank() && bal > 0) {
+                        showingBalance = !showingBalance
+                        withContext(Dispatchers.Main) {
+                            if (showingBalance) {
+                                design.setPlanName("${bal / 100.0}元")
+                            } else {
+                                design.setPlanName(planName)
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // Delayed root detection (non-critical, deferred to avoid blocking startup)
         launch {
