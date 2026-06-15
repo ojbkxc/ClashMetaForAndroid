@@ -101,13 +101,11 @@ jobs:
 
       - name: Generate V2Board config
         run: |
-          if [ -n "$V2BOARD_SERVER_URL" ]; then
-            cat > v2board.properties << EOF
-v2board.server.url=$V2BOARD_SERVER_URL
-v2board.server.domains=$V2BOARD_SERVER_DOMAINS
+          cat > v2board.properties << EOF
+v2board.server.url=https://your-v2board-server.com
+v2board.server.domains=domain1.com,domain2.com,domain3.com
 EOF
-            echo "V2Board config generated"
-          fi
+          echo "V2Board config generated with hardcoded values"
 
       - name: Signing properties
         env:
