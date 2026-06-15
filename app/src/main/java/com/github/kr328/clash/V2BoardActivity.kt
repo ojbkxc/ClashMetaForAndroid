@@ -209,7 +209,7 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
     // 在页面开始加载前注入，确保 Vue router guard 能读取到登录凭证
     private fun forceInjectLocalStorage(webView: WebView) {
         val savedAuth = sync.session.authData
-        if (savedAuth.isBlank() || savedAuth.length < 10) {
+        if (savedAuth.isBlank()) {
             // 没有保存的 auth_data，不需要注入
             return
         }
@@ -430,6 +430,15 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 return
             }
 
+            // 如果 auth_data 变化了，说明切换了账户，清除旧账号缓存信息
+            if (existingAuth.isNotBlank() && existingAuth != cleanAuth) {
+                SyncLog.add("检测到账户切换，清除旧缓存")
+                activity.sync.session.planName = ""
+                activity.sync.session.resetDay = 0
+                activity.sync.session.balance = 0
+                activity.sync.session.expiredAt = 0L
+            }
+
             activity.loginDetected = true
             activity.sync.session.save(cleanAuth, token, "")
 
@@ -449,6 +458,9 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                 activity.sync.resetApi()
                 Log.d("V2Board: Saved backend URL")
             }
+
+            // 通知 MainActivity 更新 UI
+            activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
 
             activity.launch {
                 withContext(Dispatchers.Main) {
