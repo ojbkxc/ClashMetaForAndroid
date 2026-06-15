@@ -52,7 +52,7 @@ class LargeActionCard @JvmOverloads constructor(
             updateTrailingContainer()
         }
 
-    // 流量显示：上传和下载分两行
+    // 流量显示：上传和下载上下排列
     fun setTraffic(upload: String?, download: String?) {
         if (upload != null && download != null) {
             binding.trafficUpload.text = upload
