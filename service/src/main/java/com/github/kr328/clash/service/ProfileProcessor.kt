@@ -325,13 +325,22 @@ object ProfileProcessor {
                 return yaml
             }
 
-            val hasReality = yaml.contains("reality-opts:")
-            if (!hasReality) {
-                return yaml
-            }
-
             var fixed = yaml
             var modified = false
+
+            // 强制使用TCP模式：移除所有WebSocket相关配置
+            // 因为Reality在WebSocket模式下无法正常工作
+            if (fixed.contains("network: ws") || fixed.contains("network: websocket")) {
+                Log.d("ProfileProcessor: Found WebSocket config with VLESS, forcing TCP mode")
+                fixed = fixed.replace("network: ws", "network: tcp")
+                fixed = fixed.replace("network: websocket", "network: tcp")
+                modified = true
+            }
+
+            val hasReality = fixed.contains("reality-opts:")
+            if (!hasReality) {
+                return if (modified) fixed else yaml
+            }
 
             // 分割proxies块（处理多proxy配置）
             val proxyBlocks = splitProxyBlocks(fixed)
