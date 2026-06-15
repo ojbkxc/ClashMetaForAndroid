@@ -1,11 +1,11 @@
 name: Build Release
-
 on:
   workflow_dispatch:
     inputs:
-      release-tag:
-        description: 'Release Tag (v2.x.x)'
-        required: true
+      force_rebuild:
+        description: 'Force rebuild even if no changes'
+        required: false
+        default: 'false'
 
 jobs:
   BuildRelease:
@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
       
       - name: Checkout submodules
         run: |
@@ -62,88 +60,25 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      
-      - name: Convert and set version env
-        id: process-version
+
+      - name: Generate V2Board config
+        env:
+          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
+          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
         run: |
-          VERSION_TAG=${{ inputs.release-tag }}
-          VERSION_TAG=${VERSION_TAG#v}                              # remove the 'v' prefix
-          IFS='.' read -ra VERSION_PARTS <<< "$VERSION_TAG"         # split into array
-          VERSION_CODE=$(printf "%1d%02d%03d" "${VERSION_PARTS[0]}" "${VERSION_PARTS[1]}" "${VERSION_PARTS[2]}")
-          
-          echo "versionName=$VERSION_TAG" >> $GITHUB_OUTPUT          # "1.2.3"
-          echo "versionCode=$VERSION_CODE" >> $GITHUB_OUTPUT         # "102003"
-      
-      # Re-write version in build.gradle.kts
-      - name: Re-write version
-        uses: Devofure/advance-android-version-actions@v1.5
-        with:
-          gradlePath: build.gradle.kts
-          versionCode: ${{ steps.process-version.outputs.versionCode }}
-          versionName: ${{ steps.process-version.outputs.versionName }}
-      
-      # If any change found, commit it and push
-      - name: Commit and push if changes
-        run: |
-          changes=$(git diff --name-only origin/main | wc -l)
-          if [ $changes -gt 0 ]
-          then
-            newVersionName=${{ steps.process-version.outputs.versionName }}
-            newVersionCode=${{ steps.process-version.outputs.versionCode }}
-            git config --global user.name 'GitHub Action'
-            git config --global user.email 'action@github.com'
-            git add build.gradle.kts
-            git commit -am "Bump version to $newVersionName ($newVersionCode)"
-            git tag "v$newVersionName"
-            git fetch origin main
-            git rebase origin/main
-            git push --follow-tags
+          if [ -n "$V2BOARD_SERVER_URL" ]; then
+            cat > v2board.properties << EOF
+v2board.server.url=$V2BOARD_SERVER_URL
+v2board.server.domains=$V2BOARD_SERVER_DOMAINS
+EOF
+            echo "V2Board config generated"
           fi
 
-      - name: Load Environment Variables
+      - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
-          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
-        run: |
-          echo "=== Loading Environment Variables ==="
-          echo "Priority: GitHub Secrets > .env file"
-          
-          # 使用 GITHUB_ENV 文件设置环境变量（跨步骤传递）
-          set_env() {
-            local key="$1"
-            local value="$2"
-            echo "$key=$value" >> "$GITHUB_ENV"
-            echo "Set env: $key=$value"
-          }
-          
-          if [ -f ".env" ]; then
-            echo "Found .env file, loading variables..."
-            while IFS='=' read -r key value; do
-              if [[ $key == \#* || -z $key ]]; then
-                continue
-              fi
-              if [ -z "${!key}" ]; then
-                set_env "$key" "$value"
-              else
-                set_env "$key" "${!key}"
-                echo "Secrets override .env: $key (using Secrets)"
-              fi
-            done < .env
-          else
-            echo "No .env file found, using Secrets only"
-            [ -n "$SIGNING_STORE_PASSWORD" ] && set_env "SIGNING_STORE_PASSWORD" "$SIGNING_STORE_PASSWORD"
-            [ -n "$SIGNING_KEY_ALIAS" ] && set_env "SIGNING_KEY_ALIAS" "$SIGNING_KEY_ALIAS"
-            [ -n "$SIGNING_KEY_PASSWORD" ] && set_env "SIGNING_KEY_PASSWORD" "$SIGNING_KEY_PASSWORD"
-            [ -n "$V2BOARD_SERVER_URL" ] && set_env "V2BOARD_SERVER_URL" "$V2BOARD_SERVER_URL"
-            [ -n "$V2BOARD_SERVER_DOMAINS" ] && set_env "V2BOARD_SERVER_DOMAINS" "$V2BOARD_SERVER_DOMAINS"
-          fi
-          
-          echo "=== Environment Variables Loaded ==="
-
-      - name: Signing properties
         run: |
           if [ -n "$SIGNING_STORE_PASSWORD" ]; then
             touch signing.properties
@@ -154,41 +89,18 @@ jobs:
           else
             echo "No signing secrets configured, skipping"
           fi
-          
-          if [ -n "$V2BOARD_SERVER_URL" ]; then
-            cat > app/src/main/assets/v2board.properties << EOF
-v2board.server.url=$V2BOARD_SERVER_URL
-v2board.server.domains=$V2BOARD_SERVER_DOMAINS
-EOF
-            echo "V2Board config generated"
-          fi
 
       - name: Release Build
         if: success()
-        run: ./gradlew --no-daemon --stacktrace app:assembleMetaRelease
-
-      - name: Tag Repo
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: ${{ inputs.release-tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew --no-daemon --stacktrace app:assembleRelease 2>&1
 
       - name: Upload Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: ${{ success() }}
         with:
-          tag_name: ${{ inputs.release-tag }}
-          files: app/build/outputs/apk/meta/release/*
+          tag_name: Release
+          files: app/build/outputs/apk/release/*
+          prerelease: false
           generate_release_notes: true
-
-      - name: Release Changelog Builder
-        uses: mikepenz/release-changelog-builder-action@v4.1.1
-        continue-on-error: true
-        with:
-          configurationJson: |
-            {
-              "ignore_labels": [
-                "Update"
-              ],
-            }
+          overwrite: true
+          token: ${{ secrets.GITHUB_TOKEN }}

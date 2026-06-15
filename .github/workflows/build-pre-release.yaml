@@ -76,92 +76,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Load Environment Variables
+      - name: Generate V2Board config
+        env:
+          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
+          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
+        run: |
+          if [ -n "$V2BOARD_SERVER_URL" ]; then
+            cat > v2board.properties << EOF
+v2board.server.url=$V2BOARD_SERVER_URL
+v2board.server.domains=$V2BOARD_SERVER_DOMAINS
+EOF
+            echo "V2Board config generated"
+          fi
+
+      - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
-          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
-        run: |
-          echo "=== Loading Environment Variables ==="
-          echo "Priority: GitHub Secrets > .env file"
-          
-          # 使用 GITHUB_ENV 文件设置环境变量（跨步骤传递）
-          set_env() {
-            local key="$1"
-            local value="$2"
-            echo "$key=$value" >> "$GITHUB_ENV"
-            echo "Set env: $key=$value"
-          }
-          
-          # 如果 .env 文件存在，读取其中的变量（但不覆盖已有的 Secrets）
-          if [ -f ".env" ]; then
-            echo "Found .env file, loading variables..."
-            while IFS='=' read -r key value; do
-              # 跳过注释和空行
-              if [[ $key == \#* || -z $key ]]; then
-                continue
-              fi
-              # 如果变量未设置（Secrets 优先级更高），则从 .env 读取
-              if [ -z "${!key}" ]; then
-                set_env "$key" "$value"
-              else
-                set_env "$key" "${!key}"
-                echo "Secrets override .env: $key (using Secrets)"
-              fi
-            done < .env
-          else
-            echo "No .env file found, using Secrets only"
-            # 直接设置 Secrets 变量
-            [ -n "$SIGNING_STORE_PASSWORD" ] && set_env "SIGNING_STORE_PASSWORD" "$SIGNING_STORE_PASSWORD"
-            [ -n "$SIGNING_KEY_ALIAS" ] && set_env "SIGNING_KEY_ALIAS" "$SIGNING_KEY_ALIAS"
-            [ -n "$SIGNING_KEY_PASSWORD" ] && set_env "SIGNING_KEY_PASSWORD" "$SIGNING_KEY_PASSWORD"
-            [ -n "$V2BOARD_SERVER_URL" ] && set_env "V2BOARD_SERVER_URL" "$V2BOARD_SERVER_URL"
-            [ -n "$V2BOARD_SERVER_DOMAINS" ] && set_env "V2BOARD_SERVER_DOMAINS" "$V2BOARD_SERVER_DOMAINS"
-          fi
-          
-          echo "=== Environment Variables Loaded ==="
-
-      - name: Generate V2Board config
-        run: |
-          if [ -n "$V2BOARD_SERVER_URL" ]; then
-            cat > app/src/main/assets/v2board.properties << EOF
-v2board.server.url=$V2BOARD_SERVER_URL
-v2board.server.domains=$V2BOARD_SERVER_DOMAINS
-EOF
-            echo "V2Board config generated with URL: $V2BOARD_SERVER_URL"
-          else
-            echo "No V2Board server URL configured, using default"
-          fi
-
-      - name: Generate Keystore in CI
-        run: |
-          echo "=== Generating Keystore ==="
-          echo "Store password length: ${#SIGNING_STORE_PASSWORD}"
-          echo "Key alias: '$SIGNING_KEY_ALIAS'"
-          echo "Key password length: ${#SIGNING_KEY_PASSWORD}"
-          
-          if [ -z "$SIGNING_STORE_PASSWORD" ]; then
-            echo "ERROR: SIGNING_STORE_PASSWORD is empty! Please set in GitHub Secrets or .env"
-            exit 1
-          fi
-          
-          keytool -genkey -v \
-            -keystore release.keystore \
-            -alias "$SIGNING_KEY_ALIAS" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass "$SIGNING_STORE_PASSWORD" \
-            -keypass "$SIGNING_KEY_PASSWORD" \
-            -dname "CN=ClashMeta, OU=ClashMeta, O=ClashMeta, L=Unknown, ST=Unknown, C=Unknown"
-          
-          echo "Keystore generated successfully"
-          ls -la release.keystore
-          echo "=== End Generate Keystore ==="
-
-      - name: Signing properties
         run: |
           if [ -n "$SIGNING_STORE_PASSWORD" ]; then
             touch signing.properties
