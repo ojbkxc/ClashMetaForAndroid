@@ -50,14 +50,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textSize="10sp" />
+                        android:textSize="9sp" />
 
                     <TextView
                         android:id="@+id/traffic_download"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textSize="10sp" />
+                        android:textSize="9sp" />
                 </LinearLayout>
 
                 <TextView
@@ -96,7 +96,7 @@
                 android:gravity="end"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:visibility="gone" />
 
             <!-- 到期日期（靠右底部） -->
