@@ -22,36 +22,54 @@
             android:gravity="center_vertical"
             android:orientation="vertical">
 
-            <!-- 第一行：运行中文字 -->
-            <TextView
-                android:id="@+id/text_view"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
-
-            <!-- 第二行：流量信息（上传下载上下排列） -->
+            <!-- 第一行：运行中文字 + 网速（同一行） -->
             <LinearLayout
-                android:id="@+id/traffic_container"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:gravity="start"
-                android:orientation="vertical"
-                android:visibility="gone">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
+                <!-- 运行中文字 -->
                 <TextView
-                    android:id="@+id/traffic_upload"
+                    android:id="@+id/text_view"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                    android:textSize="10sp" />
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
-                <TextView
-                    android:id="@+id/traffic_download"
+                <!-- 网速信息（上传下载上下排列，在文字右侧） -->
+                <LinearLayout
+                    android:id="@+id/traffic_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:gravity="start"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/traffic_upload"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/traffic_download"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- trailing_text（用于其他卡片） -->
+                <TextView
+                    android:id="@+id/trailing_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:gravity="end"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                    android:textSize="10sp" />
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- subtext（用于其他卡片） -->
@@ -97,15 +115,5 @@
                 android:textSize="11sp"
                 android:visibility="gone" />
         </LinearLayout>
-
-        <!-- trailing_text（用于其他卡片，在文字行旁边） -->
-        <TextView
-            android:id="@+id/trailing_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:gravity="end"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-            android:visibility="gone" />
     </LinearLayout>
 </layout>

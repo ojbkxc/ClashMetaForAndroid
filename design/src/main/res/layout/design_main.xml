@@ -160,8 +160,8 @@
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProfiles)}"
                     app:icon="@drawable/ic_baseline_view_list"
-                    app:subtext="@string/profile"
-                    app:text="@{profileName != null ? profileName : @string/not_selected}" />
+                    app:subtext="@{``}"
+                    app:text="@{profileName != null ? @string/format_profile_active : @string/format_profile_inactive}" />
 
                 <TextView
                     android:layout_width="match_parent"
