@@ -241,18 +241,23 @@ class MainActivity : BaseActivity<MainDesign>() {
                 setProfilePlanName(session.planName.ifBlank { null })
 
                 // 运行中卡片右侧：上=套餐名，下=到期信息
-                // 到期信息：>20天显示日期，≤20天显示"还剩X天"并着色
+                // 到期信息规则：
+                // - >90天：不显示
+                // - 21~90天：显示日期格式
+                // - 8~20天：橙色显示"还剩X天"
+                // - 1~7天：红色显示"还剩X天"（倒计时，最小单位天）
+                // - ≤0天：红色显示"已过期"
                 if (session.expiredAt > 0) {
                     val sdf = java.text.SimpleDateFormat("yy-MM-dd", java.util.Locale.getDefault())
                     val daysLeft = ((session.expiredAt - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
                     when {
                         daysLeft > 90 -> setProfileExpiryInfo(null)  // 超过3个月不显示
-                        daysLeft > 20 -> setProfileExpiryInfo(sdf.format(java.util.Date(session.expiredAt)))
-                        else -> {
+                        daysLeft > 20 -> setProfileExpiryInfo(sdf.format(java.util.Date(session.expiredAt)))  // 21~90天显示日期
+                        else -> {  // 20天内显示倒计时
                             val (text, color) = when {
-                                daysLeft <= 0  -> "已过期"  to 0xFFFF4444.toInt()
-                                daysLeft <= 7  -> "还剩${daysLeft}天" to 0xFFFF4444.toInt()
-                                else           -> "还剩${daysLeft}天" to 0xFFFF9800.toInt()
+                                daysLeft <= 0  -> "已过期"     to 0xFFFF4444.toInt()  // 红色
+                                daysLeft <= 7  -> "还剩${daysLeft}天" to 0xFFFF4444.toInt()  // 红色，7天内
+                                else           -> "还剩${daysLeft}天" to 0xFFFF9800.toInt()  // 橙色，8~20天
                             }
                             setProfileExpiryInfo(text, color)
                         }
