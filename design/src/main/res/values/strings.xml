@@ -17,8 +17,8 @@
 
     <string name="profiles">Profiles</string>
     <string name="not_selected">Not selected</string>
-    <string name="format_profile_active">Profile: Activated</string>
-    <string name="format_profile_inactive">Profile: Inactive</string>
+    <string name="format_profile_active">配置：已激活</string>
+    <string name="format_profile_inactive">配置：未激活</string>
     <string name="format_profile_activated">%s Activated</string>
 
     <string name="logs">Logs</string>

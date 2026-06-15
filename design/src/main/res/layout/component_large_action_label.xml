@@ -13,11 +13,12 @@
             android:id="@+id/icon_view"
             android:layout_width="@dimen/large_item_header_component_size"
             android:layout_height="@dimen/large_item_header_component_size"
-            android:layout_marginEnd="@dimen/large_item_header_margin_horizontal" />
+            android:layout_marginEnd="@dimen/large_item_header_margin_horizontal"
+            android:layout_gravity="center_vertical" />
 
         <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:orientation="vertical">
@@ -25,7 +26,7 @@
             <!-- 第一行：运行中文字 + 网速（同一行） -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -40,9 +41,9 @@
                 <LinearLayout
                     android:id="@+id/traffic_container"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="12dp"
-                    android:gravity="start"
+                    android:gravity="center_vertical"
                     android:orientation="vertical"
                     android:visibility="gone">
 
@@ -85,13 +86,13 @@
         <LinearLayout
             android:id="@+id/trailing_container"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginStart="12dp"
             android:gravity="end|center_vertical"
             android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- 套餐名称（靠右） -->
+            <!-- 套餐名称（靠右，居中） -->
             <TextView
                 android:id="@+id/trailing_text_2"
                 android:layout_width="wrap_content"
@@ -99,17 +100,19 @@
                 android:gravity="end"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:visibility="gone" />
 
-            <!-- 到期日期（靠右） -->
+            <!-- 到期日期（靠右，靠下） -->
             <TextView
                 android:id="@+id/trailing_date"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="end"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_gravity="end"
+                android:gravity="bottom|end"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="11sp"

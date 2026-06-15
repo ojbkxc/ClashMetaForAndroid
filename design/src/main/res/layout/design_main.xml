@@ -89,7 +89,8 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/application_name"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                        android:textColor="?android:attr/textColorSecondary" />
 
                     <!-- 右侧：设置图标和余额交替展示 -->
                     <FrameLayout
@@ -140,7 +141,7 @@
                     android:onClick="@{() -> self.request(Request.ToggleStatus)}"
                     android:theme="@style/AppThemeDark"
                     app:cardBackgroundColor="@{clashRunning ? colorClashStarted : colorClashStopped}"
-                    app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_baseline_play_arrow}"
+                    app:icon="@{clashRunning ? @drawable/ic_outline_flash : @drawable/ic_baseline_play_arrow}"
                     app:subtext="@{``}"
                     app:text="@{clashRunning ? @string/running : @string/stopped}" />
 
