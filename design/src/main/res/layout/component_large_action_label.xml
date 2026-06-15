@@ -25,7 +25,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -36,13 +36,13 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
-                <!-- 网速信息：上传下载上下排列 -->
+                <!-- 网速信息：上传下载上下排列（垂直居中） -->
                 <LinearLayout
                     android:id="@+id/traffic_container"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="12dp"
-                    android:gravity="start"
+                    android:gravity="center_vertical|start"
                     android:orientation="vertical"
                     android:visibility="gone">
 
@@ -79,25 +79,24 @@
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
         </LinearLayout>
 
-        <!-- 右侧：套餐信息和日期（靠右底部对齐） -->
-        <LinearLayout
+        <!-- 右侧：套餐信息（垂直居中）和日期（底部） -->
+        <RelativeLayout
             android:id="@+id/trailing_container"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_marginEnd="@dimen/large_item_tailing_margin_horizontal"
-            android:gravity="bottom|end"
-            android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- 套餐名称（靠右） -->
+            <!-- 套餐名称（靠右垂直居中） -->
             <TextView
                 android:id="@+id/trailing_text_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="end"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:layout_centerVertical="true"
+                android:layout_alignParentEnd="true"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp"
+                android:textSize="14sp"
                 android:visibility="gone" />
 
             <!-- 到期日期（靠右底部） -->
@@ -105,11 +104,12 @@
                 android:id="@+id/trailing_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="end"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentEnd="true"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="11sp"
                 android:visibility="gone" />
-        </LinearLayout>
+        </RelativeLayout>
     </LinearLayout>
 </layout>
