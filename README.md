@@ -147,6 +147,12 @@ key.password=<password>
 
 #### GitHub Actions 自动签名
 
+**配置优先级**：`GitHub Secrets` > `.env 文件`
+
+如果设置了 GitHub Secrets，会使用 Secrets 的值；否则从 `.env` 文件读取。
+
+**方法一：使用 GitHub Secrets（推荐）**
+
 在 GitHub 仓库的 `Settings → Secrets and variables → Actions` 中添加以下 Secrets：
 
 | Secret 名称 | 值 |
@@ -154,10 +160,23 @@ key.password=<password>
 | `SIGNING_STORE_PASSWORD` | 密钥库密码（如 `ojbkxc`） |
 | `SIGNING_KEY_ALIAS` | 密钥别名（如 `ojbkxc`） |
 | `SIGNING_KEY_PASSWORD` | 密钥密码（如 `ojbkxc`） |
+| `V2BOARD_SERVER_URL` | 前端域名（如 `jc.lxseek.com`） |
+| `V2BOARD_SERVER_DOMAINS` | 域名列表（如 `jc.lxseek.com`） |
+
+**方法二：使用 .env 文件（适用于本地测试）**
+
+创建 `.env` 文件：
+```env
+SIGNING_STORE_PASSWORD=ojbkxc
+SIGNING_KEY_ALIAS=ojbkxc
+SIGNING_KEY_PASSWORD=ojbkxc
+V2BOARD_SERVER_URL=jc.lxseek.com
+V2BOARD_SERVER_DOMAINS=jc.lxseek.com
+```
 
 > **注意**：
 > - CI 会自动生成签名密钥库，无需手动上传 `release.keystore` 文件
-> - 确保三个 Secrets 的值完全一致（建议都使用相同的值）
+> - 确保三个签名配置的值完全一致（建议都使用相同的值）
 
 ### 5. 配置前端域名（可选）
 

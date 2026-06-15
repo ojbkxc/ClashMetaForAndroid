@@ -76,10 +76,40 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Generate V2Board config
+      - name: Load Environment Variables
         env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
           V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
           V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
+        run: |
+          echo "=== Loading Environment Variables ==="
+          echo "Priority: GitHub Secrets > .env file"
+          
+          # 如果 .env 文件存在，读取其中的变量（但不覆盖已有的 Secrets）
+          if [ -f ".env" ]; then
+            echo "Found .env file, loading variables..."
+            while IFS='=' read -r key value; do
+              # 跳过注释和空行
+              if [[ $key == \#* || -z $key ]]; then
+                continue
+              fi
+              # 如果变量未设置（Secrets 优先级更高），则从 .env 读取
+              if [ -z "${!key}" ]; then
+                export "$key=$value"
+                echo "Loaded from .env: $key=$value"
+              else
+                echo "Secrets override .env: $key (using Secrets)"
+              fi
+            done < .env
+          else
+            echo "No .env file found, using Secrets only"
+          fi
+          
+          echo "=== Environment Variables Loaded ==="
+
+      - name: Generate V2Board config
         run: |
           if [ -n "$V2BOARD_SERVER_URL" ]; then
             cat > app/src/main/assets/v2board.properties << EOF
@@ -91,20 +121,7 @@ EOF
             echo "No V2Board server URL configured, using default"
           fi
 
-      - name: Debug Signing Secrets
-        run: |
-          echo "=== DEBUG: Signing Secrets ==="
-          echo "Secrets available: ${{ toJSON(secrets) }}"
-          echo "STORE_PASSWORD exists: ${{ secrets.SIGNING_STORE_PASSWORD != '' }}"
-          echo "KEY_ALIAS exists: ${{ secrets.SIGNING_KEY_ALIAS != '' }}"
-          echo "KEY_PASSWORD exists: ${{ secrets.SIGNING_KEY_PASSWORD != '' }}"
-          echo "=== END DEBUG ==="
-
       - name: Generate Keystore in CI
-        env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           echo "=== Generating Keystore ==="
           echo "Store password length: ${#SIGNING_STORE_PASSWORD}"
@@ -112,7 +129,7 @@ EOF
           echo "Key password length: ${#SIGNING_KEY_PASSWORD}"
           
           if [ -z "$SIGNING_STORE_PASSWORD" ]; then
-            echo "ERROR: SIGNING_STORE_PASSWORD is empty!"
+            echo "ERROR: SIGNING_STORE_PASSWORD is empty! Please set in GitHub Secrets or .env"
             exit 1
           fi
           
@@ -130,27 +147,7 @@ EOF
           ls -la release.keystore
           echo "=== End Generate Keystore ==="
 
-      - name: Test Keystore Password
-        env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: |
-          echo "=== Testing Keystore ==="
-          echo "Attempting to access keystore with password..."
-          keytool -list -v -keystore release.keystore -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" -keypass "$SIGNING_KEY_PASSWORD" 2>&1
-          if [ $? -eq 0 ]; then
-            echo "SUCCESS: Keystore password is correct!"
-          else
-            echo "FAILED: Keystore password verification failed"
-          fi
-          echo "=== End Test ==="
-
       - name: Signing properties
-        env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           if [ -n "$SIGNING_STORE_PASSWORD" ]; then
             touch signing.properties
