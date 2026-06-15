@@ -289,7 +289,6 @@
     <string name="v2board_open_in_browser">在浏览器中打开</string>
     <string name="v2board_sync_log">日志</string>
     <string name="format_v2board_traffic">%1$s / %2$s | 到期：%3$s</string>
-<<<<<<< Updated upstream
     <string name="subscription_expiring_soon">订阅将在 %d 天后到期</string>
     <string name="subscription_expired">订阅已到期</string>
     <string name="subscription_traffic_warning">流量已使用超过 90%%</string>
@@ -318,6 +317,4 @@
 
     <string name="btn_cancel">取消</string>
     <string name="btn_ok">确定</string>
-=======
->>>>>>> Stashed changes
 </resources>

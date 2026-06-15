@@ -25,13 +25,8 @@ object V2BoardAutoSync {
                 val baseName = ConfigManager.getAppName()
                 val session = V2BoardSession(context)
 
-<<<<<<< Updated upstream
                 Log.d("$TAG: Syncing: baseName=$baseName, email=$email, interval=${intervalMinutes}min")
                 SyncLog.add("开始同步订阅: $baseName")
-=======
-                Log.d("$TAG: Syncing subscription: name=$profileName, url=***, interval=${intervalMinutes}min")
-                SyncLog.add("开始同步订阅: $profileName")
->>>>>>> Stashed changes
                 SyncLog.add("订阅URL: ${SyncLog.maskUrl(subscribeUrl)}")
                 if (email.isNotBlank()) {
                     SyncLog.add("用户邮箱: $email")
@@ -53,14 +48,8 @@ object V2BoardAutoSync {
 
                     if (existing != null) {
                         Log.d("$TAG: Found existing profile: ${existing.uuid}, name=${existing.name}")
-<<<<<<< Updated upstream
                         SyncLog.add("找到已有配置: ${existing.name} (UUID: ${existing.uuid})")
                         patch(existing.uuid, baseName, subscribeUrl, intervalMs)
-=======
-                        SyncLog.add("找到已有配置: ${existing.name}")
-                        // 更新现有配置
-                        patch(existing.uuid, profileName, subscribeUrl, intervalMs)
->>>>>>> Stashed changes
                         SyncLog.add("正在更新配置...")
                         var updateSuccess = false
                         for (attempt in 1..MAX_RETRY) {
@@ -69,11 +58,7 @@ object V2BoardAutoSync {
                                     update(existing.uuid)
                                 }
                                 updateSuccess = true
-<<<<<<< Updated upstream
                                 Log.d("$TAG: Updated profile: ${existing.uuid} (attempt $attempt)")
-=======
-                                Log.d("$TAG: Updated existing profile: ${existing.uuid} (attempt $attempt)")
->>>>>>> Stashed changes
                                 SyncLog.add("配置更新成功 (尝试 $attempt)")
                                 break
                             } catch (e: Exception) {
@@ -105,7 +90,6 @@ object V2BoardAutoSync {
                     } else {
                         Log.d("$TAG: No existing profile found, creating new one")
                         SyncLog.add("未找到已有配置，创建新配置...")
-<<<<<<< Updated upstream
 
                         // 自动递增命名：直接使用邮箱，如果邮箱为空则使用 baseName
                         // 配置名称包含邮箱，方便识别不同账号
@@ -124,13 +108,6 @@ object V2BoardAutoSync {
                         session.v2boardProfileUuid = uuid.toString()
 
                         patch(uuid, newName, subscribeUrl, intervalMs)
-=======
-                        // 创建新配置
-                        val uuid = create(Profile.Type.Url, profileName, subscribeUrl)
-                        Log.d("$TAG: Created pending profile: $uuid")
-                        SyncLog.add("配置已创建: $uuid")
-                        patch(uuid, profileName, subscribeUrl, intervalMs)
->>>>>>> Stashed changes
 
                         var commitSuccess = false
                         for (attempt in 1..MAX_RETRY) {

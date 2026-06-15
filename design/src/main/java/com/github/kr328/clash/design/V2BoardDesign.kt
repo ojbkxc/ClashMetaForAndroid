@@ -59,7 +59,6 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             useWideViewPort = true
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
             mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-<<<<<<< Updated upstream
             // 配置 localStorage 和数据库的持久化路径
             // 注意：AppCache 相关 API 已废弃，localStorage 通过 domStorageEnabled=true 自动启用
             @Suppress("DEPRECATION")
@@ -79,8 +78,6 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                 setAcceptThirdPartyCookies(binding.webView, true)
             }
-=======
->>>>>>> Stashed changes
         }
 
         binding.webView.webChromeClient = object : WebChromeClient() {
@@ -178,13 +175,9 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
 
     // 不销毁 WebView，保留 cookie 和 localStorage 避免重复登录
     fun destroyWebView() {
-<<<<<<< Updated upstream
     }
 
     fun removeJavascriptInterface(name: String) {
         binding.webView.removeJavascriptInterface(name)
-=======
-        binding.webView.destroy()
->>>>>>> Stashed changes
     }
 }

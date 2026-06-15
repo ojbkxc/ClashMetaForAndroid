@@ -378,7 +378,6 @@
     <string name="v2board_open_in_browser">Open in browser</string>
     <string name="v2board_sync_log">Log</string>
     <string name="format_v2board_traffic">%1$s / %2$s | Expires: %3$s</string>
-<<<<<<< Updated upstream
     <string name="subscription_expiring_soon">Subscription expires in %d days</string>
     <string name="subscription_expired">Subscription has expired</string>
     <string name="subscription_traffic_warning">Data usage exceeds 90%%</string>
@@ -407,6 +406,4 @@
 
     <string name="btn_cancel">Cancel</string>
     <string name="btn_ok">OK</string>
-=======
->>>>>>> Stashed changes
 </resources>

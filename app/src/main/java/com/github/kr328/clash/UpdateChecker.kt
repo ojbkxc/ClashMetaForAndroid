@@ -14,14 +14,10 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object UpdateChecker {
-<<<<<<< Updated upstream
     private const val GITHUB_API = "https://api.github.com/repos/ojbkxc/ClashMetaForAndroid/releases"
     private const val PREF_NAME = "update_checker"
     private const val KEY_SKIPPED_VERSION = "skipped_version"
 
-=======
-    private const val GITHUB_API = "https://api.github.com/repos/ojbkxc/ClashMetaForAndroid/releases/latest"
->>>>>>> Stashed changes
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
@@ -90,12 +86,8 @@ object UpdateChecker {
                 }
             }
 
-<<<<<<< Updated upstream
             // 优先返回预发布版本，其次返回正式版本
             latestPreRelease ?: latestStableRelease
-=======
-            ReleaseInfo(tagName, apkUrl, body)
->>>>>>> Stashed changes
         } catch (e: Exception) {
             Log.w("UpdateChecker error: ${e.message}")
             null
@@ -106,7 +98,6 @@ object UpdateChecker {
         val needUpdate = compareVersions(currentVersion, release.tagName) < 0
         val versionTypeLabel = if (release.isPreRelease) "【测试版】" else ""
         val message = if (needUpdate) {
-<<<<<<< Updated upstream
             "当前版本: $currentVersion\n${versionTypeLabel}最新版本: ${release.tagName}\n\n更新内容:\n${release.body.take(200)}"
         } else {
             "当前已是最新版本 ($currentVersion)"
@@ -120,15 +111,6 @@ object UpdateChecker {
 
         val builder = AlertDialog.Builder(context)
             .setTitle(title)
-=======
-            "当前版本: $currentVersion\n最新版本: ${release.tagName}\n\n更新内容:\n${release.body.take(200)}"
-        } else {
-            "当前已是最新版本 ($currentVersion)"
-        }
-
-        AlertDialog.Builder(context)
-            .setTitle(if (needUpdate) "发现新版本" else "已是最新")
->>>>>>> Stashed changes
             .setMessage(message)
             .setPositiveButton(if (needUpdate) "下载更新" else "确定") { _, _ ->
                 if (needUpdate) {
@@ -137,7 +119,6 @@ object UpdateChecker {
                 }
             }
             .setNegativeButton("取消", null)
-<<<<<<< Updated upstream
 
         if (needUpdate) {
             builder.setNeutralButton("跳过此版本") { _, _ ->
@@ -158,13 +139,10 @@ object UpdateChecker {
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-=======
-            .show()
->>>>>>> Stashed changes
     }
 
     // 简单版本比较: "1.2.3" > "1.2.2"
-    private fun compareVersions(v1: String, v2: String): Int {
+    fun compareVersions(v1: String, v2: String): Int {
         val parts1 = v1.trimStart('v').split(".").map { it.toIntOrNull() ?: 0 }
         val parts2 = v2.trimStart('v').split(".").map { it.toIntOrNull() ?: 0 }
         for (i in 0 until maxOf(parts1.size, parts2.size)) {

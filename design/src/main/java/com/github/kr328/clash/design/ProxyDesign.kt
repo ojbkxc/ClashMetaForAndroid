@@ -26,7 +26,7 @@ class ProxyDesign(
     context: Context,
     overrideMode: TunnelState.Mode?,
     groupNames: List<String>,
-    uiStore: UiStore,
+    private val uiStore: UiStore,
 ) : Design<ProxyDesign.Request>(context) {
     sealed class Request {
         object ReloadAll : Request()
@@ -50,7 +50,8 @@ class ProxyDesign(
     }
 
     private val adapter: ProxyPageAdapter
-        get() = binding.pagesView.adapter!! as ProxyPageAdapter
+        get() = binding.pagesView.adapter as? ProxyPageAdapter
+            ?: throw IllegalStateException("ViewPager2 adapter not initialized")
 
     private var horizontalScrolling = false
     private val verticalBottomScrolled: Boolean
@@ -70,7 +71,6 @@ class ProxyDesign(
         parent: ProxyState,
         links: Map<String, ProxyState>
     ) {
-<<<<<<< Updated upstream
         val filtered = if (uiStore.proxyRegionFilter.isNotEmpty()) {
             val regex = uiStore.proxyRegionFilter
                 .split("|")
@@ -85,9 +85,6 @@ class ProxyDesign(
         }
 
         adapter.updateAdapter(position, filtered, selectable, parent, links)
-=======
-        adapter.updateAdapter(position, proxies, selectable, parent, links)
->>>>>>> Stashed changes
 
         adapter.states[position].urlTesting = false
 

@@ -70,6 +70,34 @@ class ProxyMenu(
 
                 requests.trySend(ProxyDesign.Request.ReloadAll)
             }
+            R.id.region_all -> {
+                uiStore.proxyRegionFilter = ""
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_hk -> {
+                uiStore.proxyRegionFilter = "HK|Hong Kong|香港"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_jp -> {
+                uiStore.proxyRegionFilter = "JP|Japan|日本|东京|大阪"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_tw -> {
+                uiStore.proxyRegionFilter = "TW|Taiwan|台湾"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_us -> {
+                uiStore.proxyRegionFilter = "US|United States|America|美国|美"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_sg -> {
+                uiStore.proxyRegionFilter = "SG|Singapore|新加坡|狮城"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
+            R.id.region_kr -> {
+                uiStore.proxyRegionFilter = "KR|Korea|韩国|韩"
+                requests.trySend(ProxyDesign.Request.ReloadAll)
+            }
             R.id.dont_modify -> {
                 requests.trySend(ProxyDesign.Request.PatchMode(null))
             }
@@ -113,7 +141,6 @@ class ProxyMenu(
                 TunnelState.Mode.Rule -> findItem(R.id.rule_mode).isChecked = true
                 else -> {}
             }
-<<<<<<< Updated upstream
 
             when (uiStore.proxyRegionFilter) {
                 "" -> findItem(R.id.region_all).isChecked = true
@@ -125,8 +152,6 @@ class ProxyMenu(
                 "KR|Korea|韩国|韩" -> findItem(R.id.region_kr).isChecked = true
                 else -> findItem(R.id.region_all).isChecked = true
             }
-=======
->>>>>>> Stashed changes
         }
 
         menu.setOnMenuItemClickListener(this)

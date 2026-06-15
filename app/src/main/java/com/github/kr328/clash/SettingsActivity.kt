@@ -29,11 +29,8 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(MetaFeatureSettingsActivity::class.intent)
                         SettingsDesign.Request.ViewSyncLog ->
                             startActivity(SyncLogActivity::class.intent)
-<<<<<<< Updated upstream
                         SettingsDesign.Request.StartRoot ->
                             startActivity(RootSettingsActivity::class.intent)
-=======
->>>>>>> Stashed changes
                     }
                 }
             }

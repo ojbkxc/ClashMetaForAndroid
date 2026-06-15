@@ -51,7 +51,6 @@ class V2BoardSession(context: Context) {
         defaultValue = false,
     )
 
-<<<<<<< Updated upstream
     // 存储当前登录用户对应的订阅UUID，用于多账号场景下精确匹配订阅
     var v2boardProfileUuid: String by store.string(
         key = "v2board_profile_uuid",
@@ -89,8 +88,6 @@ class V2BoardSession(context: Context) {
         } catch (_: Exception) {}
     }
 
-=======
->>>>>>> Stashed changes
     val isLoggedIn: Boolean
         get() = authData.isNotBlank()
 
@@ -98,7 +95,6 @@ class V2BoardSession(context: Context) {
         this.authData = authData
         this.userToken = userToken
         if (email.isNotBlank()) {
-<<<<<<< Updated upstream
             // 如果邮箱变了，说明切换了账号，清除旧账号缓存信息
             if (this.email.isNotBlank() && email != this.email) {
                 planName = ""
@@ -106,8 +102,6 @@ class V2BoardSession(context: Context) {
                 balance = 0
                 expiredAt = 0L
             }
-=======
->>>>>>> Stashed changes
             this.email = email
         }
         this.hasEverLoggedIn = true

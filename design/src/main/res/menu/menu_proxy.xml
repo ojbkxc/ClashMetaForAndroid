@@ -57,4 +57,32 @@
             </group>
         </menu>
     </item>
+    <item android:title="@string/region_filter">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/region_all"
+                    android:title="@string/region_all"
+                    android:checked="true" />
+                <item
+                    android:id="@+id/region_hk"
+                    android:title="@string/region_hk" />
+                <item
+                    android:id="@+id/region_jp"
+                    android:title="@string/region_jp" />
+                <item
+                    android:id="@+id/region_tw"
+                    android:title="@string/region_tw" />
+                <item
+                    android:id="@+id/region_us"
+                    android:title="@string/region_us" />
+                <item
+                    android:id="@+id/region_sg"
+                    android:title="@string/region_sg" />
+                <item
+                    android:id="@+id/region_kr"
+                    android:title="@string/region_kr" />
+            </group>
+        </menu>
+    </item>
 </menu>

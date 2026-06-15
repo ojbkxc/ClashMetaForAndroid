@@ -1,12 +1,8 @@
 # 蓝星网络 (LanXing Network)
 
-<<<<<<< Updated upstream
 基于 [ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid) 定制的 V2Board 订阅客户端，集成了 V2Board 账号登录、订阅自动同步、多域名回退、多账号管理等功能，同时完整保留原版 Clash Meta 的代理能力。
 
 **当前版本：v2.0.22**
-=======
-基于 [ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid) 定制的 V2Board 订阅客户端，集成了 V2Board 账号登录、订阅自动同步、多域名回退等功能，同时完整保留原版 Clash Meta 的代理能力。
->>>>>>> Stashed changes
 
 ## 功能特性
 
@@ -318,7 +314,6 @@ WebView 加载时
 本项目基于 [GPLv3](LICENSE) 许可证发布。
 
 贡献代码即表示您同意将代码合并至项目的闭源分支，其余条款遵循 GPLv3 协议。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-<<<<<<< Updated upstream
 
 ## 更新日志
 
@@ -328,5 +323,3 @@ WebView 加载时
 - **UI 优化**：主界面卡片布局优化，流量显示简写格式（↑1.2M ↓3.4G）
 - **信息同步**：切换账号后自动重新获取用户信息（套餐、到期时间、余额）
 - **编译修复**：移除废弃的 WebView API，适配最新 Android SDK
-=======
->>>>>>> Stashed changes
