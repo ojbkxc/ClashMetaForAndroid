@@ -151,8 +151,8 @@
                     android:onClick="@{() -> self.request(Request.OpenProxy)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_apps"
-                    app:subtext="@{mode}"
-                    app:text="@string/proxy" />
+                    app:subtext="@string/proxy"
+                    app:text="@{mode}" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
                     android:layout_width="match_parent"
@@ -160,8 +160,8 @@
                     android:layout_marginVertical="@dimen/main_card_margin_vertical"
                     android:onClick="@{() -> self.request(Request.OpenProfiles)}"
                     app:icon="@drawable/ic_baseline_view_list"
-                    app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
-                    app:text="@string/profile" />
+                    app:subtext="@string/profile"
+                    app:text="@{profileName != null ? profileName : @string/not_selected}" />
 
                 <TextView
                     android:layout_width="match_parent"
