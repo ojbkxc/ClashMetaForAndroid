@@ -30,6 +30,9 @@ class V2BoardDesign(context: Context) : Design<V2BoardDesign.Request>(context) {
     override val root: View
         get() = binding.root
 
+    val webView: WebView
+        get() = binding.webView
+
     var webViewClient: WebViewClient?
         get() = binding.webView.webViewClient
         set(value) {
