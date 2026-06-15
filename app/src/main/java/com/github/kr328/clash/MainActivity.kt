@@ -61,8 +61,8 @@ class MainActivity : BaseActivity<MainDesign>() {
         // 延迟 300ms 确保 UI 渲染完毕再弹出对话框
         delay(300)
         AlertDialog.Builder(this@MainActivity)
-            .setTitle("使用引导")
-            .setMessage("👋 欢迎使用蓝星网络！\n\n点击左上角logo进入账户\n点击右上角进入设置")
+            .setTitle("👋 欢迎使用蓝星网络！")
+            .setMessage("点击左上角logo进入账户\n点击右上角进入设置")
             .setPositiveButton("知道了") { dialog, _ ->
                 dialog.dismiss()
                 // 点击"知道了"后关闭弹框并打开登录页面
