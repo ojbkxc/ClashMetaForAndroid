@@ -529,6 +529,12 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
                             syncResult.getOrNull() ?: "同步完成",
                             ToastDuration.Short
                         )
+                        
+                        // 订阅同步成功后，跳转到仪表盘页面
+                        val serverUrl = activity.sync.config.serverUrl.ifBlank { activity.sync.getActiveUrl() }
+                        val dashboardUrl = "$serverUrl/#/stage"
+                        SyncLog.add("订阅同步成功，跳转到仪表盘: ${SyncLog.maskUrl(dashboardUrl)}")
+                        activity.design?.loadUrl(dashboardUrl)
                     } else {
                         val error = syncResult.exceptionOrNull()
                         val errorMsg = if (error?.message != null) {
