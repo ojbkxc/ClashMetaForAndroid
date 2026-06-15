@@ -151,7 +151,7 @@
                     android:onClick="@{() -> self.request(Request.OpenProxy)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_apps"
-                    app:subtext="@string/proxy"
+                    app:subtext="@{``}"
                     app:text="@{mode}" />
 
                 <com.github.kr328.clash.design.view.LargeActionCard
