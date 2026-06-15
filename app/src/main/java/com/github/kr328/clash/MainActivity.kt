@@ -66,7 +66,7 @@ class MainActivity : BaseActivity<MainDesign>() {
             .setPositiveButton("知道了") { dialog, _ ->
                 dialog.dismiss()
                 // 点击"知道了"后关闭弹框并打开登录页面
-                startActivity(V2BoardLoginActivity::class.java.intent)
+                startActivity(V2BoardActivity.openLogin(this))
             }
             .setCancelable(false)
             .setOnDismissListener {
