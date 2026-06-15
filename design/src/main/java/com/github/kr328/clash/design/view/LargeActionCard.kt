@@ -159,7 +159,6 @@ class LargeActionCard @JvmOverloads constructor(
             }
         }
 
-        minimumHeight = context.getPixels(R.dimen.large_action_card_min_height)
         radius = context.getPixels(R.dimen.large_action_card_radius).toFloat()
         elevation = context.getPixels(R.dimen.large_action_card_elevation).toFloat()
         setCardBackgroundColor(context.resolveThemedColor(com.google.android.material.R.attr.colorSurface))

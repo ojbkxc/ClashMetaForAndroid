@@ -3,7 +3,6 @@
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="@dimen/large_action_card_min_height"
         android:layout_gravity="center_vertical"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -24,10 +23,10 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
                 <!-- 运行中文字：垂直居中 -->
                 <TextView
@@ -36,13 +35,13 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
-                <!-- 网速信息：上传下载上下排列（垂直居中） -->
+                <!-- 网速信息：上传下载上下排列 -->
                 <LinearLayout
                     android:id="@+id/traffic_container"
                     android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
-                    android:gravity="center_vertical|start"
+                    android:gravity="start"
                     android:orientation="vertical"
                     android:visibility="gone">
 
@@ -51,14 +50,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textSize="9sp" />
+                        android:textSize="10sp" />
 
                     <TextView
                         android:id="@+id/traffic_download"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textSize="9sp" />
+                        android:textSize="10sp" />
                 </LinearLayout>
 
                 <TextView
@@ -79,22 +78,23 @@
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
         </LinearLayout>
 
-        <!-- 右侧：套餐信息（垂直居中）和日期（底部） -->
-        <RelativeLayout
+        <!-- 右侧：套餐信息和日期（靠右底部对齐） -->
+        <LinearLayout
             android:id="@+id/trailing_container"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_marginEnd="@dimen/large_item_tailing_margin_horizontal"
+            android:gravity="bottom|end"
+            android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- 套餐名称（靠右垂直居中） -->
+            <!-- 套餐名称（靠右） -->
             <TextView
                 android:id="@+id/trailing_text_2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_alignParentEnd="true"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+                android:gravity="end"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="14sp"
                 android:visibility="gone" />
@@ -104,12 +104,11 @@
                 android:id="@+id/trailing_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentEnd="true"
+                android:gravity="end"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="11sp"
                 android:visibility="gone" />
-        </RelativeLayout>
+        </LinearLayout>
     </LinearLayout>
 </layout>
