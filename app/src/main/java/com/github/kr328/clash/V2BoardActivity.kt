@@ -462,6 +462,13 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             // 通知 MainActivity 更新 UI
             activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
 
+            // 登录成功后，刷新当前页面
+            // 页面重新加载时，onPageStarted 会自动注入 localStorage
+            // onPageFinished 检测到已登录会自动跳转到仪表盘
+            // 这种方式比直接跳转更可靠，确保 localStorage 已正确注入
+            activity.design?.reload()
+            SyncLog.add("登录成功，刷新页面以应用登录状态")
+
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
