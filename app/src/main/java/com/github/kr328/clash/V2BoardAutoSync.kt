@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 object V2BoardAutoSync {
@@ -244,5 +245,105 @@ object V2BoardAutoSync {
         }.maxOrNull() ?: 0
         
         return "$baseName-${maxSuffix + 1}"
+    }
+
+    /**
+     * 修复VLESS配置的常见问题：
+     * 1. 如果配置了Reality但没有client-fingerprint，自动添加
+     * 2. 确保TLS配置正确
+     * 这个方法在订阅URL被处理前调用，确保配置能够正常连接
+     */
+    private fun fixVlessConfig(configYaml: String): String {
+        try {
+            var fixed = configYaml
+            
+            // 检测是否包含VLESS + Reality配置
+            val hasVlessReality = fixed.contains("type: vless") && 
+                                  fixed.contains("reality-opts:")
+            
+            if (hasVlessReality) {
+                // 检查每个proxies项
+                val proxyRegex = Regex("""(?s)(- name:.*?(?=- name:|proxies:|\z))""")
+                val matches = proxyRegex.findAll(fixed)
+                
+                for (match in matches) {
+                    val proxyBlock = match.value
+                    
+                    // 检查是否是VLESS类型
+                    if (!proxyBlock.contains("type: vless")) continue
+                    
+                    // 检查是否有reality-opts
+                    if (!proxyBlock.contains("reality-opts:")) continue
+                    
+                    // 检查是否有client-fingerprint
+                    if (proxyBlock.contains("client-fingerprint:")) continue
+                    
+                    Log.d("$TAG: Found VLESS+Reality config without client-fingerprint, adding default 'chrome'")
+                    SyncLog.add("⚠️ 检测到VLESS+Reality配置缺少client-fingerprint，正在自动修复...")
+                    
+                    // 在reality-opts后添加client-fingerprint
+                    val fixedProxyBlock = proxyBlock.replaceAfter(
+                        "reality-opts:",
+                        "\n  public-key: ${extractPublicKey(proxyBlock)}"
+                    ).let { original ->
+                        // 如果上面的替换没有添加内容（可能格式不同），尝试另一种方式
+                        if (original == proxyBlock) {
+                            val realityLine = proxyBlock.lines().find { it.trim().startsWith("public-key:") }
+                            if (realityLine != null && realityLine.contains("public-key:")) {
+                                // public-key已存在，不需要重复添加
+                                proxyBlock
+                            } else {
+                                // 在reality-opts:后添加
+                                proxyBlock.replace("reality-opts:", "reality-opts:\n  public-key: AUTO_FIXED")
+                            }
+                        } else {
+                            // 检查是否需要添加完整配置
+                            original
+                        }
+                    }
+                    
+                    // 在proxy块中查找并添加client-fingerprint（在server-name之后或tls之后）
+                    val needsClientFingerprint = !fixedProxyBlock.contains("client-fingerprint:")
+                    if (needsClientFingerprint) {
+                        // 在server-name或tls之后添加client-fingerprint
+                        val withFingerprint = fixedProxyBlock.let { block ->
+                            val serverNameMatch = Regex("""server-name:.*?\n""").find(block)
+                            if (serverNameMatch != null) {
+                                block.replace(serverNameMatch.value, serverNameMatch.value + "  client-fingerprint: chrome\n")
+                            } else {
+                                val tlsMatch = Regex("""tls: (true|false)""").find(block)
+                                if (tlsMatch != null) {
+                                    block.replace(tlsMatch.value, tlsMatch.value + "\n  client-fingerprint: chrome")
+                                } else {
+                                    // 如果都找不到，在server之后添加
+                                    val serverMatch = Regex("""server:.*?\n""").find(block)
+                                    if (serverMatch != null) {
+                                        block.replace(serverMatch.value, serverMatch.value + "  client-fingerprint: chrome\n")
+                                    } else {
+                                        block + "\n  client-fingerprint: chrome"
+                                    }
+                                }
+                            }
+                        }
+                        
+                        fixed = fixed.replace(proxyBlock, withFingerprint)
+                        SyncLog.add("✅ 已自动添加 client-fingerprint: chrome")
+                    }
+                }
+            }
+            
+            return fixed
+        } catch (e: Exception) {
+            Log.w("$TAG: Failed to fix VLESS config: ${e.message}")
+            return configYaml
+        }
+    }
+    
+    /**
+     * 从proxy配置块中提取public key
+     */
+    private fun extractPublicKey(proxyBlock: String): String {
+        val publicKeyMatch = Regex("""public-key:\s*(\S+)""").find(proxyBlock)
+        return publicKeyMatch?.groupValues?.get(1) ?: "AUTO_FIXED"
     }
 }

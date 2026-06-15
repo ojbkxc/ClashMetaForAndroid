@@ -41,7 +41,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
         while (true) {
             loaded.receive()
 
-            val profileName = StatusProvider.currentProfile ?: "Not selected"
+            val profileName = StatusProvider.currentProfile ?: "蓝星网络"
 
             val notification = builder
                 .setContentTitle(profileName)
