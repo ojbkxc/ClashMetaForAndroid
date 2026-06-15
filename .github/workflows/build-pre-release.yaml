@@ -76,15 +76,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Decode Keystore
+      - name: Generate Keystore
         env:
-          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
-            echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > release.keystore
-            echo "Keystore decoded"
+          if [ -n "$SIGNING_STORE_PASSWORD" ]; then
+            keytool -genkey -v \
+              -keystore release.keystore \
+              -alias "$SIGNING_KEY_ALIAS" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "$SIGNING_STORE_PASSWORD" \
+              -keypass "$SIGNING_KEY_PASSWORD" \
+              -dname "CN=ClashMeta, OU=ClashMeta, O=ClashMeta, L=Unknown, ST=Unknown, C=Unknown"
+            echo "Keystore generated"
           else
-            echo "No keystore base64 configured, skipping"
+            echo "No signing secrets configured, skipping"
           fi
 
       - name: Signing properties
