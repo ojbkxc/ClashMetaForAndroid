@@ -9,7 +9,7 @@ import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.Pending
 import com.github.kr328.clash.service.data.PendingDao
 import java.io.File
-import java.util.regex.Regex
+import kotlin.text.Regex
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.remote.IFetchObserver
 import com.github.kr328.clash.service.store.ServiceStore
@@ -345,14 +345,16 @@ object ProfileProcessor {
             // 分割proxies块（处理多proxy配置）
             val proxyBlocks = splitProxyBlocks(fixed)
 
-            for ((originalBlock, blockIndex) in proxyBlocks.withIndex()) {
+            for ((index, proxyPair) in proxyBlocks.withIndex()) {
+                val originalBlock = proxyPair.first
+                val proxyType = proxyPair.second
+                
                 // 检查是否是VLESS类型
-                if (!blockIndex.toString().startsWith("vless")) {
+                if (!proxyType.startsWith("vless")) {
                     continue
                 }
 
                 // 检查是否有reality-opts但没有client-fingerprint
-                if (!blockIndex.toString().contains("vless")) continue
                 if (!originalBlock.contains("reality-opts:")) continue
                 if (originalBlock.contains("client-fingerprint:")) continue
 
