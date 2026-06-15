@@ -142,6 +142,7 @@ require (
 
 replace cfa => ../../main/golang
 
+replace github.com/metacubex/mihomo => ./clash
 
 
 replace google.golang.org/protobuf => github.com/metacubex/protobuf-go v0.0.0-20260306035419-7ceee0674686
