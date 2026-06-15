@@ -9,7 +9,7 @@ require (
 	golang.org/x/sync v0.11.0
 )
 
-replace github.com/metacubex/mihomo => ../../foss/golang/clash
+
 
 require (
 	github.com/RyuaNerin/go-krypto v1.3.0 // indirect
