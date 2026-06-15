@@ -118,9 +118,9 @@ jobs:
       - name: Extract Version
         id: extract_version
         run: |
-          VERSION=$(grep -E 'versionName\s*=\s*"[^"]+"' build.gradle.kts | sed 's/versionName\s*=\s*"\([^"]\+\)"/\1/')
+          VERSION=$(grep -E 'versionName\s*=\s*"[^"]+"' build.gradle.kts | sed 's/versionName\s*=\s*"\([^"]\+\)"/\1/' | xargs)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "::set-output name=version::$VERSION"
+          echo "Extracted version: $VERSION"
 
       - name: Pre-release Build
         if: success()
@@ -147,7 +147,7 @@ jobs:
           files: app/build/outputs/apk/alpha/release/*
           prerelease: true
           generate_release_notes: true
-          overwrite: true
+          overwrite_files: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release Changelog Builder
