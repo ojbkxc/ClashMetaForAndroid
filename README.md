@@ -133,6 +133,8 @@ v2board.server.domains=https://jc.lxseek.com,https://go.lxkjzh.top,https://cdn.l
 
 ### 4. 配置签名（可选，发布时需要）
 
+#### 本地开发
+
 创建 `signing.properties`：
 
 ```properties
@@ -143,7 +145,39 @@ key.password=<password>
 
 签名文件放置于项目根目录，命名为 `release.keystore`。
 
-### 5. 编译
+#### GitHub Actions 自动签名
+
+在 GitHub 仓库的 `Settings → Secrets and variables → Actions` 中添加以下 Secrets：
+
+| Secret 名称 | 值 |
+|------------|-----|
+| `SIGNING_STORE_PASSWORD` | 密钥库密码 |
+| `SIGNING_KEY_ALIAS` | 密钥别名 |
+| `SIGNING_KEY_PASSWORD` | 密钥密码 |
+
+> **注意**：CI 会自动生成签名密钥库，无需手动上传 `release.keystore` 文件。确保三个 Secrets 的值与本地开发环境一致，以保证签名相同。
+
+### 5. 配置前端域名（可选）
+
+#### 本地开发
+
+在 `app/src/main/assets/v2board.properties` 中配置：
+
+```properties
+v2board.server.url=https://your-domain.com
+v2board.server.domains=https://domain1.com,https://domain2.com
+```
+
+#### GitHub Actions
+
+在 GitHub Secrets 中添加：
+
+| Secret 名称 | 值 |
+|------------|-----|
+| `V2BOARD_SERVER_URL` | 主域名（如 `https://jc.lxseek.com`） |
+| `V2BOARD_SERVER_DOMAINS` | 域名列表（逗号分隔） |
+
+### 6. 编译
 
 ```bash
 # Alpha 版本

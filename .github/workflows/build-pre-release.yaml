@@ -76,6 +76,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Generate V2Board config
+        env:
+          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
+          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
+        run: |
+          if [ -n "$V2BOARD_SERVER_URL" ]; then
+            cat > app/src/main/assets/v2board.properties << EOF
+v2board.server.url=$V2BOARD_SERVER_URL
+v2board.server.domains=$V2BOARD_SERVER_DOMAINS
+EOF
+            echo "V2Board config generated with URL: $V2BOARD_SERVER_URL"
+          else
+            echo "No V2Board server URL configured, using default"
+          fi
+
       - name: Generate Keystore
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
