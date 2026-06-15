@@ -71,6 +71,44 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Load Environment Variables
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
+          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
+        run: |
+          echo "=== Loading Environment Variables ==="
+          echo "Priority: GitHub Secrets > .env file"
+          
+          if [ -f ".env" ]; then
+            echo "Found .env file"
+            while IFS='=' read -r key value; do
+              if [[ $key == \#* || -z $key ]]; then
+                continue
+              fi
+              if [ -z "${!key}" ]; then
+                export "$key=$value"
+                echo "Loaded from .env: $key=$value"
+              else
+                echo "Secrets override .env: $key (using Secrets)"
+              fi
+            done < .env
+          else
+            echo "No .env file found, using Secrets only"
+          fi
+
+      - name: Generate V2Board config
+        run: |
+          if [ -n "$V2BOARD_SERVER_URL" ]; then
+            cat > v2board.properties << EOF
+v2board.server.url=$V2BOARD_SERVER_URL
+v2board.server.domains=$V2BOARD_SERVER_DOMAINS
+EOF
+            echo "V2Board config generated"
+          fi
+
       - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
