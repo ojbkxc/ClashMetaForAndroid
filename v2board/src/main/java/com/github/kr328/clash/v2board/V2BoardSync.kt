@@ -70,10 +70,18 @@ class V2BoardSync(private val context: Context) {
     }
 
     fun getActiveUrl(): String {
-        if (config.serverUrl.isNotBlank()) return config.serverUrl
+        if (config.serverUrl.isNotBlank()) return ensureProtocol(config.serverUrl)
         val primaryUrl = ConfigManager.getServerUrl()
-        if (primaryUrl.isNotBlank()) return primaryUrl
-        return config.getDomainList().firstOrNull() ?: ""
+        if (primaryUrl.isNotBlank()) return ensureProtocol(primaryUrl)
+        val domain = config.getDomainList().firstOrNull() ?: ""
+        return ensureProtocol(domain)
+    }
+    
+    private fun ensureProtocol(url: String): String {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url
+        }
+        return "https://$url"
     }
 
     fun resetApi() {}
@@ -82,14 +90,15 @@ class V2BoardSync(private val context: Context) {
         return withContext(Dispatchers.IO) {
             for (domain in config.getDomainList()) {
                 try {
+                    val url = ensureProtocol(domain)
                     val request = okhttp3.Request.Builder()
-                        .url("$domain/api/v1/guest/comm/config")
+                        .url("$url/api/v1/guest/comm/config")
                         .build()
                     httpClient.newCall(request).execute().use { response ->
                         if (response.isSuccessful) {
-                            config.serverUrl = domain
+                            config.serverUrl = url
                             Log.d("V2BoardSync: Found working domain")
-                            return@withContext domain
+                            return@withContext url
                         }
                     }
                 } catch (_: Exception) {}

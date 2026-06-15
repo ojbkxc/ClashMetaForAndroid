@@ -151,11 +151,13 @@ key.password=<password>
 
 | Secret 名称 | 值 |
 |------------|-----|
-| `SIGNING_STORE_PASSWORD` | 密钥库密码 |
-| `SIGNING_KEY_ALIAS` | 密钥别名 |
-| `SIGNING_KEY_PASSWORD` | 密钥密码 |
+| `SIGNING_STORE_PASSWORD` | 密钥库密码（如 `ojbkxc`） |
+| `SIGNING_KEY_ALIAS` | 密钥别名（如 `ojbkxc`） |
+| `SIGNING_KEY_PASSWORD` | 密钥密码（如 `ojbkxc`） |
 
-> **注意**：CI 会自动生成签名密钥库，无需手动上传 `release.keystore` 文件。确保三个 Secrets 的值与本地开发环境一致，以保证签名相同。
+> **注意**：
+> - CI 会自动生成签名密钥库，无需手动上传 `release.keystore` 文件
+> - 确保三个 Secrets 的值完全一致（建议都使用相同的值）
 
 ### 5. 配置前端域名（可选）
 
@@ -164,18 +166,22 @@ key.password=<password>
 在 `app/src/main/assets/v2board.properties` 中配置：
 
 ```properties
-v2board.server.url=https://your-domain.com
-v2board.server.domains=https://domain1.com,https://domain2.com
+v2board.server.url=jc.lxseek.com
+v2board.server.domains=jc.lxseek.com,backup.lxseek.com
 ```
+
+> **注意**：域名可以不带 `https://` 前缀，系统会自动添加。
 
 #### GitHub Actions
 
 在 GitHub Secrets 中添加：
 
-| Secret 名称 | 值 |
-|------------|-----|
-| `V2BOARD_SERVER_URL` | 主域名（如 `https://jc.lxseek.com`） |
-| `V2BOARD_SERVER_DOMAINS` | 域名列表（逗号分隔） |
+| Secret 名称 | 值示例 |
+|------------|--------|
+| `V2BOARD_SERVER_URL` | `jc.lxseek.com` |
+| `V2BOARD_SERVER_DOMAINS` | `jc.lxseek.com,backup.lxseek.com` |
+
+> **注意**：域名可以不带 `https://` 前缀，系统会自动添加。
 
 ### 6. 编译
 
