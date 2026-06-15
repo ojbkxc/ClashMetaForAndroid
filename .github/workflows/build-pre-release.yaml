@@ -9,17 +9,12 @@ on:
   push:
     branches:
       - main
-      - dev
-      - develop
-      - feature/*
     tags:
       - 'v*'
   pull_request:
     branches:
       - main
     types:
-      - opened
-      - synchronize
       - closed
 
 jobs:
@@ -75,19 +70,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Generate V2Board config
-        env:
-          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
-          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
-        run: |
-          if [ -n "$V2BOARD_SERVER_URL" ]; then
-            cat > v2board.properties << EOF
-v2board.server.url=$V2BOARD_SERVER_URL
-v2board.server.domains=$V2BOARD_SERVER_DOMAINS
-EOF
-            echo "V2Board config generated"
-          fi
 
       - name: Signing properties
         env:
