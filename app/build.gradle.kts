@@ -48,38 +48,13 @@ task("downloadGeoFiles") {
 
     doLast {
         geoFilesUrls.forEach { (downloadUrl, outputFileName) ->
+            val url = URI(downloadUrl).toURL()
             val outputPath = file("$geoFilesDownloadDir/$outputFileName")
             outputPath.parentFile.mkdirs()
-            
-            if (outputPath.exists()) {
-                println("$outputFileName already exists, skipping download")
-                return@forEach
+            url.openStream().use { input ->
+                Files.copy(input, outputPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                println("$outputFileName downloaded to $outputPath")
             }
-            
-            var lastException: Exception? = null
-            val maxRetries = 3
-            var attempt = 0
-            
-            while (attempt < maxRetries) {
-                try {
-                    val url = URI(downloadUrl).toURL()
-                    url.openStream().use { input ->
-                        Files.copy(input, outputPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                        println("$outputFileName downloaded to $outputPath")
-                    }
-                    return@forEach
-                } catch (e: Exception) {
-                    lastException = e
-                    attempt++
-                    if (attempt < maxRetries) {
-                        val delayMs = (1000L * Math.pow(2.0, (attempt - 1).toDouble())).toLong()
-                        println("Download attempt $attempt failed for $outputFileName. Retrying in ${delayMs}ms...")
-                        Thread.sleep(delayMs)
-                    }
-                }
-            }
-            
-            throw lastException ?: Exception("Failed to download $outputFileName after $maxRetries attempts")
         }
     }
 }

@@ -65,6 +65,7 @@ class ServiceStore(context: Context) {
         key = "dynamic_notification",
         defaultValue = true
     )
+<<<<<<< Updated upstream
 
     var rootTransparentProxy by store.boolean(
         key = "root_transparent_proxy",
@@ -80,4 +81,6 @@ class ServiceStore(context: Context) {
         key = "root_dns_hijack",
         defaultValue = false
     )
+=======
+>>>>>>> Stashed changes
 }

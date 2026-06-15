@@ -11,7 +11,11 @@ import com.github.kr328.clash.design.util.root
 class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context) {
     enum class Request {
         StartApp, StartNetwork, StartOverride, StartMetaFeature,
+<<<<<<< Updated upstream
         ViewSyncLog, StartRoot,
+=======
+        ViewSyncLog,
+>>>>>>> Stashed changes
     }
 
     private val binding = DesignSettingsBinding

@@ -250,6 +250,7 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">相機權限受限，請前往設定開啟。</string>
     <string name="import_from_qr_exception">發生系統未知異常，操作失敗。</string>
+<<<<<<< Updated upstream
 
     <!-- Root Settings -->
     <string name="root_not_available">Root 權限不可用</string>
@@ -275,4 +276,6 @@
 
     <string name="btn_cancel">取消</string>
     <string name="btn_ok">確定</string>
+=======
+>>>>>>> Stashed changes
 </resources>

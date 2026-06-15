@@ -29,7 +29,6 @@ import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.v2board.SyncLog
 import com.github.kr328.clash.v2board.V2BoardSync
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -101,6 +100,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
+<<<<<<< Updated upstream
         // 启动后延迟检查更新（非阻塞，不干扰主页加载）
         launch {
             kotlinx.coroutines.delay(3000)
@@ -121,6 +121,8 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
         }
 
+=======
+>>>>>>> Stashed changes
         val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
 
         while (isActive) {
@@ -193,6 +195,7 @@ class MainActivity : BaseActivity<MainDesign>() {
         setHasProviders(providers.isNotEmpty())
 
         withProfile {
+<<<<<<< Updated upstream
             val active = queryActive()
             setProfileName(active?.name)
             
@@ -310,6 +313,9 @@ class MainActivity : BaseActivity<MainDesign>() {
             bytes < 1024 * 1024 -> "%.1fKB".format(bytes / 1024.0)
             bytes < 1024 * 1024 * 1024 -> "%.1fMB".format(bytes / (1024.0 * 1024))
             else -> "%.2fGB".format(bytes / (1024.0 * 1024 * 1024))
+=======
+            setProfileName(queryActive()?.name)
+>>>>>>> Stashed changes
         }
     }
 
@@ -488,9 +494,12 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
     }
+<<<<<<< Updated upstream
 
     override fun onDestroy() {
         design?.onPageDestroy()
         super.onDestroy()
     }
+=======
+>>>>>>> Stashed changes
 }

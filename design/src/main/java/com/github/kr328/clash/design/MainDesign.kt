@@ -109,6 +109,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+<<<<<<< Updated upstream
     suspend fun setProfileFlowInfo(info: String?) {
         withContext(Dispatchers.Main) {
             binding.profileFlowInfo = info
@@ -297,6 +298,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         animationScope.cancel()
     }
 
+=======
+>>>>>>> Stashed changes
     init {
         binding.self = this
 

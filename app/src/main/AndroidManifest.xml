@@ -192,12 +192,6 @@
             android:exported="false"
             android:label="@string/v2board_sync_log" />
 
-        <activity
-            android:name=".RootSettingsActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/root_settings" />
-
         <service
             android:name=".LogcatService"
             android:exported="false"

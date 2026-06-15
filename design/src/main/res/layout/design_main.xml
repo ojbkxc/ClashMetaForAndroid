@@ -29,12 +29,6 @@
         <variable
             name="isLoggedIn"
             type="boolean" />
-        <variable
-            name="profileFlowInfo"
-            type="String" />
-        <variable
-            name="profileFlowProgress"
-            type="int" />
 
         <import type="android.view.View" />
         <import type="com.github.kr328.clash.design.MainDesign.Request" />
@@ -162,27 +156,6 @@
                     app:icon="@drawable/ic_baseline_view_list"
                     app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
                     app:text="@string/profile" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="@dimen/main_label_margin_vertical"
-                    android:layout_marginBottom="@dimen/main_label_margin_vertical"
-                    android:gravity="center"
-                    android:text="@{profileFlowInfo}"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                    android:visibility="@{profileFlowInfo != null &amp;&amp; !profileFlowInfo.isEmpty() ? View.VISIBLE : View.GONE}" />
-
-                <ProgressBar
-                    android:id="@+id/profileFlowProgressBar"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="@dimen/main_label_margin_vertical"
-                    android:layout_marginBottom="@dimen/main_label_margin_vertical"
-                    android:max="1000"
-                    android:progress="@{profileFlowProgress}"
-                    android:visibility="@{profileFlowProgress > 0 ? View.VISIBLE : View.GONE}" />
 
                 <com.github.kr328.clash.design.view.LargeActionLabel
                     android:layout_width="match_parent"

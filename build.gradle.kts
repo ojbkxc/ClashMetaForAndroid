@@ -25,7 +25,6 @@ subprojects {
         mavenCentral()
         google()
         maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
-        maven("https://jitpack.io")
     }
 
     val isApp = name == "app"
@@ -59,8 +58,13 @@ subprojects {
             minSdk = 21
             targetSdk = 35
 
+<<<<<<< Updated upstream
             versionName = "2.0.29"
             versionCode = 200029
+=======
+            versionName = "2.11.29"
+            versionCode = 211029
+>>>>>>> Stashed changes
 
             resValue("string", "release_name", "v$versionName")
             resValue("integer", "release_code", "$versionCode")

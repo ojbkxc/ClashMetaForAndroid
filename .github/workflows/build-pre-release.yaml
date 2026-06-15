@@ -29,10 +29,7 @@ jobs:
         uses: actions/checkout@v6
       
       - name: Checkout submodules
-        run: |
-          git submodule update --init --recursive --force
-          cd core/src/foss/golang/clash
-          git checkout Alpha
+        run: git submodule update --init --recursive --force
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -55,13 +52,6 @@ jobs:
           cd $(go env GOROOT)
           for p in $GITHUB_WORKSPACE/.github/patch/*.patch; do patch --verbose -p 1 < "$p"; done
 
-      - name: Tidy Go modules
-        run: |
-          cd $GITHUB_WORKSPACE/core/src/foss/golang
-          go mod tidy
-          cd $GITHUB_WORKSPACE/core/src/main/golang
-          go mod tidy
-
       - uses: actions/cache@v5
         with:
           path: |
@@ -71,7 +61,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+<<<<<<< Updated upstream
       - name: Load Environment Variables
+=======
+      - name: Update CA
+        run: |
+          sudo apt-get update && sudo apt-get install ca-certificates
+          sudo update-ca-certificates
+          cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
+
+      - name: Signing properties
+>>>>>>> Stashed changes
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
