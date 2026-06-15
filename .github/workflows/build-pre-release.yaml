@@ -99,14 +99,6 @@ jobs:
             echo "No .env file found, using Secrets only"
           fi
 
-      - name: Generate V2Board config
-        run: |
-          cat > v2board.properties << EOF
-v2board.server.url=jc.lxseek.com
-v2board.server.domains=jc.lxseek.com,go.lxkjzh.top,cdn.lxkjzh.top
-EOF
-          echo "V2Board config generated with hardcoded values"
-
       - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
