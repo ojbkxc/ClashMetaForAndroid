@@ -19,6 +19,7 @@ const (
 	_IPV6_PMTUDISC_DO  = 2    // same as IP_PMTUDISC_DO
 	_IPV6_TCLASS       = 67   // not exposed in syscall; Linux 2.6+
 	_IPTOS_LOWDELAY    = 0x10 // minimized delay; RFC 1349
+	_TCP_QUICKACK      = 12   // TCP_QUICKACK; Linux 2.4.4+
 )
 
 // applySocketOpts configures per-connection socket options.
@@ -63,6 +64,26 @@ func applySocketOpts(network string, c syscall.RawConn) error {
 		case isTCP(network):
 			// Disable Nagle's algorithm for lower latency
 			_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
+			
+			// TCP_QUICKACK: Enable quick ACK responses to reduce latency for small packets
+			_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_TCP, _TCP_QUICKACK, 1)
+			
+			// SO_KEEPALIVE: Keep connection alive to detect dead connections early
+			// Important for Reality connections to avoid being dropped by firewalls
+			_ = syscall.SetsockoptInt(fdInt, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 1)
+			
+			// SO_RCVBUF/SO_SNDBUF: Increase buffer sizes for high-latency networks
+			// 256KB receive buffer and 128KB send buffer
+			_ = syscall.SetsockoptInt(fdInt, syscall.SOL_SOCKET, syscall.SO_RCVBUF, 262144)
+			_ = syscall.SetsockoptInt(fdInt, syscall.SOL_SOCKET, syscall.SO_SNDBUF, 131072)
+			
+			// QoS: low-latency DSCP marking for better network prioritization
+			switch network {
+			case "tcp4", "tcp":
+				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IP, syscall.IP_TOS, _IPTOS_LOWDELAY)
+			case "tcp6":
+				_ = syscall.SetsockoptInt(fdInt, syscall.IPPROTO_IPV6, _IPV6_TCLASS, _IPTOS_LOWDELAY)
+			}
 		}
 	})
 	if ctrlErr != nil {

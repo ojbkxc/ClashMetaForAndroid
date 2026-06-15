@@ -17,6 +17,7 @@ type TCPConnPool struct {
 	maxPerHost  int
 	closed      bool
 	dialFn      func(ctx context.Context, network, address string) (net.Conn, error)
+	dialTimeout time.Duration // dial timeout for new connections
 }
 
 type connQueue struct {
@@ -34,10 +35,11 @@ func NewTCPConnPool(maxSize int, idleTimeout time.Duration, maxPerHost int) *TCP
 		maxPerHost = 5
 	}
 	return &TCPConnPool{
-		pools:       make(map[string]*connQueue),
-		maxSize:     maxSize,
-		idleTimeout: idleTimeout,
-		maxPerHost:  maxPerHost,
+		pools:        make(map[string]*connQueue),
+		maxSize:      maxSize,
+		idleTimeout:  idleTimeout,
+		maxPerHost:   maxPerHost,
+		dialTimeout:  15 * time.Second, // default 15 seconds timeout
 	}
 }
 
@@ -72,6 +74,13 @@ func (p *TCPConnPool) DialContext(ctx context.Context, network, address string) 
 		}
 	}
 	p.mu.Unlock()
+
+	// Add timeout control if not already set in context
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, p.dialTimeout)
+		defer cancel()
+	}
 
 	if p.dialFn != nil {
 		return p.dialFn(ctx, network, address)

@@ -2,6 +2,7 @@ package optimize
 
 import (
 	"net"
+	"sync"
 	"syscall"
 
 	"github.com/metacubex/mihomo/component/dialer"
@@ -78,4 +79,28 @@ func resolveAndCache(host string) (string, error) {
 		cache.store(host, ip)
 	}
 	return ip, nil
+}
+
+// PrecacheDNS performs parallel DNS lookups for multiple hosts and caches the results.
+// This reduces initial connection latency by warming up the DNS cache.
+func PrecacheDNS(hosts []string) {
+	o, err := GetGlobalOptimizer()
+	if err != nil {
+		return
+	}
+
+	cache := o.GetDNSCache()
+	if cache == nil {
+		return
+	}
+
+	var wg sync.WaitGroup
+	for _, host := range hosts {
+		wg.Add(1)
+		go func(h string) {
+			defer wg.Done()
+			resolveAndCache(h)
+		}(host)
+	}
+	wg.Wait()
 }

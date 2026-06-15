@@ -39,8 +39,45 @@ ClashMetaForAndroid/
 │       └── assets/         # 内置资源（about.html、geo 数据）
 ├── core/                   # 核心代理模块
 │   └── src/
-│       ├── foss/golang/    # Go 原生代码（mihomo 内核）
-│       ├── main/golang/    # Go JNI 桥接层
+│       ├── foss/golang/    # Go 原生代码（mihomo 内核，外部依赖不修改）
+│       │   └── clash/
+│       │       ├── adapter/
+│       │       │   ├── inbound/      # 入站适配器（HTTP/HTTPS/SOCKS5）
+│       │       │   ├── outbound/     # 出站协议（VLESS/VMess/Trojan/Shadowsocks等）
+│       │       │   ├── outboundgroup/ # 出站组（负载均衡/故障转移/URL测试）
+│       │       │   └── provider/     # 订阅提供者
+│       │       ├── common/           # 公共工具（缓存、并发、网络工具）
+│       │       │   ├── arc/          # ARC 缓存
+│       │       │   ├── atomic/       # 原子操作
+│       │       │   ├── lru/          # LRU 缓存
+│       │       │   ├── net/          # 网络工具
+│       │       │   └── pool/         # 对象池
+│       │       ├── component/        # 组件（加密、证书、DNS等）
+│       │       │   ├── age/          # age 加密
+│       │       │   ├── ca/           # CA 证书管理
+│       │       │   ├── cidr/         # CIDR 处理
+│       │       │   ├── dialer/       # 拨号器
+│       │       │   ├── fakeip/       # Fake-IP
+│       │       │   └── geodata/      # GeoIP/GeoSite
+│       │       ├── config/           # 配置解析
+│       │       ├── constant/         # 常量定义
+│       │       ├── dns/              # DNS 模块
+│       │       ├── hub/              # 核心 Hub
+│       │       ├── log/              # 日志系统
+│       │       ├── rule/             # 规则引擎
+│       │       ├── tunnel/           # 隧道模块
+│       │       └── transport/        # 传输层（WebSocket/HTTP2/QUIC）
+│       ├── main/golang/    # Go JNI 桥接层（可修改）
+│       │   └── native/
+│       │       ├── optimize/         # 网络优化（TCP参数/连接池/DNS缓存）
+│       │       │   ├── socket_optimize.go  # Socket 参数优化
+│       │       │   ├── tcp_pool.go         # TCP 连接池
+│       │       │   ├── hook.go             # 优化钩子
+│       │       │   └── optimizer.go        # 优化器主类
+│       │       ├── bridge.c          # C 桥接
+│       │       ├── delegate/         # 代理委托
+│       │       ├── main.go           # Go 入口
+│       │       └── tun.go            # TUN 模块
 │       └── main/cpp/       # C JNI 桥接层
 ├── service/                # 后台服务模块
 │   └── src/main/java/      # ClashService、TunService、ProfileManager
@@ -53,6 +90,18 @@ ClashMetaForAndroid/
 │   └── src/main/java/      # 配置管理、会话、同步逻辑
 └── hideapi/                # Android 隐藏 API 访问
 ```
+
+### 目录说明
+
+| 目录 | 说明 | 是否可修改 |
+|------|------|-----------|
+| `app/` | Android 主应用模块 | ✅ 可修改 |
+| `core/src/foss/golang/` | mihomo 内核代码（Git 子模块） | ❌ 外部依赖，不修改 |
+| `core/src/main/golang/` | Go JNI 桥接层和优化代码 | ✅ 可修改 |
+| `core/src/main/cpp/` | C/C++ JNI 桥接层 | ✅ 可修改 |
+| `service/` | 后台服务模块 | ✅ 可修改 |
+| `design/` | UI 设计模块 | ✅ 可修改 |
+| `v2board/` | V2Board 集成模块 | ✅ 可修改 |
 
 ## 环境要求
 
@@ -323,3 +372,15 @@ WebView 加载时
 - **UI 优化**：主界面卡片布局优化，流量显示简写格式（↑1.2M ↓3.4G）
 - **信息同步**：切换账号后自动重新获取用户信息（套餐、到期时间、余额）
 - **编译修复**：移除废弃的 WebView API，适配最新 Android SDK
+- **网络优化**：
+  - TCP 参数增强：添加 TCP_QUICKACK（快速ACK响应）、SO_KEEPALIVE（连接保活）、增大缓冲区（256KB/128KB）
+  - 连接超时控制：添加 15 秒默认超时，避免无限等待
+  - DNS 缓存预热：支持并行预取多个域名的 DNS 解析结果
+
+### v2.0.21
+- **首次登录引导**：新增欢迎弹窗，点击"知道了"后自动打开登录页面
+- **UI 细节优化**：
+  - 运行状态卡片右侧显示套餐名称和到期日期
+  - 代理模式卡片只显示模式名称
+  - 配置卡片显示激活状态（配置：已激活/未激活）
+- **图标替换**：运行状态图标从打勾改为闪电图标
