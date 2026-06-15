@@ -462,17 +462,6 @@ class V2BoardActivity : BaseActivity<V2BoardDesign>() {
             // 通知 MainActivity 更新 UI
             activity.events.trySend(BaseActivity.Event.V2BoardLoginChanged)
 
-            // 登录成功后，先强制注入 localStorage（同步执行）
-            // 然后直接跳转到仪表盘页面，避免刷新页面导致状态丢失
-            activity.forceInjectLocalStorage(activity.design?.webView ?: return@onAuthData)
-            SyncLog.add("登录成功，已注入 localStorage")
-
-            // 直接跳转到仪表盘页面
-            val serverUrl = activity.sync.config.serverUrl.ifBlank { activity.sync.getActiveUrl() }
-            val dashboardUrl = "$serverUrl/#/stage"
-            activity.design?.loadUrl(dashboardUrl)
-            SyncLog.add("登录成功，跳转到仪表盘: ${SyncLog.maskUrl(dashboardUrl)}")
-
             activity.launch {
                 withContext(Dispatchers.Main) {
                     activity.design?.showToast(
