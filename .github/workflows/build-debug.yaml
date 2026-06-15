@@ -1,16 +1,11 @@
 name: Build Debug
 on:
+  pull_request:
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
-    inputs:
-      force_rebuild:
-        description: 'Force rebuild even if no changes'
-        required: false
-        default: 'false'
   push:
     branches:
       - main
-    tags:
-      - 'v*'
 
 jobs:
   BuildDebug:
@@ -66,45 +61,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Load Environment Variables
+      - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
-          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
-        run: |
-          echo "=== Loading Environment Variables ==="
-          echo "Priority: GitHub Secrets > .env file"
-          
-          if [ -f ".env" ]; then
-            echo "Found .env file"
-            while IFS='=' read -r key value; do
-              if [[ $key == \#* || -z $key ]]; then
-                continue
-              fi
-              if [ -z "${!key}" ]; then
-                export "$key=$value"
-                echo "Loaded from .env: $key=$value"
-              else
-                echo "Secrets override .env: $key (using Secrets)"
-              fi
-            done < .env
-          else
-            echo "No .env file found, using Secrets only"
-          fi
-
-      - name: Generate V2Board config
-        run: |
-          if [ -n "$V2BOARD_SERVER_URL" ]; then
-            cat > v2board.properties << EOF
-v2board.server.url=$V2BOARD_SERVER_URL
-v2board.server.domains=$V2BOARD_SERVER_DOMAINS
-EOF
-            echo "V2Board config generated"
-          fi
-
-      - name: Signing properties
         run: |
           if [ -n "$SIGNING_STORE_PASSWORD" ]; then
             touch signing.properties
@@ -116,17 +77,46 @@ EOF
             echo "No signing secrets configured, skipping"
           fi
 
-      - name: Debug Build
+      - name: Build
         if: success()
-        run: ./gradlew --no-daemon --stacktrace app:assembleDebug 2>&1
-
-      - name: Upload Debug
-        uses: softprops/action-gh-release@v2
-        if: ${{ success() }}
+        run: ./gradlew --no-daemon --stacktrace app:assembleAlphaRelease
+          
+      - name: Upload Aritfact (universal)
+        uses: actions/upload-artifact@v7
+        if: ${{  success() }}
         with:
-          tag_name: Debug
-          files: app/build/outputs/apk/debug/*
-          prerelease: true
-          generate_release_notes: true
-          overwrite: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          name: CMFA Debug Unsigned APK (universal) 
+          path: |
+            app/build/outputs/apk/alpha/release/*-universal-*.apk
+      
+      - name: Upload Aritfact (arm64-v8a)
+        uses: actions/upload-artifact@v7
+        if: ${{  success() }}
+        with:
+          name: CMFA Debug Unsigned APK (arm64-v8a)
+          path: |
+            app/build/outputs/apk/alpha/release/*-arm64-v8a-*.apk
+      
+      - name: Upload Aritfact (armeabi-v7a)
+        uses: actions/upload-artifact@v7
+        if: ${{  success() }}
+        with:
+          name: CMFA Debug Unsigned APK (armeabi-v7a)
+          path: |
+            app/build/outputs/apk/alpha/release/*-armeabi-v7a-*.apk
+      
+      - name: Upload Aritfact (x86_64)
+        uses: actions/upload-artifact@v7
+        if: ${{  success() }}
+        with:
+          name: CMFA Debug Unsigned APK (x86_64)
+          path: |
+            app/build/outputs/apk/alpha/release/*-x86_64-*.apk
+      
+      - name: Upload Aritfact (x86)
+        uses: actions/upload-artifact@v7
+        if: ${{  success() }}
+        with:
+          name: CMFA Debug Unsigned APK (x86)
+          path: |
+            app/build/outputs/apk/alpha/release/*-x86-*.apk

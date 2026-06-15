@@ -71,48 +71,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Load Environment Variables
+      - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          V2BOARD_SERVER_URL: ${{ secrets.V2BOARD_SERVER_URL }}
-          V2BOARD_SERVER_DOMAINS: ${{ secrets.V2BOARD_SERVER_DOMAINS }}
-        run: |
-          echo "=== Loading Environment Variables ==="
-          echo "Priority: GitHub Secrets > .env file"
-          
-          # 如果 .env 文件存在，读取其中的变量（但不覆盖已有的 Secrets）
-          if [ -f ".env" ]; then
-            echo "Found .env file"
-            while IFS='=' read -r key value; do
-              # 跳过注释和空行
-              if [[ $key == \#* || -z $key ]]; then
-                continue
-              fi
-              # 如果变量未设置（Secrets 优先级更高），则从 .env 读取
-              if [ -z "${!key}" ]; then
-                export "$key=$value"
-                echo "Loaded from .env: $key=$value"
-              else
-                echo "Secrets override .env: $key (using Secrets)"
-              fi
-            done < .env
-          else
-            echo "No .env file found, using Secrets only"
-          fi
-
-      - name: Generate V2Board config
-        run: |
-          if [ -n "$V2BOARD_SERVER_URL" ]; then
-            cat > v2board.properties << EOF
-v2board.server.url=$V2BOARD_SERVER_URL
-v2board.server.domains=$V2BOARD_SERVER_DOMAINS
-EOF
-            echo "V2Board config generated"
-          fi
-
-      - name: Signing properties
         run: |
           if [ -n "$SIGNING_STORE_PASSWORD" ]; then
             touch signing.properties
