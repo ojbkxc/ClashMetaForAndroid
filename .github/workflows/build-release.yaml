@@ -6,6 +6,11 @@ on:
         description: 'Force rebuild even if no changes'
         required: false
         default: 'false'
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
 
 jobs:
   BuildRelease:
