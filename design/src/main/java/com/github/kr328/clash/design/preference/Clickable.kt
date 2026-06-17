@@ -71,3 +71,54 @@ fun PreferenceScreen.clickable(
 
     return impl
 }
+
+fun PreferenceScreen.clickable(
+    @StringRes title: Int,
+    @DrawableRes icon: Int? = null,
+    summary: CharSequence?,
+    configure: ClickablePreference.() -> Unit = {}
+): ClickablePreference {
+    val binding = PreferenceClickableBinding
+        .inflate(context.layoutInflater, root, false)
+
+    val impl = object : ClickablePreference {
+        override var icon: Drawable?
+            get() = binding.iconView.background
+            set(value) {
+                binding.iconView.background = value
+            }
+        override var title: CharSequence
+            get() = binding.titleView.text
+            set(value) {
+                binding.titleView.text = value
+            }
+        override var summary: CharSequence?
+            get() = binding.summaryView.text
+            set(value) {
+                binding.summaryView.text = value
+                binding.summaryView.visibility = if (value == null) View.GONE else View.VISIBLE
+            }
+        override val view: View
+            get() = binding.root
+
+        override fun clicked(clicked: () -> Unit) {
+            binding.root.setOnClickListener {
+                clicked()
+            }
+        }
+    }
+
+    impl.title = context.getText(title)
+
+    if (icon != null) {
+        impl.icon = context.getDrawableCompat(icon)
+    }
+
+    impl.summary = summary
+
+    impl.configure()
+
+    addElement(impl)
+
+    return impl
+}
