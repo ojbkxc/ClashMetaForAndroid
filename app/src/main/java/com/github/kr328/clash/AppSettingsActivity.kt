@@ -1,6 +1,8 @@
 package com.github.kr328.clash
 
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.design.AppSettingsDesign
@@ -34,8 +36,15 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                     }
                 }
                 design.requests.onReceive {
-                    ApplicationObserver.createdActivities.forEach {
-                        it.recreate()
+                    when (it) {
+                        AppSettingsDesign.Request.ReCreateAllActivities -> {
+                            ApplicationObserver.createdActivities.forEach { activity ->
+                                activity.recreate()
+                            }
+                        }
+                        AppSettingsDesign.Request.OpenGitHub -> {
+                            openGitHub()
+                        }
                     }
                 }
             }
@@ -74,5 +83,10 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
             newState,
             PackageManager.DONT_KILL_APP
         )
+    }
+
+    private fun openGitHub() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ojbkxc/ClashMetaForAndroid"))
+        startActivity(intent)
     }
 }

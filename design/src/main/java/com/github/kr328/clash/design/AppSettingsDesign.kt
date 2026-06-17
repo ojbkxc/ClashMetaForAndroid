@@ -1,6 +1,9 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.view.View
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
 import com.github.kr328.clash.design.model.Behavior
@@ -22,7 +25,8 @@ class AppSettingsDesign(
     onHideIconChange: (hide: Boolean) -> Unit,
 ) : Design<AppSettingsDesign.Request>(context) {
     enum class Request {
-        ReCreateAllActivities
+        ReCreateAllActivities,
+        OpenGitHub
     }
 
     private val binding = DesignSettingsCommonBinding
@@ -37,6 +41,12 @@ class AppSettingsDesign(
         binding.activityBarLayout.applyFrom(context)
 
         binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
+
+        val currentVersion = try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
+        } catch (e: PackageManager.NameNotFoundException) {
+            ""
+        }
 
         val screen = preferenceScreen(context) {
             category(R.string.behavior)
@@ -98,6 +108,22 @@ class AppSettingsDesign(
             ) {
                 enabled = !running
             }
+
+            category(R.string.about)
+
+            clickable(
+                icon = R.drawable.ic_github,
+                title = R.string.github,
+                summary = "github.com/ojbkxc/ClashMetaForAndroid"
+            ) {
+                requests.trySend(Request.OpenGitHub)
+            }
+
+            clickable(
+                icon = R.drawable.ic_baseline_info,
+                title = R.string.version,
+                summary = currentVersion
+            )
         }
 
         binding.content.addView(screen.root)

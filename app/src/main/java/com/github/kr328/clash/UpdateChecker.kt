@@ -14,7 +14,8 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object UpdateChecker {
-    private const val GITHUB_API = "https://api.github.com/repos/ojbkxc/ClashMetaForAndroid/releases"
+    private const val GITHUB_API_CDN = "https://cdn.lxseek.com/https://api.github.com/repos/ojbkxc/ClashMetaForAndroid/releases"
+    private const val GITHUB_API_DIRECT = "https://api.github.com/repos/ojbkxc/ClashMetaForAndroid/releases"
     private const val PREF_NAME = "update_checker"
     private const val KEY_SKIPPED_VERSION = "skipped_version"
 
@@ -31,16 +32,20 @@ object UpdateChecker {
     )
 
     suspend fun checkForUpdate(context: Context): ReleaseInfo? = withContext(Dispatchers.IO) {
-        try {
-            // 获取所有 releases
+        // 先尝试 CDN 地址，失败则降级到直接地址
+        checkForUpdateInternal(GITHUB_API_CDN) ?: checkForUpdateInternal(GITHUB_API_DIRECT)
+    }
+
+    private fun checkForUpdateInternal(apiUrl: String): ReleaseInfo? {
+        return try {
             val request = Request.Builder()
-                .url(GITHUB_API)
+                .url(apiUrl)
                 .header("Accept", "application/vnd.github.v3+json")
                 .build()
             val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
+            if (!response.isSuccessful) return null
 
-            val releasesArray = org.json.JSONArray(response.body?.string() ?: return@withContext null)
+            val releasesArray = org.json.JSONArray(response.body?.string() ?: return null)
 
             var latestPreRelease: ReleaseInfo? = null
             var latestStableRelease: ReleaseInfo? = null
@@ -69,27 +74,23 @@ object UpdateChecker {
                 val release = ReleaseInfo(tagName, apkUrl, body, isPreRelease)
 
                 if (isPreRelease) {
-                    // 预发布版本：取第一个（通常是最新的测试版）
                     if (latestPreRelease == null) {
                         latestPreRelease = release
                     }
                 } else {
-                    // 正式版本：取第一个（通常是最新的正式版）
                     if (latestStableRelease == null) {
                         latestStableRelease = release
                     }
                 }
 
-                // 如果同时找到了预发布和正式版，可以提前退出
                 if (latestPreRelease != null && latestStableRelease != null) {
                     break
                 }
             }
 
-            // 优先返回预发布版本，其次返回正式版本
             latestPreRelease ?: latestStableRelease
         } catch (e: Exception) {
-            Log.w("UpdateChecker error: ${e.message}")
+            Log.w("UpdateChecker error ($apiUrl): ${e.message}")
             null
         }
     }
