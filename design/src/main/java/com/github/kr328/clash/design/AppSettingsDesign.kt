@@ -113,7 +113,7 @@ class AppSettingsDesign(
 
             clickable(
                 icon = R.drawable.ic_github,
-                title = R.string.github,
+                title = R.string.about,
                 summary = "github.com/ojbkxc/ClashMetaForAndroid"
             ) {
                 requests.trySend(Request.OpenGitHub)
