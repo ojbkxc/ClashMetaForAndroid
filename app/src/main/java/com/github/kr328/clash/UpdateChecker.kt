@@ -142,15 +142,34 @@ object UpdateChecker {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
-    // 简单版本比较: "1.2.3" > "1.2.2"
+    // 版本比较: "1.2.3" > "1.2.2", "Prerelease-alpha-2.0.1" > "2.0.0"
     fun compareVersions(v1: String, v2: String): Int {
-        val parts1 = v1.trimStart('v').split(".").map { it.toIntOrNull() ?: 0 }
-        val parts2 = v2.trimStart('v').split(".").map { it.toIntOrNull() ?: 0 }
+        val version1 = extractVersionNumber(v1)
+        val version2 = extractVersionNumber(v2)
+
+        val parts1 = version1.split(".").map { it.toIntOrNull() ?: 0 }
+        val parts2 = version2.split(".").map { it.toIntOrNull() ?: 0 }
+
         for (i in 0 until maxOf(parts1.size, parts2.size)) {
             val p1 = if (i < parts1.size) parts1[i] else 0
             val p2 = if (i < parts2.size) parts2[i] else 0
             if (p1 != p2) return p1.compareTo(p2)
         }
         return 0
+    }
+
+    // 从版本字符串中提取版本号，支持格式: "v2.0.0", "Prerelease-alpha-2.0.1", "2.0.0"
+    private fun extractVersionNumber(version: String): String {
+        val normalized = version.trimStart('v')
+
+        // 处理预发布版本格式: "Prerelease-alpha-2.0.1" -> "2.0.1"
+        val prereleasePattern = Regex("""[a-zA-Z]+-([0-9.]+)""")
+        val match = prereleasePattern.find(normalized)
+        if (match != null) {
+            return match.groupValues[1]
+        }
+
+        // 处理普通版本格式: "2.0.0"
+        return normalized
     }
 }
