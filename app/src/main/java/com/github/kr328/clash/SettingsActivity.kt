@@ -1,5 +1,7 @@
 package com.github.kr328.clash
 
+import android.content.Intent
+import android.net.Uri
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.SettingsDesign
 import com.github.kr328.clash.SyncLogActivity
@@ -31,9 +33,16 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(SyncLogActivity::class.intent)
                         SettingsDesign.Request.StartRoot ->
                             startActivity(RootSettingsActivity::class.intent)
+                        SettingsDesign.Request.OpenGitHub ->
+                            openGitHub()
                     }
                 }
             }
         }
+    }
+
+    private fun openGitHub() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ojbkxc/ClashMetaForAndroid"))
+        startActivity(intent)
     }
 }
