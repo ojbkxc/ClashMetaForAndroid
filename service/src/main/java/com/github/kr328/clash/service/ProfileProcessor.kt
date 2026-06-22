@@ -352,9 +352,17 @@ object ProfileProcessor {
                 var blockModified = false
 
                 // 对于所有VLESS配置：确保启用TLS（VLESS必须TLS）
-                if (!currentBlock.contains("tls:") && !currentBlock.contains("tls :")) {
+                val tlsMatch = Regex("""tls:\s*(true|false)""", RegexOption.IGNORE_CASE).find(currentBlock)
+                if (tlsMatch == null) {
                     Log.d("ProfileProcessor: VLESS config missing TLS, enabling TLS")
                     currentBlock = enableTLS(currentBlock)
+                    blockModified = true
+                } else if (tlsMatch.groupValues[1].equals("false", ignoreCase = true)) {
+                    Log.d("ProfileProcessor: VLESS config has TLS disabled, enabling TLS")
+                    currentBlock = currentBlock.replaceFirst(
+                        Regex("""tls:\s*false""", RegexOption.IGNORE_CASE),
+                        "tls: true"
+                    )
                     blockModified = true
                 }
 
@@ -379,15 +387,30 @@ object ProfileProcessor {
                 }
 
                 // 检查并修复其他常见问题
-                // 确保有server-name（用于TLS SNI）
-                if (currentBlock.contains("tls:") && !currentBlock.contains("server-name:") && !currentBlock.contains("servername:")) {
-                    // 从server字段提取域名作为server-name
+                // 确保有servername（用于TLS SNI，mihomo使用servername而非server-name）
+                val hasTls = currentBlock.contains("tls:") || currentBlock.contains("tls :")
+                val hasServerName = currentBlock.contains("server-name:") || currentBlock.contains("servername:")
+                
+                if (hasTls && !hasServerName) {
+                    // 从server字段提取域名作为servername
                     val serverMatch = Regex("""server:\s*(.+)""").find(currentBlock)
                     if (serverMatch != null) {
-                        val serverValue = serverMatch.groupValues[1].trim()
-                        Log.d("ProfileProcessor: Adding server-name: $serverValue")
-                        currentBlock = addServerName(currentBlock, serverValue)
-                        blockModified = true
+                        var serverValue = serverMatch.groupValues[1].trim()
+                        // 移除引号
+                        serverValue = serverValue.removeSurrounding("\"", "\"").removeSurrounding("'", "'")
+                        
+                        // 检查是否是IP地址，如果是IP地址则不添加servername
+                        // IP地址格式：xxx.xxx.xxx.xxx 或 [ipv6]
+                        val isIpAddress = Regex("""^\d+\.\d+\.\d+\.\d+$""").matches(serverValue) || 
+                                         serverValue.startsWith("[") && serverValue.endsWith("]")
+                        
+                        if (!isIpAddress) {
+                            Log.d("ProfileProcessor: Adding servername: $serverValue")
+                            currentBlock = addServerName(currentBlock, serverValue)
+                            blockModified = true
+                        } else {
+                            Log.d("ProfileProcessor: Server is IP address, skipping servername")
+                        }
                     }
                 }
 
@@ -532,13 +555,17 @@ object ProfileProcessor {
     }
 
     /**
-     * 添加server-name
+     * 添加servername（mihomo内核使用servername而非server-name）
      */
     private fun addServerName(proxyBlock: String, serverName: String): String {
         val lines = proxyBlock.lines().toMutableList()
         val indent = detectIndent(proxyBlock)
 
-        // 在server之后添加server-name
+        // 移除引号（如果有）
+        val cleanServerName = serverName.removeSurrounding("\"", "\"")
+                                        .removeSurrounding("'", "'")
+
+        // 在server之后添加servername
         var insertIndex = -1
         for ((index, line) in lines.withIndex()) {
             if (line.trim().startsWith("server:")) {
@@ -548,7 +575,7 @@ object ProfileProcessor {
         }
 
         return if (insertIndex > 0 && insertIndex < lines.size) {
-            lines.add(insertIndex, "$indent server-name: $serverName")
+            lines.add(insertIndex, "$indent servername: $cleanServerName")
             lines.joinToString("\n")
         } else {
             proxyBlock
@@ -559,10 +586,18 @@ object ProfileProcessor {
      * 检测缩进
      */
     private fun detectIndent(proxyBlock: String): String {
-        val firstLine = proxyBlock.lines().firstOrNull() ?: ""
-        val match = Regex("""^(\s*)""").find(firstLine)
-        val leadingSpaces = match?.groupValues?.get(1)?.length ?: 0
-        // proxy块通常是2个空格缩进
+        // 找到第一个非空行
+        for (line in proxyBlock.lines()) {
+            if (line.trim().startsWith("- name:")) {
+                // 这是块的开始，返回子元素的缩进（多2个空格）
+                return "  "
+            }
+            // 查找第一个有缩进的配置行
+            val match = Regex("""^(\s*)\w+:""").find(line)
+            if (match != null) {
+                return match.groupValues[1]
+            }
+        }
         return "  "
     }
 
