@@ -319,8 +319,9 @@ object ProfileProcessor {
     /**
      * 修复VLESS配置的YAML内容：
      * - 为VLESS+Reality配置自动添加client-fingerprint: chrome（Reality正常工作的必要条件）
-     * - 移除VLESS+Reality配置中的flow参数（Reality不支持XTLS flow）
+     * - 将VLESS+Reality的WebSocket模式强制改为TCP（Reality在WS模式下不稳定）
      * - 强制启用TLS（Reality必须启用TLS）
+     * - Reality支持XTLS flow（如xtls-rprx-vision），保留flow参数
      * - 为所有VLESS配置添加TLS（如果没有的话）
      * - 保留VLESS+WebSocket配置（mihomo内核支持VLESS+WS）
      */
@@ -366,15 +367,6 @@ object ProfileProcessor {
                         Log.d("ProfileProcessor: Found VLESS+Reality with WebSocket, forcing TCP mode")
                         currentBlock = currentBlock.replace("network: ws", "network: tcp")
                                                     .replace("network: websocket", "network: tcp")
-                        blockModified = true
-                    }
-                    
-                    // Reality不支持XTLS flow，需要移除
-                    if (currentBlock.contains("flow:") && currentBlock.contains("xtls")) {
-                        Log.d("ProfileProcessor: Found VLESS+Reality with XTLS flow, removing flow")
-                        currentBlock = currentBlock.lines()
-                            .filterNot { it.trim().startsWith("flow:") }
-                            .joinToString("\n")
                         blockModified = true
                     }
                     
